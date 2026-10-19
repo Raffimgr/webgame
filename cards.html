@@ -244,9 +244,9 @@ const GAMES=[
   {id:"hilo",name:"Higher or Lower",title:"Higher or Lower",x:"#aab7ff",min:2,tag:"Nerve · 1 min each",how:"Take turns guessing if the next card is higher or lower. Longest streak wins.",fan:["4c","9h","Ks"]},
   {id:"blackjack",name:"Blackjack vs Dealer",title:"Blackjack vs Dealer",x:"#9df0c8",min:2,tag:"Everyone vs the house",how:"Each player plays one hand against the dealer. Get close to 21 without going over.",fan:["Ah","Kd","10s"]},
 ];
-function drawMenu(){$("#games").innerHTML=GAMES.map(g=>`<button class="game${g.main?" main":""}" data-g="${g.id}" style="--x:${g.x}"><span class="fan">${g.fan.map(t=>card(C.parse(t))).join("")}</span><span class="tx"><small>${g.tag}</small><b>${g.title}</b><span>${g.how}</span><em>${g.min} to 9 players ›</em></span></button>`).join("")}
+function drawMenu(){const h=GAMES.map(g=>`<button class="game${g.main?" main":""}" data-g="${g.id}" style="--x:${g.x}"><span class="fan">${g.fan.map(t=>card(C.parse(t))).join("")}</span><span class="tx"><small>${g.tag}</small><b>${g.title}</b><span>${g.how}</span><em>${g.min} to 9 players ›</em></span></button>`);h.splice(1,0,`<a class="game main" href="online.html" style="--x:#2ec4b6;text-decoration:none"><span class="fan">${["Ah","Kd","Qc"].map(t=>card(C.parse(t))).join("")}</span><span class="tx"><small>Online · everyone on their own phone</small><b>Poker on phones</b><span>Texas Hold'em where each player logs in and plays on their own phone, hand after hand. Others can watch.</span><em>Open the tables ›</em></span></a>`);$("#games").innerHTML=h.join("")}
 drawMenu();
-$("#games").onclick=e=>{const b=e.target.closest(".game");if(b)openSetup(GAMES.find(g=>g.id===b.dataset.g))};
+$("#games").onclick=e=>{const b=e.target.closest(".game");if(b&&b.dataset.g)openSetup(GAMES.find(g=>g.id===b.dataset.g))};
 let timers=[],curSetup=null,playing=false; // playing: a game is under way (leaving asks first)
 function later(f,ms){timers.push(setTimeout(f,ms))}
 function clearTimers(){timers.forEach(clearTimeout);timers=[]}
