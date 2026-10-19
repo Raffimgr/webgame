@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
-/* Shenandoah Guide: tabs for places, map, photo gallery, history, videos, quiz and road-trip bingo. */
+/* Shenandoah Guide: tabs for places (one "Closest first" menu to narrow them down), the map, history and places to eat. */
 :root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--ink:#15181e;--well:#202328;
   --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
   --in-sh:inset 3px 3px 8px rgba(0,0,0,.5);
@@ -28,9 +28,9 @@ a{color:var(--teal)}
 .hero h1{margin:0;font:700 clamp(32px,6vw,52px)/1 var(--play);color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.35)}
 .hero p{margin:6px 0 0;font-weight:600;color:#fff}
 .hero .cr{position:absolute;right:12px;top:10px;z-index:1;font-size:11px;color:rgba(255,255,255,.8);text-decoration:none;background:rgba(0,0,0,.35);padding:3px 8px;border-radius:99px}
-.tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;scrollbar-width:none;position:sticky;top:0;z-index:20;background:linear-gradient(#24272d 70%,rgba(36,39,45,0))}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:4px 2px 10px;scrollbar-width:none;position:sticky;top:0;z-index:20;background:linear-gradient(#24272d 70%,rgba(36,39,45,0))}
 .tabs::-webkit-scrollbar{display:none}
-.tabs button{flex:none;border:0;cursor:pointer;padding:10px 15px;border-radius:99px;font:600 14px var(--font);color:var(--mut);background:var(--raise);box-shadow:var(--raise-sh)}
+.tabs button{flex:1 0 auto;border:0;cursor:pointer;padding:10px 9px;white-space:nowrap;border-radius:99px;font:600 14px var(--font);color:var(--mut);background:var(--raise);box-shadow:var(--raise-sh)}
 .tabs button.on{color:var(--ink);background:var(--x,var(--teal));box-shadow:0 0 16px color-mix(in srgb,var(--x,var(--teal)) 45%,transparent)}
 h2{margin:6px 0 2px;font:600 26px var(--play)}
 .sub{margin:0 0 6px;color:var(--mut)}
@@ -56,7 +56,6 @@ h2{margin:6px 0 2px;font:600 26px var(--play)}
 .acts{display:flex;gap:8px;margin-top:auto;padding-top:4px;flex-wrap:wrap}
 .btn{border:0;cursor:pointer;padding:10px 14px;border-radius:14px;font:700 13.5px var(--font);background:var(--teal);color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:6px}
 .btn.ghost{background:#353a43;color:var(--fg)}
-.btn.big{padding:14px 20px;font-size:15.5px;border-radius:16px}
 .fact{font-size:13px;color:var(--gold);font-weight:600}
 #map{height:min(70vh,560px);border-radius:24px;box-shadow:var(--raise-sh);overflow:hidden;background:#2a2e35}
 .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#2a2e35;color:var(--fg)}
@@ -73,15 +72,19 @@ h2{margin:6px 0 2px;font:600 26px var(--play)}
 .legend{display:flex;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--mut)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend b{width:12px;height:12px;border-radius:50%;background:var(--x)}
-.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
-.gallery figure{margin:0;border-radius:20px;overflow:hidden;background:var(--raise);box-shadow:var(--raise-sh);cursor:zoom-in}
-.gallery .ph{aspect-ratio:4/3}
 .ph.art{background:linear-gradient(150deg,color-mix(in srgb,var(--x) 70%,#1b1d22),color-mix(in srgb,var(--x) 25%,#1b1d22));display:grid;place-items:center}
 .ph.art svg{position:absolute;inset:0;width:100%;height:100%}
 .ph.art .em{position:relative;font-size:56px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.35))}
-.gallery .del{top:8px;right:8px;bottom:auto;border:0;cursor:pointer;font-size:13px;padding:4px 9px}
-.sel{padding:11px 12px;border-radius:14px;border:0;background:var(--well);color:var(--fg);font:600 14px var(--font);box-shadow:var(--in-sh);max-width:100%}
-.gallery figcaption{padding:10px 12px;font-size:13px;font-weight:600}
+.pick{position:relative;margin:8px 0 14px}
+.pickb{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;padding:11px 16px;border-radius:99px;font:700 15px var(--font);color:var(--ink);background:#ff9f43;box-shadow:0 0 16px rgba(255,159,67,.3)}
+.pickb .car{font-size:12px}
+.pickm{position:absolute;left:0;top:calc(100% + 8px);z-index:25;width:min(320px,calc(100vw - 32px));max-height:70vh;overflow:auto;background:#2a2e35;border-radius:18px;box-shadow:0 18px 44px rgba(0,0,0,.65);padding:6px;display:flex;flex-direction:column}
+.pickm button{display:flex;align-items:center;gap:12px;border:0;background:none;color:var(--fg);padding:10px 12px;border-radius:12px;text-align:left;cursor:pointer;font-family:var(--font)}
+.pickm button .e{font-size:22px;width:28px;text-align:center}
+.pickm button b{display:block;font-size:15px;font-weight:600}
+.pickm button small{display:block;font-size:12px;color:var(--mut)}
+.pickm button.on{background:rgba(255,159,67,.16)}
+.pickm button.on b{color:#ffb877}
 .lb{position:fixed;inset:0;z-index:60;background:rgba(10,11,14,.94);display:grid;place-items:center;padding:16px}
 .lb img{max-width:100%;max-height:78vh;border-radius:16px}
 .lb .cap{color:#fff;text-align:center;margin-top:10px;font-weight:600}
@@ -98,15 +101,6 @@ h2{margin:6px 0 2px;font:600 26px var(--play)}
 .ev p{margin:0;color:#c9cfda;font-size:14.5px}
 .ev img{width:100%;border-radius:14px;margin-top:10px;display:block}
 .ev .cr{font-size:11px;color:var(--mut)}
-.vids{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
-.vid{display:flex;flex-direction:column;border-radius:20px;overflow:hidden;background:var(--raise);box-shadow:var(--raise-sh)}
-.vid>a{display:flex;flex-direction:column;flex:1;color:inherit;text-decoration:none}
-.vid a .ph{aspect-ratio:16/9}
-.vid a .play{position:absolute;inset:0;display:grid;place-items:center}
-.vid a .play b{width:56px;height:40px;border-radius:12px;background:#ff3d3d;display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.5)}
-.vid a .b{padding:10px 13px 13px}
-.vid a h3{margin:0 0 2px;font:600 16px var(--play)}
-.vid a span{font-size:12.5px;color:var(--mut)}
 /* likes and comments */
 .talk{display:flex;flex-direction:column;gap:8px;border-top:1px solid rgba(255,255,255,.07);padding-top:10px;margin-top:2px}
 .talk .tb{display:flex;gap:8px;flex-wrap:wrap}
@@ -122,7 +116,6 @@ h2{margin:6px 0 2px;font:600 26px var(--play)}
 .tf{display:flex;gap:6px}
 .tf input{flex:1;min-width:0;border:0;border-radius:12px;padding:9px 12px;background:var(--well);color:var(--fg);font:16px var(--font);box-shadow:var(--in-sh)}
 .tf .btn{padding:8px 14px}
-.vid .talk{margin:0 13px 13px}
 .ev .talk{margin-top:10px}
 .lb{overflow:auto}
 .lb .talk{max-width:520px;margin:12px auto 0;text-align:left;color:var(--fg)}
@@ -132,64 +125,23 @@ h2{margin:6px 0 2px;font:600 26px var(--play)}
 .feed .fi{display:flex;gap:9px;align-items:flex-start;text-align:left;width:100%;border:0;background:none;color:#d6dbe4;font:14px/1.4 var(--font);padding:7px 0;cursor:pointer;border-top:1px solid rgba(255,255,255,.06)}
 .feed .fi:first-of-type{border-top:0}
 .feed .fi b{color:var(--fg)}
-.vgrp{margin:8px 0 4px;font:600 15px var(--play);color:var(--gold)}
 .panel{border-radius:26px;background:var(--raise);box-shadow:var(--raise-sh);padding:20px}
-.qsets{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
-.qset{border:0;cursor:pointer;text-align:left;padding:16px;border-radius:20px;background:var(--well);box-shadow:var(--in-sh);color:var(--fg);font-family:var(--font);display:flex;flex-direction:column;gap:4px}
-.qset.on{box-shadow:0 0 0 2px var(--x),0 0 16px color-mix(in srgb,var(--x) 35%,transparent);background:#2c3138}
-.qset .e{font-size:28px}
-.qset b{font:600 18px var(--play)}
-.qset span{font-size:12.5px;color:var(--mut)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{border:0;cursor:pointer;padding:8px 12px;border-radius:99px;font:600 13.5px var(--font);background:var(--well);box-shadow:var(--in-sh);color:var(--mut)}
 .chip.on{background:var(--x,var(--teal));color:var(--ink);box-shadow:none}
-.lbl{font:600 13px var(--font);color:var(--mut);text-transform:uppercase;letter-spacing:.6px;margin:16px 0 8px}
-.qhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.turn{display:inline-flex;align-items:center;gap:8px;font:600 18px var(--play)}
-.dot{width:14px;height:14px;border-radius:50%;background:var(--x)}
-.timer{height:8px;border-radius:8px;background:var(--well);box-shadow:var(--in-sh);overflow:hidden;margin:12px 0}
-.timer i{display:block;height:100%;background:linear-gradient(90deg,var(--green),var(--gold),var(--red));transform-origin:left;transition:transform .1s linear}
-.q{font:600 clamp(20px,4vw,26px)/1.3 var(--play);margin:8px 0 14px}
-.opts{display:grid;gap:10px}
-@media (min-width:640px){.opts{grid-template-columns:1fr 1fr}}
-.opt{border:0;cursor:pointer;text-align:left;padding:15px 16px;border-radius:16px;font:600 15.5px var(--font);background:var(--well);box-shadow:var(--in-sh);color:var(--fg);transition:transform .1s}
-.opt:active{transform:scale(.98)}
-.opt.ok{background:var(--green);color:var(--ink);box-shadow:0 0 18px rgba(111,192,74,.5)}
-.opt.no{background:var(--red);color:var(--ink)}
-.why{margin-top:14px;padding:12px 14px;border-radius:14px;background:#24303a;color:#d6e6f2;font-size:14.5px}
-.why b{color:var(--gold)}
-.board{display:flex;flex-direction:column;gap:8px;margin:14px 0}
-.row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--well);box-shadow:var(--in-sh)}
-.row .n{font:700 18px var(--play);width:28px;color:var(--mut)}
-.row .nm{flex:1;font-weight:600}
-.row .s{font:700 18px var(--play)}
-.row.first{background:linear-gradient(90deg,rgba(255,210,63,.22),var(--well))}
-.big{font:700 clamp(30px,6vw,44px)/1.1 var(--play);margin:6px 0}
-.center{text-align:center}
-.bingo{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
-@media (max-width:480px){.bingo{gap:4px}.panel{padding:16px 12px}}
-.sq{border:0;cursor:pointer;aspect-ratio:1;min-width:0;overflow:hidden;border-radius:14px;background:var(--well);box-shadow:var(--in-sh);color:var(--fg);font:600 clamp(9.5px,2.3vw,13px)/1.2 var(--font);padding:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;overflow-wrap:anywhere}
-.sq .e{font-size:clamp(18px,5vw,28px)}
-.sq.on{background:var(--green);color:var(--ink);box-shadow:0 0 12px rgba(111,192,74,.45)}
-.sq.free{background:var(--gold);color:var(--ink)}
-.sq.win{animation:pulse 1s ease-in-out infinite alternate}
-@keyframes pulse{to{transform:scale(1.06)}}
+@media (max-width:480px){.panel{padding:16px 12px}}
 .facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
 .fc{padding:16px;border-radius:20px;background:var(--raise);box-shadow:var(--raise-sh)}
 .fc b{display:block;font:700 30px var(--play);color:var(--x,var(--gold))}
 .fc span{font-size:13.5px;color:#c9cfda}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#eef1f6;color:#15181e;font:700 14px var(--font);padding:11px 18px;border-radius:99px;z-index:80;box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:calc(100vw - 32px);text-align:center}
-#confetti{position:fixed;inset:0;pointer-events:none;z-index:70}
-.pill.games{background:#7be08a;color:#15181e;font-size:15px;font-weight:800;padding:12px 18px;box-shadow:0 0 18px rgba(123,224,138,.4)}
 .foot{color:var(--mut);font-size:12px;text-align:center;margin-top:10px}
 </style>
 </head>
 <body>
-<canvas id="confetti"></canvas>
 <div class="wrap">
   <div class="top">
-    <a class="pill games" href="games.html">🎲 Games for the trip &rarr;</a>
-    <span class="pill" id="who" hidden></span>
+    <span class="pill" id="who" hidden style="margin-left:auto"></span>
   </div>
 
   <div class="hero" id="hero">
@@ -204,7 +156,7 @@ h2{margin:6px 0 2px;font:600 26px var(--play)}
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="rg.js?v=3"></script>
+<script src="rg.js?v=4"></script>
 <script src="talk.js?v=3"></script>
 <script>
 (function(){
@@ -436,16 +388,6 @@ const cabinCard=()=>`<article class="card" style="margin-bottom:16px"><div class
 const fmtDr=m=>m<60?m+" min":Math.floor(m/60)+" h"+(m%60?" "+m%60+" min":"");
 
 /* Skyline Drive photo gallery */
-const GALLERY_GROUPS=[
-  ["Near our cabin",["bryceResort","lakeLaura"]],
-  ["Skyline Drive",["stonySunset","skySummer"]],
-  ["Sunrise, sunset and stars",["sunsetRocks","valleySunset","blueRidges","sunrise","blackrockSunset","stars","peaks","rockyOvl"]],
-  ["Summits and waterfalls",["hawksbillUpper","marysSummit","stonyHiker","whiteoakLow","meadowsView"]],
-  ["Wildlife and wildflowers",["bearRoad","bearWet","deer","bear","ladyslipper","hepatica"]],
-  ["Every season",["winter"]]
-];
-const GALLERY=GALLERY_GROUPS.flatMap(g=>g[1]);
-
 const HISTORY=[
   {y:"Thousands of years ago",t:"The first people",c:"#2ec4b6",d:"Native Americans hunted, gathered and camped in these mountains for at least 9,000 years. Later the Monacan and Manahoac peoples lived east of the Blue Ridge, and Shawnee bands moved through the Valley. Nobody knows for sure where the name Shenandoah comes from; a favorite legend says it means 'Daughter of the Stars.'"},
   {y:"1716",t:"The Knights of the Golden Horseshoe",c:"#2ec4b6",d:"Virginia's governor Alexander Spotswood led an expedition over the Blue Ridge into the Valley. Back home he gave each man a small golden horseshoe pin, which gave the trip its name."},
@@ -464,29 +406,6 @@ const HISTORY=[
   {y:"2008",t:"A national landmark",c:"#6fc04a",d:"The Skyline Drive Historic District, with its overlooks, stone walls and buildings, became a National Historic Landmark."}
 ];
 
-const VIDEOS=[
-  {g:"Skyline Drive",items:[
-    {id:"cVfZB_wktdM",t:"A Day in Shenandoah: Skyline Drive 4K timelapse",s:"Sunrise to sunset in a few minutes"},
-    {id:"pr1FoOFRgQ8",t:"Skyline Drive: Shenandoah National Park",s:"A tour of the drive"},
-    {id:"movQWfOifgc",t:"Top 5 overlooks in the North District",s:"Where to stop near Front Royal"},
-    {id:"7Ku2UMmRlDw",t:"Top overlooks in the South District",s:"The quieter southern end"},
-    {id:"IeS8chxeBBU",t:"Epic fall drive with hikes and overlooks",s:"Fall colors"}]},
-  {g:"Hikes and waterfalls",items:[
-    {id:"ujqdCZtYPd4",t:"Dark Hollow Falls hike",s:"What the trail looks like"},
-    {id:"hd2mmUzUtcs",t:"Dark Hollow Falls and Rose River loop",s:"Waterfall day"},
-    {id:"Mbt-6mqfvr0",t:"Old Rag hike and rock scramble POV",s:"See the scramble before you try it"},
-    {id:"RKUhYuV3C_c",t:"Old Rag: what you should know",s:"Tickets, timing and tips"}]},
-  {g:"Luray Caverns",items:[
-    {id:"lTqnpc2Utzc",t:"Luray Caverns full tour",s:"Walk through the whole cave"},
-    {id:"b8tb0oE80IU",t:"Luray Caverns history, facts and audio tour",s:"The story of the discovery"}]},
-  {g:"History",items:[
-    {id:"Dixji4Ngo1I",t:"The displaced families of Shenandoah National Park",s:"Who lived here before the park"},
-    {id:"3SNyZAROWII",t:"A Richer Land: creating Shenandoah National Park",s:"Documentary"},
-    {id:"yJMLp8vnblY",t:"VMI cadets at New Market",s:"Battlefield history"}]}
-];
-
-/* Places to eat near the cabin and on the drive. Ratings and review summaries were gathered in October 2026
-   from Google (via Wanderlog/Restaurantji), Tripadvisor and OpenTable; u = where they came from. Hours change, so the page says to check. */
 const MEALS={bfast:{n:"Breakfast & brunch",e:"\u{1F95E}",c:"#ffd23f"},dinner:{n:"Dinner",e:"\u{1F37D}️",c:"#ff7b6b"},lunch:{n:"Lunch & treats",e:"\u{1F354}",c:"#6fc04a"},park:{n:"Inside the park",e:"\u{1F332}",c:"#2ec4b6"}};
 const EATS=[
   {n:"Woodstock Cafe",t:"Woodstock",dr:30,m:"bfast",pr:"$-$$",r:"4.7 Google (~1,150) · 4.6 Tripadvisor",h:"Breakfast & lunch, about 8am-3pm Mon-Sat, closed Sun",
@@ -549,58 +468,8 @@ const FACTS=[
 ];
 
 /* Quiz sets: [question, [options], index of right answer, explanation] */
-const QUIZ={
-  skyline:{n:"Skyline Drive",e:"\u{1F697}",c:"#2ec4b6",q:[
-    ["How long is Skyline Drive?",["55 miles","105 miles","205 miles","75 miles"],1,"It runs <b>105 miles</b> along the Blue Ridge, from Front Royal to Rockfish Gap."],
-    ["What is the speed limit on Skyline Drive?",["25 mph","45 mph","35 mph","55 mph"],2,"<b>35 mph</b> everywhere. Bears and deer cross often."],
-    ["How many tunnels are on Skyline Drive?",["None","One","Three","Seven"],1,"Just <b>one</b>: Mary's Rock Tunnel near mile 32."],
-    ["Mile marker 0 is at which town?",["Luray","Waynesboro","Front Royal","Harrisonburg"],2,"<b>Front Royal</b> is the north entrance. The markers count up going south."],
-    ["About how many overlooks does the drive have?",["10","25","70","200"],2,"There are about <b>70</b> overlooks, so you can stop a lot."],
-    ["When was the whole drive finished?",["1909","1939","1969","1999"],1,"Construction began in 1931 and all 105 miles were done in <b>1939</b>."],
-    ["Which mountain range does Skyline Drive follow?",["The Rockies","The Blue Ridge","The Adirondacks","The Ozarks"],1,"It follows the crest of the <b>Blue Ridge</b>, part of the Appalachians."],
-    ["Where is the only gas station inside the park?",["Big Meadows","Dickey Ridge","Mary's Rock","Old Rag"],0,"Fill up at <b>Big Meadows Wayside</b>, or better yet, before you drive in."]]},
-  history:{n:"History",e:"\u{1F4DC}",c:"#ff7b6b",q:[
-    ["Which president dedicated the park in 1936?",["Herbert Hoover","Franklin D. Roosevelt","Teddy Roosevelt","Harry Truman"],1,"<b>Franklin D. Roosevelt</b> dedicated it at Big Meadows on July 3, 1936."],
-    ["Which president had a fishing camp in the park?",["George Washington","Abraham Lincoln","Herbert Hoover","John F. Kennedy"],2,"<b>Herbert Hoover</b> built Rapidan Camp, an early 'Camp David'."],
-    ["Who built the overlooks, trails and stone walls in the 1930s?",["The army","The Civilian Conservation Corps","A railroad company","Prisoners"],1,"Young men of the <b>CCC</b> did it during the Great Depression."],
-    ["The Shenandoah Valley was called the Breadbasket of the...",["Confederacy","Union","Colonies","World"],0,"It fed the <b>Confederacy</b>, which is why it was burned in 1864."],
-    ["What was the nickname of Stonewall Jackson's fast-marching soldiers?",["Mountain goats","Foot cavalry","Iron legs","Valley runners"],1,"They marched so fast they were called <b>foot cavalry</b>."],
-    ["What is the battlefield at New Market nicknamed?",["Field of Lost Shoes","Bloody Meadow","Cadet Hill","Muddy Run"],0,"The <b>Field of Lost Shoes</b>, because the mud pulled the cadets' shoes off."],
-    ["About how many families had to leave to make the park?",["10","50","500","5,000"],2,"Around <b>500 families</b> were moved out of the mountains."],
-    ["The 1716 explorers who crossed the Blue Ridge were called the Knights of the Golden...",["Crown","Sword","Horseshoe","Apple"],2,"The governor gave each a tiny <b>golden horseshoe</b> pin."]]},
-  nature:{n:"Wildlife & nature",e:"\u{1F43B}",c:"#6fc04a",q:[
-    ["What is the highest peak in the park?",["Old Rag","Stony Man","Hawksbill","Mary's Rock"],2,"<b>Hawksbill</b> tops out at 4,051 feet."],
-    ["Which big animal is common in Shenandoah?",["Grizzly bear","Black bear","Moose","Mountain lion"],1,"The park has one of the densest <b>black bear</b> populations in the country."],
-    ["Which way does the Shenandoah River flow?",["South","East","West","North"],3,"It flows <b>north</b> to meet the Potomac at Harpers Ferry."],
-    ["What does Stony Man look like from far away?",["A sleeping dog","A bearded man's face","A castle","A ship"],1,"The cliffs look like <b>a bearded man's face</b>."],
-    ["How tall is Dark Hollow Falls?",["20 feet","70 feet","200 feet","500 feet"],1,"It drops about <b>70 feet</b>."],
-    ["What should you do if you see a bear?",["Run away fast","Feed it","Stay back and make noise","Climb a tree"],2,"<b>Keep your distance</b>, stay calm, and make noise. Never feed wildlife."],
-    ["Old Rag's granite is about how old?",["1,000 years","1 million years","1 billion years","10,000 years"],2,"Over <b>a billion years</b> old."],
-    ["Which famous long trail runs through the park?",["Pacific Crest Trail","Appalachian Trail","Oregon Trail","Continental Divide Trail"],1,"About 101 miles of the <b>Appalachian Trail</b> run through Shenandoah."]]},
-  cave:{n:"Luray Caverns",e:"\u{1F987}",c:"#ffd23f",q:[
-    ["What year was Luray Caverns discovered?",["1778","1878","1928","1958"],1,"It was found on August 13, <b>1878</b>."],
-    ["How did the discoverers find the cave?",["A dog fell in","Cool air from a sinkhole","A map from a pirate","An earthquake"],1,"They felt <b>cool air</b> blowing out of a sinkhole and dug in."],
-    ["What instrument is played using the cave's stalactites?",["The Great Stalacpipe Organ","The Rock Guitar","The Cave Drum","The Crystal Harp"],0,"The <b>Great Stalacpipe Organ</b> taps stalactites with rubber mallets."],
-    ["What temperature is it inside, all year?",["34°F","54°F","74°F","94°F"],1,"About <b>54°F</b>. Bring a sweater."],
-    ["Stalactites hang from the ceiling. Stalagmites...",["Hang from walls","Grow up from the floor","Float in water","Are made of ice"],1,"They <b>grow up from the floor</b>. Tip: stalac<b>t</b>ites hold <b>t</b>ight to the ceiling."],
-    ["Dream Lake in the cave is famous for...",["Glowing fish","Being a perfect mirror","Being hot","Having a waterfall"],1,"It is so still and shallow it looks like <b>a perfect mirror</b> of the ceiling."]]}
-};
-
-const BINGO=[["\u{1F43B}","Black bear"],["\u{1F98C}","Deer"],["\u{1F983}","Wild turkey"],["\u{1F985}","Hawk"],["\u{1F987}","Bat"],
-  ["\u{1F687}","Mary's Rock Tunnel"],["0️⃣","Mile marker 0"],["\u{1F9F1}","Stone wall"],["\u{1F304}","Overlook stop"],["\u{1F4A7}","Waterfall"],
-  ["\u{1F33B}","Wildflowers"],["\u{1F344}","Mushroom"],["\u{1F4F8}","Group photo"],["\u{1F3D4}️","Summit"],["\u{1F9D7}","Rock scramble"],
-  ["\u{1F366}","Blackberry ice cream"],["\u{1F6B2}","Cyclist"],["\u{1F3D5}️","Campsite"],["\u{1F3A8}","Fall colors"],["\u{1F31F}","Stargazing"],
-  ["\u{1F98B}","Butterfly"],["\u{1F43F}️","Squirrel"],["\u{1F9ED}","Trail sign"],["\u{1F96A}","Picnic"],["\u{1F30C}","Sunset"]];
-
 /* ---------- small helpers ---------- */
 function toast(m){const t=document.createElement("div");t.className="toast";t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
-function confetti(){
-  const cv=$("#confetti"),x=cv.getContext("2d");cv.width=innerWidth;cv.height=innerHeight;
-  const cols=["#2ec4b6","#ffd23f","#6fc04a","#ff7b6b","#5cc8ee","#b392f0"];
-  const ps=Array.from({length:140},()=>({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*.5,r:4+Math.random()*5,c:cols[Math.random()*6|0],vx:-1.5+Math.random()*3,vy:2+Math.random()*3,a:Math.random()*6}));
-  let n=0;(function f(){x.clearRect(0,0,cv.width,cv.height);ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.a+=.1;x.fillStyle=p.c;x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillRect(-p.r,-p.r/2,p.r*2,p.r);x.restore()});if(++n<200)requestAnimationFrame(f);else x.clearRect(0,0,cv.width,cv.height)})();
-}
-const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 const dirs=ll=>`https://www.google.com/maps/dir/?api=1&destination=${ll[0]},${ll[1]}`;
 
 /* ---------- hero slideshow ---------- */
@@ -613,14 +482,15 @@ const dirs=ll=>`https://www.google.com/maps/dir/?api=1&destination=${ll[0]},${ll
 })();
 
 /* ---------- tabs ---------- */
-const TABS=[["places","\u{1F4CD} Places","#2ec4b6"],["map","\u{1F5FA}️ Map","#5cc8ee"],["skyline","\u{1F4F8} Photos","#ffd23f"],["history","\u{1F4DC} History","#ff7b6b"],["quiz","\u{1F3C6} Quiz","#b392f0"],["eat","\u{1F37D}\uFE0F Eat","#ff9f43"],["bingo","\u{1F3B2} Bingo","#6fc04a"],["videos","▶️ Videos","#ff7b6b"]];
+const TABS=[["places","\u{1F4CD} Places","#2ec4b6"],["map","\u{1F5FA}️ Map","#5cc8ee"],["history","\u{1F4DC} History","#ff7b6b"],["eat","\u{1F37D}\uFE0F Eat","#ff9f43"]];
 let tab=store.get("tab","places");if(!TABS.some(t=>t[0]===tab))tab="places";
 function drawTabs(){$("#tabs").innerHTML=TABS.map(([k,l,c])=>`<button data-k="${k}" class="${k===tab?"on":""}" style="--x:${c}">${l}</button>`).join("");
   $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>go(b.dataset.k))}
-function go(k){tab=k;store.set("tab",k);drawTabs();stopTimer();VIEWS[k]();const t=$("#tabs");if(t.getBoundingClientRect().top<0||scrollY>t.offsetTop)scrollTo({top:t.offsetTop-4,behavior:"smooth"})}
+function go(k){tab=k;store.set("tab",k);drawTabs();VIEWS[k]();const t=$("#tabs");if(t.getBoundingClientRect().top<0||scrollY>t.offsetTop)scrollTo({top:t.offsetTop-4,behavior:"smooth"})}
 
 /* ---------- likes and comments (talk.js / talk.php, behind the login) ---------- */
-/* Each place, place to eat, history event, video and photo has a key (pl-, eat-, hi-, vid-, ph-); everyone can like it and comment on it. */
+/* Each place, place to eat, history event and trip-album photo has a key (pl-, eat-, hi-, ph-al); everyone can like it and comment on it.
+   (vid- and other ph- keys belong to the Videos and Photos tabs, which are gone; their old comments stay in talk.php but no longer show.) */
 const slug=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,50);
 const talkBar=k=>window.Talk?Talk.bar(k):"",talkCount=k=>window.Talk?Talk.count(k):"";
 /* where a key lives: [tab, name] */
@@ -628,20 +498,19 @@ function talkWhere(k){const i=k.indexOf("-"),pre=k.slice(0,i),id=k.slice(i+1);
   if(pre==="pl"){const p=PLACES.find(x=>x.id===id);return p&&["places",p.n]}
   if(pre==="eat"){const e=EATS.find(x=>slug(x.n)===id);return e&&["eat",e.n]}
   if(pre==="hi"){const h=HISTORY.find(x=>slug(x.t)===id);return h&&["history",h.t]}
-  if(pre==="vid"){const v=VIDEOS.flatMap(g=>g.items).find(x=>x.id===id);return v&&["videos",v.t]}
-  if(pre==="ph"){const p=P[id];return p&&["skyline",p.cap||"a photo"]}}
+  if(pre==="ph"&&album){const it=album.items.find(x=>"al"+x.id===id);return it&&["album",it.cap||placeName(it.place)]}}
 function talkFeed(){
   if(!window.Talk||!Talk.data||!me)return "";const all=[];Object.entries(Talk.data).forEach(([k,t])=>t.comments.forEach(c=>{const w=talkWhere(k);if(w)all.push({k,w,...c})}));if(!all.length)return "";
   all.sort((a,b)=>b.at-a.at);
   return `<div class="panel feed"><h3>\u{1F4AC} Latest comments</h3>${all.slice(0,4).map(c=>`<button class="fi" data-jump="${esc(c.k)}">${Talk.av(c.by,26)}<span><b>${esc(Talk.name(c.by))}</b> on <b>${esc(c.w[1])}</b>: ${esc(c.body.length>90?c.body.slice(0,90)+"…":c.body)} <span class="tm">${Talk.ago(c.at)}</span></span></button>`).join("")}</div>`}
 function talkJump(key){const w=talkWhere(key);if(!w)return;Talk.open.add(key);
+  if(w[0]==="album"){albumLightbox(album.items,album.items.findIndex(it=>"al"+it.id===key.slice(3)));return}
   if(w[0]==="places")placeFilter="all";if(w[0]==="eat")eatFilter="all";go(w[0]);
-  if(w[0]==="skyline"){const k=key.slice(3),g=GALLERY.indexOf(k);if(g>=0)lightbox(g);else if(album){const a=album.items.findIndex(it=>"al"+it.id===k);if(a>=0)albumLightbox(a)}return}
   setTimeout(()=>{const el=document.getElementById(key);if(el)el.scrollIntoView({behavior:"smooth",block:"center"})},80)}
 document.addEventListener("click",e=>{const j=e.target.closest("[data-jump]");if(j)talkJump(j.dataset.jump)});
 
 /* ---------- places ---------- */
-let placeFilter="all",placeSort=store.get("sort","near");
+let placeFilter="all",placeSort="near";
 /* A place with more photos (more:[keys], plus any trip-album photos of it) cycles through them on its card; tap the photo or a dot to change it. */
 function slides(ks,extra){
   return `<div class="ph slides" data-k="${ks.join(",")}" data-i="0">${extra}${ks.map((k,i)=>`<img class="${i?"":"on"}" loading="lazy" src="${img(P[k],700)}" alt="${esc(P[k].cap)}">`).join("")}${credit(P[ks[0]])}<div class="dots">${ks.map((k,i)=>`<button class="${i?"":"on"}" data-i="${i}" aria-label="Photo ${i+1} of ${ks.length}"></button>`).join("")}</div></div>`}
@@ -657,20 +526,30 @@ function placeCard(pl){const c=CAT[pl.cat],tag=`<span class="tag" style="--x:${c
   <div class="b"><h3>${esc(pl.n)}</h3>
   <div class="meta"><span class="dr">\u{1F697} ${fmtDr(pl.dr)} from the cabin</span><span>${esc(pl.mile)}</span><span>⏱ ${esc(pl.time)}</span><span>${pl.lvl==="Hard"?"\u{1F525}":pl.lvl==="Moderate"?"\u{1F4AA}":"\u{1F642}"} ${esc(pl.lvl)}</span></div>
   <p>${esc(pl.d)}</p><p class="fact">\u{1F4A1} ${esc(pl.f)}</p>
-  <div class="acts"><a class="btn" href="${dirs(pl.ll)}" target="_blank" rel="noopener">Directions</a><button class="btn ghost" data-map="${pl.id}">Show on map</button>${(()=>{const n=album?album.items.filter(it=>it.place===pl.id).length:0;return n?`<button class="btn ghost" data-ours="1">\u{1F4F7} Our photos (${n})</button>`:""})()}</div>${talkBar("pl-"+pl.id)}</div></article>`}
+  <div class="acts"><a class="btn" href="${dirs(pl.ll)}" target="_blank" rel="noopener">Directions</a><button class="btn ghost" data-map="${pl.id}">Show on map</button>${(()=>{const n=album?album.items.filter(it=>it.place===pl.id).length:0;return n?`<button class="btn ghost" data-ours="${pl.id}">\u{1F4F7} Our photos (${n})</button>`:""})()}</div>${talkBar("pl-"+pl.id)}</div></article>`}
+/* "Closest first" is the starting point; tapping it opens a short menu to show only one kind of place, or everything by type. */
+function placePicker(){
+  const opts=[["near:all","\u{1F697}","Closest first","Everything, nearest to the cabin first"],
+    ...Object.entries(CAT).map(([k,c])=>{const n=PLACES.filter(p=>p.cat===k).length;return [`near:${k}`,c.e,c.n,`${n} place${n===1?"":"s"}, closest first`]}),
+    ["eat:","\u{1F37D}\uFE0F","Restaurants","Opens the Eat list"],["type:all","\u{1F4CB}","Everything by type",""]];
+  const cur=`${placeSort}:${placeFilter}`,o=opts.find(x=>x[0]===cur)||opts[0];
+  const label=cur==="near:all"?`${o[1]} ${o[2]}`:placeSort==="type"?`${o[1]} By type`:`${o[1]} ${o[2]} \u00B7 closest first`;
+  return `<div class="pick"><button class="pickb" id="pickBtn" aria-haspopup="true" aria-expanded="false">${label} <span class="car">\u25BE</span></button>
+    <div class="pickm" id="pickMenu" hidden>${opts.map(([k,e,n,d])=>`<button data-pick="${k}" class="${k===cur?"on":""}"><span class="e">${e}</span><span><b>${esc(n)}</b>${d?`<small>${esc(d)}</small>`:""}</span></button>`).join("")}</div></div>`}
+document.addEventListener("click",e=>{const m=$("#pickMenu");if(m&&!m.hidden&&!e.target.closest(".pick"))m.hidden=true});
 const VIEWS={};
 VIEWS.places=()=>{
   const list=PLACES.filter(p=>placeFilter==="all"||p.cat===placeFilter).slice();if(placeSort==="near")list.sort((a,b)=>a.dr-b.dr);
   $("#view").innerHTML=`${talkFeed()}<h2>Places to visit</h2><p class="sub">Drive times are rough, from the cabin in Basye. Tap Directions to open your maps app.</p>
-  <div class="chips" style="margin-top:6px"><button class="chip ${placeSort==="near"?"on":""}" data-sort="near" style="--x:#ff9f43">\u{1F697} Closest first</button><button class="chip ${placeSort==="type"?"on":""}" data-sort="type">\u{1F4CB} By type</button></div>
-  <div class="chips" style="margin:6px 0 14px"><button class="chip ${placeFilter==="all"?"on":""}" data-f="all">All</button>${Object.entries(CAT).map(([k,c])=>`<button class="chip ${placeFilter===k?"on":""}" data-f="${k}" style="--x:${c.c}">${c.e} ${c.n}</button>`).join("")}</div>
+  ${placePicker()}
   ${cabinCard()}<div class="grid">${list.map(placeCard).join("")}</div>
   <h2 style="margin-top:22px">Quick facts</h2><div class="facts">${FACTS.map(f=>`<div class="fc" style="--x:${f.c}"><b>${f.b}</b><span>${esc(f.t)}</span></div>`).join("")}</div>`;
   {const ce=$("#cabinEdit");if(ce)ce.onclick=cabinEdit}
-  $("#view").querySelectorAll("[data-sort]").forEach(b=>b.onclick=()=>{placeSort=b.dataset.sort;store.set("sort",placeSort);VIEWS.places()});
-  $("#view").querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{placeFilter=b.dataset.f;VIEWS.places()});
+  $("#pickBtn").onclick=e=>{e.stopPropagation();const m=$("#pickMenu");m.hidden=!m.hidden;$("#pickBtn").setAttribute("aria-expanded",!m.hidden)};
+  $("#pickMenu").querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{const [s,f]=b.dataset.pick.split(":");
+    if(s==="eat"){eatFilter="all";go("eat");return}placeSort=s;placeFilter=f;VIEWS.places()});
   $("#view").querySelectorAll("[data-map]").forEach(b=>b.onclick=()=>{focusId=b.dataset.map;go("map")});
-  $("#view").querySelectorAll("[data-ours]").forEach(b=>b.onclick=()=>{go("skyline");setTimeout(()=>{const a=$("#album");if(a)a.scrollIntoView({behavior:"smooth"})},60)});
+  $("#view").querySelectorAll("[data-ours]").forEach(b=>b.onclick=()=>albumLightbox(album.items.filter(it=>it.place===b.dataset.ours),0));
 };
 
 /* ---------- map ---------- */
@@ -708,75 +587,30 @@ VIEWS.map=()=>{
   else m.fitBounds(L.latLngBounds([cabinLL(),...PLACES.map(p=>p.ll)]),{padding:[24,24]});
 };
 
-/* ---------- Skyline Drive gallery ---------- */
-/* ---------- our own trip album (album.php, behind the login; never in this public repo) ---------- */
+/* ---------- our own trip album (album.php, behind the login; never in this public repo) ----------
+   New photos go to the Trip Feed now; album photos already shared still join their place's card and its "Our photos" button. */
 let album=null;
 async function loadAlbum(){try{const r=await fetch("album.php",{credentials:"same-origin"});if(r.ok){album=await r.json();
   /* each album photo also gets a P entry, so it joins its place's card photos */
   album.items.forEach(it=>P["al"+it.id]={u:"album.php?id="+it.id,by:(rosterById[it.by]||{}).name||"Our trip",cap:it.cap||placeName(it.place),src:"album.php?id="+it.id})}}catch(e){}}
 const placeName=id=>{const pl=PLACES.find(p=>p.id===id);return pl?pl.n:"Around the trip"};
-function albumHTML(){
-  if(!online)return "";
-  const items=album?album.items:[],last=store.get("albPlace","");
-  const groups=[];items.forEach((it,k)=>{let g=groups.find(g=>g.place===it.place);if(!g)groups.push(g={place:it.place,list:[]});g.list.push(k)});
-  return `<div class="panel" id="album" style="margin:8px 0 20px"><h2 style="margin-top:0">\u{1F4F7} Our trip album</h2>
-  <p class="sub">Our own photos. Only people logged in to Ridge Games can see them. Pick where they were taken, then add as many as you like.</p>
-  <div class="acts" style="margin:10px 0 6px;align-items:center"><select id="albPlace" class="sel"><option value="">Around the trip</option>${PLACES.slice().sort((a,b)=>a.n.localeCompare(b.n)).map(p=>`<option value="${p.id}" ${p.id===last?"selected":""}>${esc(p.n)}</option>`).join("")}</select>
-  <label class="btn" style="cursor:pointer">\u{1F4E4} Add photos<input type="file" accept="image/*" multiple hidden id="albFile"></label></div>
-  ${items.length?groups.map(g=>`<div class="vgrp">${esc(placeName(g.place))}</div><div class="gallery">${g.list.map(k=>{const it=items[k],who=rosterById[it.by];
-    return `<figure data-a="${k}"><div class="ph"><img loading="lazy" src="album.php?id=${it.id}" alt="${esc(it.cap||placeName(it.place))}">${me&&(me.id===it.by||me.is_admin)?`<button class="cr del" data-del="${it.id}" title="Remove">\u2715</button>`:""}</div><figcaption>${esc(it.cap||placeName(it.place))}${talkCount("ph-al"+it.id)}${who?`<span style="color:var(--mut);font-weight:500"> \u00B7 ${esc(who.name)}</span>`:""}</figcaption></figure>`}).join("")}</div>`).join(""):`<p class="sub" style="margin-top:8px">No photos yet. Be the first!</p>`}</div>`;
-}
-/* Phones take huge photos: draw them at 1600px max into a JPEG, which also leaves the GPS location behind. */
-function shrinkPhoto(file){return new Promise(res=>{const u=URL.createObjectURL(file),im=new Image();
-  im.onload=()=>{const k=Math.min(1,1600/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement("canvas");c.width=Math.round(im.naturalWidth*k);c.height=Math.round(im.naturalHeight*k);
-    c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>res(b||file),"image/jpeg",.85)};
-  im.onerror=()=>{URL.revokeObjectURL(u);res(file)};im.src=u})}
-function wireAlbum(){
-  const el=$("#album");if(!el)return;
-  $("#albPlace").onchange=e=>store.set("albPlace",e.target.value);
-  $("#albFile").onchange=async e=>{const files=[...e.target.files];if(!files.length)return;const place=$("#albPlace").value;let ok=0;
-    for(let n=0;n<files.length;n++){toast(`Uploading ${n+1} of ${files.length}\u2026`);
-      try{const b=await shrinkPhoto(files[n]);const r=await fetch("album.php?place="+encodeURIComponent(place),{method:"POST",credentials:"same-origin",headers:{"X-RG":"1","Content-Type":b.type||"image/jpeg"},body:b});
-        const j=await r.json();if(!r.ok)throw new Error(j.error||"Could not upload.");ok++}catch(err){toast(err.message||"Could not upload.")}}
-    await loadAlbum();VIEWS.skyline();if(ok)toast(`${ok} photo${ok>1?"s":""} added \u{1F389}`)};
-  el.querySelectorAll("[data-del]").forEach(b=>b.onclick=async ev=>{ev.stopPropagation();if(!confirm("Remove this photo from the album?"))return;
-    try{const r=await fetch("album.php?del="+b.dataset.del,{method:"POST",credentials:"same-origin",headers:{"X-RG":"1"}});const j=await r.json();if(!r.ok)throw new Error(j.error);await loadAlbum();VIEWS.skyline()}catch(err){toast(err.message||"Could not remove.")}});
-  const items=album?album.items:[];
-  el.querySelectorAll("figure[data-a]").forEach(f=>f.onclick=()=>albumLightbox(+f.dataset.a));
-}
-function albumLightbox(i){lightboxItems(album.items.map(it=>({src:"album.php?id="+it.id,cap:it.cap||placeName(it.place),by:(rosterById[it.by]||{}).name||"the group",k:"ph-al"+it.id})),i)}
+function albumLightbox(items,i){lightboxItems(items.map(it=>({src:"album.php?id="+it.id,cap:it.cap||placeName(it.place),by:(rosterById[it.by]||{}).name||"the group",k:"ph-al"+it.id})),i)}
 
-VIEWS.skyline=()=>{
-  $("#view").innerHTML=`${albumHTML()}<h2>Shenandoah in pictures</h2><p class="sub">Overlooks, fall colors, sunsets, waterfalls and wildlife you might see on the trip. Tap any photo to see it big and swipe through.</p>
-  ${GALLERY_GROUPS.map(([t,ks])=>`<div class="vgrp">${esc(t)}</div><div class="gallery">${ks.map(k=>`<figure data-i="${GALLERY.indexOf(k)}">${photo(P[k],600)}<figcaption>${esc(P[k].cap)}${talkCount("ph-"+k)}</figcaption></figure>`).join("")}</div>`).join("")}
-  <h2 style="margin-top:22px">Tips for the drive</h2>
-  <div class="grid">
-    <div class="card"><div class="b"><h3>\u{1F39F}️ Entry</h3><p>The park charges an entrance fee per car (or use an America the Beautiful pass). There are four entrances: Front Royal (mile 0), Thornton Gap (31.5), Swift Run Gap (65.5) and Rockfish Gap (105).</p></div></div>
-    <div class="card"><div class="b"><h3>\u{1F4F5} Signal</h3><p>Cell service is spotty on the ridge. Download offline maps before you go, and agree on a meeting spot in case the group gets split up.</p></div></div>
-    <div class="card"><div class="b"><h3>\u{1F305} Best light</h3><p>Sunrise from the east-facing overlooks and sunset from the west-facing ones. Big Meadows is great for stars after dark.</p></div></div>
-  </div>`;
-  $("#view").querySelectorAll("figure[data-i]").forEach(f=>f.onclick=e=>{if(e.target.closest("a"))return;lightbox(+f.dataset.i)});
-  wireAlbum();
-};
-function lightbox(i){lightboxItems(GALLERY.map(k=>{const p=P[k];return {src:img(p,1600),cap:p.cap,by:p.by||"Wikimedia Commons",href:page(p),k:"ph-"+k}}),i)}
 function lightboxItems(list,i){
   const d=document.createElement("div");d.className="lb";
   const draw=()=>{const p=list[i];d.innerHTML=`<button class="pill x">Close \u2715</button>${list.length>1?`<button class="pill nav prev">\u2039</button><button class="pill nav next">\u203A</button>`:""}
     <div><img src="${esc(p.src)}" alt="${esc(p.cap)}"><div class="cap">${esc(p.cap)}<br>${p.href?`<a href="${esc(p.href)}" target="_blank" rel="noopener">Photo: ${esc(p.by)}</a>`:`<a>Photo: ${esc(p.by)}</a>`}</div>${p.k?talkBar(p.k):""}</div>`;
-    d.querySelector(".x").onclick=()=>{d.remove();if(tab==="skyline"&&window.Talk&&Talk.data)VIEWS.skyline()};
+    d.querySelector(".x").onclick=()=>d.remove();
     if(list.length>1){d.querySelector(".prev").onclick=()=>{i=(i+list.length-1)%list.length;draw()};d.querySelector(".next").onclick=()=>{i=(i+1)%list.length;draw()}}};
   draw();d.onclick=e=>{if(e.target===d)d.remove()};document.body.appendChild(d);
 }
 
 /* ---------- history ---------- */
 VIEWS.history=()=>{
-  $("#view").innerHTML=`<h2>History of the Shenandoah</h2><p class="sub">From the first people to the park you will visit. Read it, then try the History quiz.</p>
-  <div class="tl">${HISTORY.map(h=>`<div class="ev" id="hi-${slug(h.t)}" style="--x:${h.c}"><div class="yr">${esc(h.y)}</div><h3>${esc(h.t)}</h3><p>${esc(h.d)}</p>${h.p?`<img loading="lazy" src="${img(P[h.p],800)}" alt="${esc(P[h.p].cap)}" onerror="this.nextElementSibling.remove();this.remove()"><a class="cr" href="${page(P[h.p])}" target="_blank" rel="noopener">${esc(P[h.p].cap)}. Photo: ${esc(P[h.p].by||"Wikimedia Commons")}</a>`:""}${talkBar("hi-"+slug(h.t))}</div>`).join("")}</div>
-  <div style="margin-top:16px"><button class="btn big" id="toQuiz">\u{1F3C6} Take the History quiz</button></div>`;
-  $("#toQuiz").onclick=()=>{quiz.set="history";go("quiz")};
+  $("#view").innerHTML=`<h2>History of the Shenandoah</h2><p class="sub">From the first people to the park you will visit.</p>
+  <div class="tl">${HISTORY.map(h=>`<div class="ev" id="hi-${slug(h.t)}" style="--x:${h.c}"><div class="yr">${esc(h.y)}</div><h3>${esc(h.t)}</h3><p>${esc(h.d)}</p>${h.p?`<img loading="lazy" src="${img(P[h.p],800)}" alt="${esc(P[h.p].cap)}" onerror="this.nextElementSibling.remove();this.remove()"><a class="cr" href="${page(P[h.p])}" target="_blank" rel="noopener">${esc(P[h.p].cap)}. Photo: ${esc(P[h.p].by||"Wikimedia Commons")}</a>`:""}${talkBar("hi-"+slug(h.t))}</div>`).join("")}</div>`;
 };
 
-/* ---------- videos ---------- */
 /* ---------- places to eat ---------- */
 let eatFilter="bfast";
 VIEWS.eat=()=>{
@@ -795,98 +629,8 @@ VIEWS.eat=()=>{
   $("#view").querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{eatFilter=b.dataset.m;VIEWS.eat()});
 };
 
-VIEWS.videos=()=>{
-  $("#view").innerHTML=`<h2>Videos</h2><p class="sub">Watch before the trip to pick your favorites. Each one opens on YouTube.</p>
-  ${VIDEOS.map(g=>`<div class="vgrp">${esc(g.g)}</div><div class="vids">${g.items.map(v=>`<div class="vid" id="vid-${v.id}"><a href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener"><div class="ph"><img loading="lazy" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg" alt=""><div class="play"><b>▶</b></div></div><div class="b"><h3>${esc(v.t)}</h3><span>${esc(v.s)}</span></div></a>${talkBar("vid-"+v.id)}</div>`).join("")}</div>`).join("")}`;
-};
-
-/* ---------- quiz (solo or pass-the-phone) ---------- */
-const COLORS=["#2ec4b6","#ffd23f","#ff7b6b","#6fc04a","#5cc8ee","#b392f0","#ff9f43","#f78fb3","#a3e635"];
-let roster=["Raffael","Rasha","Rami","Yara","Yazan","Rose","Sako","Sofia","Jacob"].map((n,i)=>({name:n,color:COLORS[i]}));
+/* ---------- who is logged in ---------- */
 let me=null,rosterById={};
-const quiz={set:"skyline",players:[],rounds:5,state:null};
-let tmr=null;function stopTimer(){if(tmr){clearInterval(tmr);tmr=null}}
-VIEWS.quiz=()=>{
-  if(quiz.state)return quizTurn();
-  if(!quiz.players.length&&me)quiz.players=[me];
-  const best=store.get("best",{});
-  $("#view").innerHTML=`<div class="panel"><h2>\u{1F3C6} Shenandoah Quiz</h2><p class="sub">Play alone or pass the phone around. 15 seconds per question, faster answers score more.</p>
-  <div class="lbl">Pick a topic</div>
-  <div class="qsets">${Object.entries(QUIZ).map(([k,s])=>`<button class="qset ${quiz.set===k?"on":""}" data-s="${k}" style="--x:${s.c}"><span class="e">${s.e}</span><b>${s.n}</b><span>${s.q.length} questions${best[k]!=null?` · your best ${best[k]}`:""}</span></button>`).join("")}
-  <button class="qset ${quiz.set==="mix"?"on":""}" data-s="mix" style="--x:#ff9f43"><span class="e">\u{1F3B2}</span><b>Mix it up</b><span>Random from every topic${best.mix!=null?` · your best ${best.mix}`:""}</span></button></div>
-  <div class="lbl">Who's playing? (tap to add)</div>
-  <div class="chips">${roster.map(p=>`<button class="chip ${quiz.players.some(q=>q.name===p.name)?"on":""}" data-p="${esc(p.name)}" style="--x:${p.color}">${esc(p.name)}</button>`).join("")}</div>
-  <div class="lbl">Questions each</div>
-  <div class="chips">${[3,5,8].map(n=>`<button class="chip ${quiz.rounds===n?"on":""}" data-r="${n}">${n}</button>`).join("")}</div>
-  <div style="margin-top:20px"><button class="btn big" id="start">Start quiz</button></div></div>`;
-  const v=$("#view");
-  v.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{quiz.set=b.dataset.s;VIEWS.quiz()});
-  v.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{const p=roster.find(r=>r.name===b.dataset.p),i=quiz.players.findIndex(q=>q.name===p.name);i>=0?quiz.players.splice(i,1):quiz.players.push(p);VIEWS.quiz()});
-  v.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{quiz.rounds=+b.dataset.r;VIEWS.quiz()});
-  $("#start").onclick=startQuiz;
-};
-function startQuiz(){
-  const players=quiz.players.length?quiz.players:[{name:"You",color:"#2ec4b6"}];
-  const pool=quiz.set==="mix"?Object.values(QUIZ).flatMap(s=>s.q):QUIZ[quiz.set].q;
-  const need=players.length*quiz.rounds;let qs=[];while(qs.length<need)qs=qs.concat(shuffle(pool));
-  quiz.state={players:players.map(p=>({...p,score:0,right:0})),qs:qs.slice(0,need),i:0,phase:"pass"};
-  if(players.length===1)quiz.state.phase="ask";
-  quizTurn();
-}
-function quizTurn(){
-  const s=quiz.state;stopTimer();
-  if(s.i>=s.qs.length)return quizEnd();
-  const pl=s.players[s.i%s.players.length],round=Math.floor(s.i/s.players.length)+1,[q,opts,ans,why]=s.qs[s.i];
-  const head=`<div class="qhead"><span class="turn"><span class="dot" style="--x:${pl.color}"></span>${esc(pl.name)}</span><span style="color:var(--mut);font-weight:600">Question ${round} of ${quiz.rounds} · ${pl.score} pts</span></div>`;
-  if(s.phase==="pass"){
-    $("#view").innerHTML=`<div class="panel center">${head}<p class="big" style="margin-top:26px">Pass the phone to<br><span style="color:${pl.color}">${esc(pl.name)}</span></p><p class="sub">No peeking, everyone else!</p><button class="btn big" id="ready">I'm ready</button>
-    <div style="margin-top:18px"><button class="btn ghost" id="quit">Quit quiz</button></div></div>`;
-    $("#ready").onclick=()=>{s.phase="ask";quizTurn()};$("#quit").onclick=()=>{quiz.state=null;VIEWS.quiz()};return;
-  }
-  const order=shuffle(opts.map((o,k)=>k));
-  $("#view").innerHTML=`<div class="panel">${head}<div class="timer"><i id="bar"></i></div><div class="q">${esc(q)}</div>
-  <div class="opts">${order.map(k=>`<button class="opt" data-k="${k}">${esc(opts[k])}</button>`).join("")}</div><div id="after"></div></div>`;
-  const T=15000,t0=Date.now();let done=false;
-  const finish=k=>{if(done)return;done=true;stopTimer();
-    const left=Math.max(0,T-(Date.now()-t0)),ok=k===ans;
-    $("#view").querySelectorAll(".opt").forEach(b=>{b.disabled=true;const bk=+b.dataset.k;if(bk===ans)b.classList.add("ok");else if(bk===k)b.classList.add("no")});
-    let pts=0;if(ok){pts=100+Math.round(left/T*100);pl.score+=pts;pl.right++}
-    const last=s.i+1>=s.qs.length,nextPl=s.players[(s.i+1)%s.players.length];
-    $("#after").innerHTML=`<div class="why">${ok?`✅ <b>+${pts} points!</b> `:k==null?"⏰ Time's up! ":"❌ Not quite. "}${why}</div>
-    <div style="margin-top:14px"><button class="btn big" id="next">${last?"See results":s.players.length>1?`Next: ${esc(nextPl.name)}`:"Next question"}</button></div>`;
-    if(ok&&left>T*.7)toast(["Lightning fast! ⚡","Nailed it! \u{1F3AF}","Park ranger level! \u{1F332}"][Math.random()*3|0]);
-    $("#next").onclick=()=>{s.i++;s.phase=s.players.length>1?"pass":"ask";quizTurn()};
-  };
-  $("#view").querySelectorAll(".opt").forEach(b=>b.onclick=()=>finish(+b.dataset.k));
-  tmr=setInterval(()=>{const f=1-(Date.now()-t0)/T;const bar=$("#bar");if(bar)bar.style.transform=`scaleX(${Math.max(0,f)})`;if(f<=0)finish(null)},100);
-}
-function quizEnd(){
-  const s=quiz.state,ps=s.players.slice().sort((a,b)=>b.score-a.score),top=ps[0];
-  if(s.players.length===1){const best=store.get("best",{});if(best[quiz.set]==null||top.score>best[quiz.set]){best[quiz.set]=top.score;store.set("best",best)}}
-  confetti();
-  const medal=["\u{1F947}","\u{1F948}","\u{1F949}"];
-  const title=s.players.length>1?`${esc(top.name)} wins!`:top.right===quiz.rounds?"Perfect score!":top.right>=quiz.rounds*.6?"Great job!":"Nice try!";
-  $("#view").innerHTML=`<div class="panel center"><p class="big">\u{1F451} ${title}</p><p class="sub">${QUIZ[quiz.set]?QUIZ[quiz.set].n:"Mixed"} quiz</p>
-  <div class="board" style="text-align:left">${ps.map((p,i)=>`<div class="row ${i===0?"first":""}"><span class="n">${medal[i]||i+1}</span><span class="dot" style="--x:${p.color}"></span><span class="nm">${esc(p.name)}</span><span style="color:var(--mut);font-size:13px">${p.right}/${quiz.rounds} right</span><span class="s">${p.score}</span></div>`).join("")}</div>
-  <div class="acts" style="justify-content:center"><button class="btn big" id="again">Play again</button><button class="btn big ghost" id="menu">Pick another topic</button></div></div>`;
-  $("#again").onclick=()=>{quiz.players=s.players.map(({name,color})=>({name,color}));startQuiz()};
-  $("#menu").onclick=()=>{quiz.state=null;VIEWS.quiz()};
-}
-
-/* ---------- road-trip bingo ---------- */
-function bingoCard(){let c=store.get("bingo",null);if(!c||c.cells.length!==25){const items=shuffle(BINGO.slice()).slice(0,24);items.splice(12,0,["\u{1F3D4}️","FREE"]);c={cells:items,on:[12]};store.set("bingo",c)}return c}
-const LINES=[...[0,1,2,3,4].map(r=>[0,1,2,3,4].map(c=>r*5+c)),...[0,1,2,3,4].map(c=>[0,1,2,3,4].map(r=>r*5+c)),[0,6,12,18,24],[4,8,12,16,20]];
-VIEWS.bingo=()=>{
-  const c=bingoCard(),on=new Set(c.on);
-  const wins=LINES.filter(l=>l.every(i=>on.has(i))),winCells=new Set(wins.flat());
-  $("#view").innerHTML=`<div class="panel"><h2>\u{1F3B2} Skyline Drive Bingo</h2><p class="sub">Tap a square when you spot it on the trip. Five in a row (across, down or diagonal) wins! Everyone gets their own card on their phone.</p>
-  <div class="bingo">${c.cells.map(([e,t],i)=>`<button class="sq ${i===12?"free":""} ${on.has(i)&&i!==12?"on":""} ${winCells.has(i)?"win":""}" data-i="${i}"><span class="e">${e}</span>${esc(t)}</button>`).join("")}</div>
-  <p class="center" style="font:600 18px var(--play);margin:14px 0 4px">${wins.length?`\u{1F389} BINGO${wins.length>1?" x"+wins.length:""}! Shout it out!`:`${on.size-1} of 24 spotted`}</p>
-  <div class="acts" style="justify-content:center"><button class="btn ghost" id="newcard">New card</button></div></div>`;
-  $("#view").querySelectorAll(".sq").forEach(b=>b.onclick=()=>{const i=+b.dataset.i;if(i===12)return;const before=LINES.filter(l=>l.every(j=>on.has(j))).length;on.has(i)?on.delete(i):on.add(i);c.on=[...on];store.set("bingo",c);const after=LINES.filter(l=>l.every(j=>on.has(j))).length;if(after>before){confetti();toast("BINGO! \u{1F389}")}VIEWS.bingo()});
-  $("#newcard").onclick=()=>{if(confirm("Start a fresh bingo card?")){store.set("bingo",null);VIEWS.bingo()}};
-};
-
 /* ---------- start: players log in like the rest of the site; the preview works without a server ---------- */
 async function boot(){
   drawTabs();VIEWS[tab]();
@@ -894,13 +638,13 @@ async function boot(){
   try{
     const r=await RG.login();
     me={id:r.me.id,name:r.me.name,color:r.me.color,is_admin:+r.me.is_admin===1};
-    if(r.state&&r.state.players){roster=r.state.players.map(p=>({name:p.name,color:p.color}));r.state.players.forEach(p=>rosterById[p.id]=p)}
+    if(r.state&&r.state.players)r.state.players.forEach(p=>rosterById[p.id]=p);
     const w=$("#who");w.hidden=false;w.innerHTML=RG.av(r.me,22)+" "+esc(r.me.name);
     online=true;
     try{const c=await fetch("cabin.php",{credentials:"same-origin"});if(c.ok)cabinInfo=await c.json()}catch(e){}
     try{const m=await fetch("tripmap.php?info=1",{credentials:"same-origin"});if(m.ok)parkMap=await m.json()}catch(e){}
     await loadAlbum();if(window.Talk){Talk.setMe(me,rosterById);await Talk.load()}
-    if(tab!=="quiz"||!quiz.state)VIEWS[tab]();
+    VIEWS[tab]();
   }catch(e){/* no game server (file or preview): the guide still works */}
 }
 boot();
