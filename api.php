@@ -256,6 +256,14 @@ case 'me_update': // a player edits their own profile or password
 case 'admin_players':
   need_admin(); out(['players' => players_public(true)]);
 
+case 'password_all': // one shared password for every player who isn't an admin
+  if (!$post) fail('Use POST.');
+  need_admin(); $pw = (string)(body()['password'] ?? '');
+  if (mb_strlen($pw) < 4) fail('Use at least 4 characters.');
+  $n = db()->prepare('UPDATE players SET pass_hash=? WHERE is_admin=0');
+  $n->execute([password_hash($pw, PASSWORD_DEFAULT)]);
+  out(['ok' => 1, 'changed' => $n->rowCount(), 'players' => players_public(true)]);
+
 case 'player_save':
   if (!$post) fail('Use POST.');
   $adm = need_admin(); $b = body();

@@ -242,7 +242,8 @@ function drawPlayers(){
   const el=document.getElementById("t-pl");
   el.innerHTML=`<div class="panel"><h2>Players and passwords</h2><p class="hint">Each player logs in with their own password. Players without a password can't log in yet.</p>
   ${players.map(p=>`<div class="pp" style="${p.active?"":"opacity:.5"}">${av(p,40)}<div><b>${esc(p.name)}</b> ${p.is_admin?`<span class="tag" style="font-size:11px;font-weight:800;padding:2px 7px;border-radius:99px;background:#1d3d3a;color:#7ee8f0">ADMIN</span>`:""}<div class="sub">${p.has_pass?"Has a password":"No password yet"}${p.active?"":" · hidden"}</div></div><button class="btn sm" data-pe="${p.id}">Edit</button></div>`).join("")}
-  <div class="actions"><button class="btn main" id="addp">＋ Add player</button></div></div>`;
+  <div class="actions"><button class="btn" id="allpw">Same password for everyone</button><button class="btn main" id="addp">＋ Add player</button></div></div>`;
+  el.querySelector("#allpw").onclick=async()=>{const pw=prompt("One password for every player (admins keep their own):");if(pw==null)return;try{const r=await api("password_all",{password:pw});players=r.players;drawPlayers();toast(`Set for ${r.changed} players.`)}catch(x){toast(x.message)}};
   el.querySelectorAll("[data-pe]").forEach(b=>b.onclick=()=>editPlayer(players.find(p=>p.id===b.dataset.pe)));
   el.querySelector("#addp").onclick=()=>editPlayer(null);
 }
