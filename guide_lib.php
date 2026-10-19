@@ -1,5 +1,5 @@
 <?php
-/* Shared by the guide's private files (cabin.php, tripmap.php): JSON replies, the data folder and the logged-in check.
+/* Shared by the guide's private files (cabin.php, tripmap.php, album.php): JSON replies, the data folder and the logged-in check.
    Uses the same data folder and session cookie as api.php, so a player logged in to the games is logged in here. */
 
 declare(strict_types=1);
@@ -40,4 +40,10 @@ function guide_login(): string {
   $s = $pdo->prepare('SELECT 1 FROM players WHERE id=? AND active=1'); $s->execute([$pid]);
   if (!$s->fetchColumn()) fail('Please log in.', 401);
   return (string)$pid;
+}
+
+function guide_is_admin(string $pid): bool {
+  $pdo = new PDO('sqlite:' . data_dir() . '/ridge.sqlite', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+  $s = $pdo->prepare('SELECT is_admin FROM players WHERE id=?'); $s->execute([$pid]);
+  return (int)$s->fetchColumn() === 1;
 }

@@ -72,6 +72,8 @@ h2{margin:6px 0 2px;font:600 26px var(--play)}
 .ph.art{background:linear-gradient(150deg,color-mix(in srgb,var(--x) 70%,#1b1d22),color-mix(in srgb,var(--x) 25%,#1b1d22));display:grid;place-items:center}
 .ph.art svg{position:absolute;inset:0;width:100%;height:100%}
 .ph.art .em{position:relative;font-size:56px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.35))}
+.gallery .del{top:8px;right:8px;bottom:auto;border:0;cursor:pointer;font-size:13px;padding:4px 9px}
+.sel{padding:11px 12px;border-radius:14px;border:0;background:var(--well);color:var(--fg);font:600 14px var(--font);box-shadow:var(--in-sh);max-width:100%}
 .gallery figcaption{padding:10px 12px;font-size:13px;font-weight:600}
 .lb{position:fixed;inset:0;z-index:60;background:rgba(10,11,14,.94);display:grid;place-items:center;padding:16px}
 .lb img{max-width:100%;max-height:78vh;border-radius:16px}
@@ -181,6 +183,9 @@ const store={get(k,d){try{const v=localStorage.getItem("rg-guide-"+k);return v?J
 const img=(p,w=900)=>p.u?p.u.replace(/([?&](?:width|maxWidth|maxwidth)=)\d+/,"$1"+w):"https://commons.wikimedia.org/wiki/Special:FilePath/"+encodeURIComponent(p.f)+"?width="+w;
 const page=p=>p.src||"https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(p.f.replace(/ /g,"_"));
 const P={
+  sakoPool:{u:"img/luray-mirror-pool.jpg",by:"Sako",cap:"The mirror pool in Luray Caverns",src:"img/luray-mirror-pool.jpg"},
+  sakoReflect:{u:"img/luray-reflections.jpg",by:"Sako",cap:"Stalactites reflected in still water",src:"img/luray-reflections.jpg"},
+  sakoForm:{u:"img/luray-formations.jpg",by:"Sako",cap:"Looking down on the formations",src:"img/luray-formations.jpg"},
   sandy:{f:"2016-10-24 13 08 17 View north from the Sandy Bottom Overlook along Shenandoah National Park's Skyline Drive in Rockingham County, Virginia.jpg",by:"Famartin",cap:"Sandy Bottom Overlook in fall"},
   hensley:{f:"2016-10-25 09 47 24 View north-northwest from the Hensley Hollow Overlook along Shenandoah National Park's Skyline Drive in Rockingham County, Virginia.jpg",by:"Famartin",cap:"Hensley Hollow Overlook"},
   rockytop:{f:"2016-10-24 12 22 33 View west from the Rockytop Overlook along Shenandoah National Park's Skyline Drive in Rockingham County, Virginia.jpg",by:"Famartin",cap:"Rockytop Overlook, looking west"},
@@ -318,7 +323,7 @@ const PLACES=[
   {id:"blackrock",dr:120,n:"Blackrock Summit",cat:"hike",ll:[38.2210,-78.7360],p:"blackrock",mile:"Mile 84.4",time:"About 1 hour",lvl:"Easy",
    d:"An easy 1-mile loop to a giant pile of dark boulders with huge views west. One of the best sunset spots in the south of the park.",
    f:"The jumbled boulders are called talus: rock that broke off the cliffs over thousands of years of freezing and thawing."},
-  {id:"luray",dr:55,n:"Luray Caverns",cat:"cave",ll:[38.6643,-78.4836],p:"luray",mile:"Luray, 15 min from Thornton Gap",time:"About 1.5 hours",lvl:"Easy",
+  {id:"luray",dr:55,n:"Luray Caverns",cat:"cave",ll:[38.6643,-78.4836],p:"sakoPool",mile:"Luray, 15 min from Thornton Gap",time:"About 1.5 hours",lvl:"Easy",
    d:"The largest cave system in the eastern US. A paved walking tour takes you past giant stalactites, Dream Lake and the Great Stalacpipe Organ.",
    f:"The cave stays about 54°F all year, so bring a light jacket even in summer."},
   {id:"dickey",dr:75,n:"Dickey Ridge Visitor Center",cat:"history",ll:[38.8707,-78.2034],p:"gimlet",mile:"Mile 4.6",time:"30 minutes",lvl:"Easy",
@@ -361,12 +366,13 @@ const fmtDr=m=>m<60?m+" min":Math.floor(m/60)+" h"+(m%60?" "+m%60+" min":"");
 
 /* Skyline Drive photo gallery */
 const GALLERY_GROUPS=[
+  ["Inside Luray Caverns",["sakoReflect","sakoForm","luray","wish"]],
   ["Overlooks along the drive",["hogwallow","rangeView","pinnacles","franklin","crescent","hogback","thePoint","hazeltop","sandy","hensley","rockytop","hazel","thorofare","ragFromSD"]],
   ["Fall colors",["fallTile","fallFalls","fallPoplar","banner","whiteoakFall","sd2005"]],
   ["Sunrise, sunset and stars",["sunrise","blackrockSunset","stars","peaks","rockyOvl"]],
   ["Summits and waterfalls",["hawksbillUpper","marysSummit","stonyHiker","whiteoakLow","meadowsView"]],
   ["Wildlife and wildflowers",["bearRoad","bearWet","deer","bear","ladyslipper","hepatica"]],
-  ["Every season",["winter","marysTunnelC","wish"]]
+  ["Every season",["winter","marysTunnelC"]]
 ];
 const GALLERY=GALLERY_GROUPS.flatMap(g=>g[1]);
 
@@ -550,7 +556,7 @@ function placeCard(pl){const c=CAT[pl.cat],p=P[pl.p];
   <div class="b"><h3>${esc(pl.n)}</h3>
   <div class="meta"><span class="dr">\u{1F697} ${fmtDr(pl.dr)} from the cabin</span><span>${esc(pl.mile)}</span><span>⏱ ${esc(pl.time)}</span><span>${pl.lvl==="Hard"?"\u{1F525}":pl.lvl==="Moderate"?"\u{1F4AA}":"\u{1F642}"} ${esc(pl.lvl)}</span></div>
   <p>${esc(pl.d)}</p><p class="fact">\u{1F4A1} ${esc(pl.f)}</p>
-  <div class="acts"><a class="btn" href="${dirs(pl.ll)}" target="_blank" rel="noopener">Directions</a><button class="btn ghost" data-map="${pl.id}">Show on map</button></div></div></article>`}
+  <div class="acts"><a class="btn" href="${dirs(pl.ll)}" target="_blank" rel="noopener">Directions</a><button class="btn ghost" data-map="${pl.id}">Show on map</button>${(()=>{const n=album?album.items.filter(it=>it.place===pl.id).length:0;return n?`<button class="btn ghost" data-ours="1">\u{1F4F7} Our photos (${n})</button>`:""})()}</div></div></article>`}
 const VIEWS={};
 VIEWS.places=()=>{
   const list=PLACES.filter(p=>placeFilter==="all"||p.cat===placeFilter).slice();if(placeSort==="near")list.sort((a,b)=>a.dr-b.dr);
@@ -563,6 +569,7 @@ VIEWS.places=()=>{
   $("#view").querySelectorAll("[data-sort]").forEach(b=>b.onclick=()=>{placeSort=b.dataset.sort;store.set("sort",placeSort);VIEWS.places()});
   $("#view").querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{placeFilter=b.dataset.f;VIEWS.places()});
   $("#view").querySelectorAll("[data-map]").forEach(b=>b.onclick=()=>{focusId=b.dataset.map;go("map")});
+  $("#view").querySelectorAll("[data-ours]").forEach(b=>b.onclick=()=>{go("skyline");setTimeout(()=>{const a=$("#album");if(a)a.scrollIntoView({behavior:"smooth"})},60)});
 };
 
 /* ---------- map ---------- */
@@ -601,8 +608,42 @@ VIEWS.map=()=>{
 };
 
 /* ---------- Skyline Drive gallery ---------- */
+/* ---------- our own trip album (album.php, behind the login; never in this public repo) ---------- */
+let album=null;
+async function loadAlbum(){try{const r=await fetch("album.php",{credentials:"same-origin"});if(r.ok)album=await r.json()}catch(e){}}
+const placeName=id=>{const pl=PLACES.find(p=>p.id===id);return pl?pl.n:"Around the trip"};
+function albumHTML(){
+  if(!online)return "";
+  const items=album?album.items:[],last=store.get("albPlace","");
+  const groups=[];items.forEach((it,k)=>{let g=groups.find(g=>g.place===it.place);if(!g)groups.push(g={place:it.place,list:[]});g.list.push(k)});
+  return `<div class="panel" id="album" style="margin:8px 0 20px"><h2 style="margin-top:0">\u{1F4F7} Our trip album</h2>
+  <p class="sub">Our own photos. Only people logged in to Ridge Games can see them. Pick where they were taken, then add as many as you like.</p>
+  <div class="acts" style="margin:10px 0 6px;align-items:center"><select id="albPlace" class="sel"><option value="">Around the trip</option>${PLACES.slice().sort((a,b)=>a.n.localeCompare(b.n)).map(p=>`<option value="${p.id}" ${p.id===last?"selected":""}>${esc(p.n)}</option>`).join("")}</select>
+  <label class="btn" style="cursor:pointer">\u{1F4E4} Add photos<input type="file" accept="image/*" multiple hidden id="albFile"></label></div>
+  ${items.length?groups.map(g=>`<div class="vgrp">${esc(placeName(g.place))}</div><div class="gallery">${g.list.map(k=>{const it=items[k],who=rosterById[it.by];
+    return `<figure data-a="${k}"><div class="ph"><img loading="lazy" src="album.php?id=${it.id}" alt="${esc(it.cap||placeName(it.place))}">${me&&(me.id===it.by||me.is_admin)?`<button class="cr del" data-del="${it.id}" title="Remove">\u2715</button>`:""}</div><figcaption>${esc(it.cap||placeName(it.place))}${who?`<span style="color:var(--mut);font-weight:500"> \u00B7 ${esc(who.name)}</span>`:""}</figcaption></figure>`}).join("")}</div>`).join(""):`<p class="sub" style="margin-top:8px">No photos yet. Be the first!</p>`}</div>`;
+}
+/* Phones take huge photos: draw them at 1600px max into a JPEG, which also leaves the GPS location behind. */
+function shrinkPhoto(file){return new Promise(res=>{const u=URL.createObjectURL(file),im=new Image();
+  im.onload=()=>{const k=Math.min(1,1600/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement("canvas");c.width=Math.round(im.naturalWidth*k);c.height=Math.round(im.naturalHeight*k);
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>res(b||file),"image/jpeg",.85)};
+  im.onerror=()=>{URL.revokeObjectURL(u);res(file)};im.src=u})}
+function wireAlbum(){
+  const el=$("#album");if(!el)return;
+  $("#albPlace").onchange=e=>store.set("albPlace",e.target.value);
+  $("#albFile").onchange=async e=>{const files=[...e.target.files];if(!files.length)return;const place=$("#albPlace").value;let ok=0;
+    for(let n=0;n<files.length;n++){toast(`Uploading ${n+1} of ${files.length}\u2026`);
+      try{const b=await shrinkPhoto(files[n]);const r=await fetch("album.php?place="+encodeURIComponent(place),{method:"POST",credentials:"same-origin",headers:{"X-RG":"1","Content-Type":b.type||"image/jpeg"},body:b});
+        const j=await r.json();if(!r.ok)throw new Error(j.error||"Could not upload.");ok++}catch(err){toast(err.message||"Could not upload.")}}
+    await loadAlbum();VIEWS.skyline();if(ok)toast(`${ok} photo${ok>1?"s":""} added \u{1F389}`)};
+  el.querySelectorAll("[data-del]").forEach(b=>b.onclick=async ev=>{ev.stopPropagation();if(!confirm("Remove this photo from the album?"))return;
+    try{const r=await fetch("album.php?del="+b.dataset.del,{method:"POST",credentials:"same-origin",headers:{"X-RG":"1"}});const j=await r.json();if(!r.ok)throw new Error(j.error);await loadAlbum();VIEWS.skyline()}catch(err){toast(err.message||"Could not remove.")}});
+  const items=album?album.items:[];
+  el.querySelectorAll("figure[data-a]").forEach(f=>f.onclick=()=>lightboxItems(items.map(it=>({src:"album.php?id="+it.id,cap:it.cap||placeName(it.place),by:(rosterById[it.by]||{}).name||"the group"})),+f.dataset.a));
+}
+
 VIEWS.skyline=()=>{
-  $("#view").innerHTML=`<h2>Shenandoah in pictures</h2><p class="sub">Overlooks, fall colors, sunsets, waterfalls and wildlife you might see on the trip. Tap any photo to see it big and swipe through.</p>
+  $("#view").innerHTML=`${albumHTML()}<h2>Shenandoah in pictures</h2><p class="sub">Overlooks, fall colors, sunsets, waterfalls and wildlife you might see on the trip. Tap any photo to see it big and swipe through.</p>
   ${GALLERY_GROUPS.map(([t,ks])=>`<div class="vgrp">${esc(t)}</div><div class="gallery">${ks.map(k=>`<figure data-i="${GALLERY.indexOf(k)}">${photo(P[k],600)}<figcaption>${esc(P[k].cap)}</figcaption></figure>`).join("")}</div>`).join("")}
   <h2 style="margin-top:22px">Tips for the drive</h2>
   <div class="grid">
@@ -610,15 +651,16 @@ VIEWS.skyline=()=>{
     <div class="card"><div class="b"><h3>\u{1F4F5} Signal</h3><p>Cell service is spotty on the ridge. Download offline maps before you go, and agree on a meeting spot in case the group gets split up.</p></div></div>
     <div class="card"><div class="b"><h3>\u{1F305} Best light</h3><p>Sunrise from the east-facing overlooks and sunset from the west-facing ones. Big Meadows is great for stars after dark.</p></div></div>
   </div>`;
-  $("#view").querySelectorAll("figure").forEach(f=>f.onclick=e=>{if(e.target.closest("a"))return;lightbox(+f.dataset.i)});
+  $("#view").querySelectorAll("figure[data-i]").forEach(f=>f.onclick=e=>{if(e.target.closest("a"))return;lightbox(+f.dataset.i)});
+  wireAlbum();
 };
-function lightbox(i){
+function lightbox(i){lightboxItems(GALLERY.map(k=>{const p=P[k];return {src:img(p,1600),cap:p.cap,by:p.by||"Wikimedia Commons",href:page(p)}}),i)}
+function lightboxItems(list,i){
   const d=document.createElement("div");d.className="lb";
-  const draw=()=>{const p=P[GALLERY[i]];d.innerHTML=`<button class="pill x">Close ✕</button><button class="pill nav prev">‹</button><button class="pill nav next">›</button>
-    <div><img src="${img(p,1600)}" alt="${esc(p.cap)}"><div class="cap">${esc(p.cap)}<br><a href="${page(p)}" target="_blank" rel="noopener">Photo: ${esc(p.by||"Wikimedia Commons")} (tap for license)</a></div></div>`;
+  const draw=()=>{const p=list[i];d.innerHTML=`<button class="pill x">Close \u2715</button>${list.length>1?`<button class="pill nav prev">\u2039</button><button class="pill nav next">\u203A</button>`:""}
+    <div><img src="${esc(p.src)}" alt="${esc(p.cap)}"><div class="cap">${esc(p.cap)}<br>${p.href?`<a href="${esc(p.href)}" target="_blank" rel="noopener">Photo: ${esc(p.by)}</a>`:`<a>Photo: ${esc(p.by)}</a>`}</div></div>`;
     d.querySelector(".x").onclick=()=>d.remove();
-    d.querySelector(".prev").onclick=()=>{i=(i+GALLERY.length-1)%GALLERY.length;draw()};
-    d.querySelector(".next").onclick=()=>{i=(i+1)%GALLERY.length;draw()}};
+    if(list.length>1){d.querySelector(".prev").onclick=()=>{i=(i+list.length-1)%list.length;draw()};d.querySelector(".next").onclick=()=>{i=(i+1)%list.length;draw()}}};
   draw();d.onclick=e=>{if(e.target===d)d.remove()};document.body.appendChild(d);
 }
 
@@ -657,7 +699,7 @@ VIEWS.videos=()=>{
 /* ---------- quiz (solo or pass-the-phone) ---------- */
 const COLORS=["#2ec4b6","#ffd23f","#ff7b6b","#6fc04a","#5cc8ee","#b392f0","#ff9f43","#f78fb3","#a3e635"];
 let roster=["Raffael","Rasha","Rami","Yara","Yazan","Rose","Sako","Sofia","Jacob"].map((n,i)=>({name:n,color:COLORS[i]}));
-let me=null;
+let me=null,rosterById={};
 const quiz={set:"skyline",players:[],rounds:5,state:null};
 let tmr=null;function stopTimer(){if(tmr){clearInterval(tmr);tmr=null}}
 VIEWS.quiz=()=>{
@@ -747,12 +789,13 @@ async function boot(){
   if(!window.RG)return;
   try{
     const r=await RG.login();
-    me={name:r.me.name,color:r.me.color};
-    if(r.state&&r.state.players)roster=r.state.players.map(p=>({name:p.name,color:p.color}));
+    me={id:r.me.id,name:r.me.name,color:r.me.color,is_admin:+r.me.is_admin===1};
+    if(r.state&&r.state.players){roster=r.state.players.map(p=>({name:p.name,color:p.color}));r.state.players.forEach(p=>rosterById[p.id]=p)}
     const w=$("#who");w.hidden=false;w.innerHTML=RG.av(r.me,22)+" "+esc(r.me.name);
     online=true;
     try{const c=await fetch("cabin.php",{credentials:"same-origin"});if(c.ok)cabinInfo=await c.json()}catch(e){}
     try{const m=await fetch("tripmap.php?info=1",{credentials:"same-origin"});if(m.ok)parkMap=await m.json()}catch(e){}
+    await loadAlbum();
     if(tab!=="quiz"||!quiz.state)VIEWS[tab]();
   }catch(e){/* no game server (file or preview): the guide still works */}
 }
