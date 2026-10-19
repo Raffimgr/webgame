@@ -167,7 +167,7 @@ a.vid span{font-size:12.5px;color:var(--mut)}
 
   <main id="view"></main>
 
-  <p class="foot">Photos come from the National Park Service and USGS (public domain) and Wikimedia Commons. Tap a credit to see the source and license. Map data &copy; OpenStreetMap contributors. Videos open on YouTube and belong to their creators. Check <a href="https://www.nps.gov/shen/planyourvisit/conditions.htm" target="_blank" rel="noopener">park conditions</a> before you go.</p>
+  <p class="foot">Photos come from the National Park Service and USGS (public domain), Wikimedia Commons, and pictures Sako took or picked. Tap a credit to see the source and license. Map data &copy; OpenStreetMap contributors. Videos open on YouTube and belong to their creators. Check <a href="https://www.nps.gov/shen/planyourvisit/conditions.htm" target="_blank" rel="noopener">park conditions</a> before you go.</p>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -178,7 +178,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store={get(k,d){try{const v=localStorage.getItem("rg-guide-"+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem("rg-guide-"+k,JSON.stringify(v))}catch(e){}}};
 
-/* Photos: Wikimedia Commons files hotlinked by name (f), or public-domain National Park Service / USGS photos linked directly (u).
+/* Photos: Wikimedia Commons files hotlinked by name (f), or photos linked directly (u): public-domain NPS / USGS ones, or local copies in img/ (Sako's own and ones he picked).
    by = photographer or agency; the credit link opens the source page with the full credit and license. */
 const img=(p,w=900)=>p.u?p.u.replace(/([?&](?:width|maxWidth|maxwidth)=)\d+/,"$1"+w):"https://commons.wikimedia.org/wiki/Special:FilePath/"+encodeURIComponent(p.f)+"?width="+w;
 const page=p=>p.src||"https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(p.f.replace(/ /g,"_"));
@@ -186,6 +186,25 @@ const P={
   sakoPool:{u:"img/luray-mirror-pool.jpg",by:"Sako",cap:"The mirror pool in Luray Caverns",src:"img/luray-mirror-pool.jpg"},
   sakoReflect:{u:"img/luray-reflections.jpg",by:"Sako",cap:"Stalactites reflected in still water",src:"img/luray-reflections.jpg"},
   sakoForm:{u:"img/luray-formations.jpg",by:"Sako",cap:"Looking down on the formations",src:"img/luray-formations.jpg"},
+  bryceFall:{u:"img/bryce-fall-valley.jpg",by:"Shared by Sako",cap:"Fall color over the Bryce Resort valley",src:"img/bryce-fall-valley.jpg"},
+  lakeLaura:{u:"img/lake-laura.jpg",by:"Shared by Sako",cap:"Dinner set up by Lake Laura at Bryce",src:"img/lake-laura.jpg"},
+  orkneyAerial:{u:"img/orkney-springs.jpg",by:"Shared by Sako",cap:"Orkney Springs and its big white hotel from above",src:"img/orkney-springs.jpg"},
+  shrineMont:{u:"img/shrine-mont.jpg",by:"Shared by Sako",cap:"The outdoor stone chapel at Shrine Mont, Orkney Springs",src:"img/shrine-mont.jpg"},
+  chipsFryer:{u:"img/route11-chips.jpg",by:"Shared by Sako",cap:"Chips tumbling off the fryer at Route 11",src:"img/route11-chips.jpg"},
+  r11Counter:{u:"img/route11-counter.jpg",by:"Shared by Sako",cap:"The Route 11 shop counter, with the kitchen behind the windows",src:"img/route11-counter.jpg"},
+  r11Store:{u:"img/route11-store.jpg",by:"Shared by Sako",cap:"Inside the Route 11 chip store",src:"img/route11-store.jpg"},
+  woodstockTower:{u:"img/woodstock-tower.jpg",by:"Shared by Sako",cap:"Woodstock Tower on Massanutten Mountain",src:"img/woodstock-tower.jpg"},
+  meemsSide:{u:"img/meems-side.jpg",by:"Shared by Sako",cap:"The bridge rests on stone and concrete piers",src:"img/meems-side.jpg"},
+  meemsUnder:{u:"img/meems-under.jpg",by:"Shared by Sako",cap:"Under the bridge, over the North Fork of the Shenandoah",src:"img/meems-under.jpg"},
+  meemsInside:{u:"img/meems-inside.jpg",by:"Shared by Sako",cap:"Inside the covered bridge",src:"img/meems-inside.jpg"},
+  meemsPlaque:{u:"img/meems-plaque.jpg",by:"Shared by Sako",cap:"The plaque: Virginia's longest covered bridge, built 1892-93",src:"img/meems-plaque.jpg"},
+  stonySunset:{u:"img/stony-man-sunset.jpg",by:"Shared by Sako",cap:"Stony Man glowing at sunset, from Skyline Drive",src:"img/stony-man-sunset.jpg"},
+  skyCurve:{u:"img/skyline-curve.jpg",by:"Shared by Sako",cap:"A stone wall curve on Skyline Drive in fall",src:"img/skyline-curve.jpg"},
+  skyAerial:{u:"img/skyline-aerial.jpg",by:"Shared by Sako",cap:"The drive winding through fall color",src:"img/skyline-aerial.jpg"},
+  skyTrees:{u:"img/skyline-trees.jpg",by:"Shared by Sako",cap:"Driving under a tunnel of fall leaves",src:"img/skyline-trees.jpg"},
+  sky0303:{u:"img/skyline-0303.jpg",by:"Shared by Sako",cap:"Red and gold maples along the road",src:"img/skyline-0303.jpg"},
+  skyBend:{u:"img/skyline-bend.jpg",by:"Twenty20",cap:"A sweeping bend in October",src:"img/skyline-bend.jpg"},
+  skySummer:{u:"img/skyline-summer.jpg",by:"iStock / stanley45",cap:"The same road in summer green",src:"img/skyline-summer.jpg"},
   sandy:{f:"2016-10-24 13 08 17 View north from the Sandy Bottom Overlook along Shenandoah National Park's Skyline Drive in Rockingham County, Virginia.jpg",by:"Famartin",cap:"Sandy Bottom Overlook in fall"},
   hensley:{f:"2016-10-25 09 47 24 View north-northwest from the Hensley Hollow Overlook along Shenandoah National Park's Skyline Drive in Rockingham County, Virginia.jpg",by:"Famartin",cap:"Hensley Hollow Overlook"},
   rockytop:{f:"2016-10-24 12 22 33 View west from the Rockytop Overlook along Shenandoah National Park's Skyline Drive in Rockingham County, Virginia.jpg",by:"Famartin",cap:"Rockytop Overlook, looking west"},
@@ -199,7 +218,7 @@ const P={
   rag:{f:"Old Rag Mountain.jpg",cap:"Old Rag Mountain"},
   dark:{f:"Early Fall at Dark Hollow Falls (22028259442).jpg",cap:"Dark Hollow Falls"},
   rose:{f:"Rose river falls Shenandoha Virginia USA.jpg",cap:"Rose River Falls"},
-  luray:{f:"Luray Caverns, Dream Lake - mirror-lake of caverns (2015-05-09 14.01.21 by Stan Mouser).jpg",by:"Stan Mouser",cap:"Dream Lake, Luray Caverns"},
+  luray:{u:"img/luray-dream-lake.jpg",by:"Shared by Sako",cap:"Dream Lake, Luray Caverns",src:"img/luray-dream-lake.jpg"},
   wish:{f:"2018-04-28 16 28 28 The Wishing Well within Luray Caverns in Luray, Page County, Virginia.jpg",by:"Famartin",cap:"The Wishing Well, Luray Caverns"},
   lurayEntrance:{f:"2018-04-28 15 38 42 Original 1878 entrance to Luray Caverns in Luray, Page County, Virginia.jpg",by:"Famartin",cap:"The original 1878 cave entrance"},
   meadows:{f:"Big Meadows Lodge (13084688304).jpg",cap:"Big Meadows Lodge"},
@@ -215,7 +234,7 @@ const P={
   riverFR:{f:"South Fork Shenandoah River Front Royal crossing 2020a.jpg",cap:"The South Fork of the Shenandoah at Front Royal"},
   frGazebo:{f:"Front Royal gazebo.JPG",cap:"Downtown Front Royal"},
   singing:{f:"Belle Brown Northcott Memorial - Luray, Virginia - Sarah Stierch.jpg",by:"Sarah Stierch",cap:"The Luray Singing Tower"},
-  meems:{f:"Meems Bottom Bridge 2.JPG",cap:"Meems Bottom Covered Bridge"},
+  meems:{u:"img/meems-bridge.jpg",by:"James P. Walsh II",cap:"Meems Bottom Covered Bridge",src:"img/meems-bridge.jpg"},
   stonyMan:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/40381D58-CFEA-13B4-A323F6134CA86C5F.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"On top of Stony Man",src:"https://www.nps.gov/places/000/stony-man.htm"},
   stonyHiker:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/D79AAFA0-97CB-4765-C8AE1C915FD064C3.jpg?width=1300&quality=90&mode=crop",by:"NPS / M. O'Neill",cap:"Snapping the view from Stony Man",src:"https://www.nps.gov/thingstodo/stony-man.htm"},
   hawksbill:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/53D8B66C-B998-E968-C3DFC22761F8784F.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"The view from Hawksbill summit",src:"https://www.nps.gov/places/000/hawksbill-summit.htm"},
@@ -250,7 +269,7 @@ const P={
   bearRoad:{u:"https://www.nps.gov/common/uploads/structured_data/40B4BA96-B7A2-896A-156E0E0E85486CC1.jpg?maxWidth=1200&maxHeight=800&quality=90",by:"NPS / B. Raeburn",cap:"A black bear crossing Skyline Drive",src:"https://www.nps.gov/shen/index.htm"},
   bearWet:{u:"https://www.nps.gov/shen/learn/nature/images/20170520_BlackBear__MG_9131_dm_2.jpg?maxwidth=1300&maxheight=1300&autorotate=false",by:"NPS",cap:"A black bear after the rain",src:"https://www.nps.gov/shen/learn/nature/mammals.htm"},
   hepatica:{u:"https://www.nps.gov/shen/learn/nature/images/20160325_Hepatica_6F1A6173_br_1.jpg?maxwidth=1300&maxheight=1300&autorotate=false",by:"NPS",cap:"Hepatica, an early spring wildflower",src:"https://www.nps.gov/shen/learn/nature/wildflowers.htm"},
-  fallStraight:{u:"https://www.nps.gov/shen/planyourvisit/images/20231020_TunnelOvlk_Fall_NDL6953_nl_6000.jpg?maxwidth=1600&maxheight=1600&autorotate=false",by:"NPS",cap:"Skyline Drive in peak fall color",src:"https://www.nps.gov/shen/planyourvisit/driving-skyline-drive.htm"},
+  fallStraight:{u:"img/skyline-fall.jpg",by:"NPS / Neal Lewis",cap:"Skyline Drive in peak fall color",src:"https://www.nps.gov/shen/planyourvisit/driving-skyline-drive.htm"},
   fallFalls:{u:"https://www.nps.gov/common/uploads/structured_data/3C80B867-1DD8-B71B-0B328321E4420769.jpg?maxWidth=1200&maxHeight=800&quality=90",by:"NPS / Neal Lewis",cap:"Skyline Drive passing a little waterfall",src:"https://www.nps.gov/shen/index.htm"},
   fallPoplar:{u:"https://www.nps.gov/common/uploads/structured_data/3C80B989-1DD8-B71B-0B3A418BF2F78CF0.jpg?maxWidth=1200&maxHeight=800&quality=90",by:"NPS / Katy Cain",cap:"Golden poplars near mile 8",src:"https://www.nps.gov/shen/index.htm"},
   fallTile:{u:"https://www.nps.gov/common/uploads/grid_builder/shen/crop16_9/168B7EFB-FCAF-AC9F-673FB15A71E122EE.jpg?width=1300&quality=80&mode=crop",by:"NPS",cap:"Skyline Drive in autumn",src:"https://www.nps.gov/shen/index.htm"},
@@ -269,13 +288,13 @@ const photo=(p,w,extra="",art)=>p?`<div class="ph">${extra}<img loading="lazy" s
 
 const CAT={near:{c:"#ff9f43",e:"\u{1F3E1}",n:"Near the cabin"},view:{c:"#2ec4b6",e:"\u{1F304}",n:"Views"},hike:{c:"#6fc04a",e:"\u{1F97E}",n:"Hikes"},water:{c:"#5cc8ee",e:"\u{1F4A7}",n:"Water"},history:{c:"#ff7b6b",e:"\u{1F3DB}️",n:"History"},town:{c:"#b392f0",e:"\u{1F3D8}️",n:"Towns & food"},cave:{c:"#ffd23f",e:"\u{1F987}",n:"Underground"}};
 const PLACES=[
-  {id:"bryce",dr:5,n:"Bryce Resort",cat:"near",ll:[38.8165,-78.7700],p:null,mile:"Basye, right by the cabin",time:"As long as you like",lvl:"Easy",
+  {id:"bryce",dr:5,n:"Bryce Resort",cat:"near",ll:[38.8165,-78.7700],p:"bryceFall",mile:"Basye, right by the cabin",time:"As long as you like",lvl:"Easy",
    d:"The resort next door: Lake Laura for paddling and swimming, mini golf, lift-served mountain biking in the warm months, and skiing and snow tubing in winter.",
    f:"Bryce is one of the few ski areas in the Shenandoah Valley, and it is small enough that you can see the whole hill from the lodge."},
-  {id:"orkney",dr:10,n:"Orkney Springs",cat:"near",ll:[38.7962,-78.8070],p:null,mile:"10 min west of the cabin",time:"30 minutes",lvl:"Easy",
+  {id:"orkney",dr:10,n:"Orkney Springs",cat:"near",ll:[38.7962,-78.8070],p:"orkneyAerial",mile:"10 min west of the cabin",time:"30 minutes",lvl:"Easy",
    d:"A tiny village built around a mineral-springs resort from the 1800s, with a huge old wooden hotel and summer concerts on the lawn.",
    f:"People once traveled here by stagecoach to 'take the waters' because the springs were thought to cure illness."},
-  {id:"chips",dr:20,n:"Route 11 Potato Chips",cat:"near",ll:[38.7520,-78.6460],p:null,mile:"Mount Jackson",time:"30 minutes",lvl:"Easy",
+  {id:"chips",dr:20,n:"Route 11 Potato Chips",cat:"near",ll:[38.7520,-78.6460],p:"chipsFryer",mile:"Mount Jackson",time:"30 minutes",lvl:"Easy",
    d:"A small chip factory where you can watch the chips being made through windows and taste strange flavors before you buy.",
    f:"Kettle chips are fried in small batches, which is why every bag tastes a little different."},
   {id:"meems",dr:20,n:"Meems Bottom Covered Bridge",cat:"near",ll:[38.7114,-78.6537],p:"meems",mile:"Just south of Mount Jackson",time:"20 minutes",lvl:"Easy",
@@ -284,7 +303,7 @@ const PLACES=[
   {id:"scaverns",dr:25,n:"Shenandoah Caverns",cat:"near",ll:[38.6890,-78.6510],p:null,mile:"Quicksburg, off I-81",time:"About 1.5 hours",lvl:"Easy",
    d:"A smaller, quieter cave than Luray, with 'bacon' rock formations and an elevator down. Tickets also cover a quirky parade-float and toy museum.",
    f:"It has the only cave elevator in Virginia."},
-  {id:"woodstock",dr:40,n:"Woodstock Tower",cat:"near",ll:[38.8860,-78.4640],p:null,mile:"Massanutten Mountain",time:"1 hour",lvl:"Easy",
+  {id:"woodstock",dr:40,n:"Woodstock Tower",cat:"near",ll:[38.8860,-78.4640],p:"woodstockTower",mile:"Massanutten Mountain",time:"1 hour",lvl:"Easy",
    d:"A short walk to a wooden lookout tower with a famous view of the Seven Bends, where the North Fork river loops back and forth below you.",
    f:"From the top you can count the river bends; most people get a different number."},
   {id:"skyline",dr:70,n:"Skyline Drive",cat:"view",ll:[38.6610,-78.3203],p:"fallStraight",mile:"Mile 0 to 105",time:"Half a day or more",lvl:"Easy",
@@ -293,7 +312,7 @@ const PLACES=[
   {id:"marys",dr:70,n:"Mary's Rock Tunnel",cat:"view",ll:[38.6488,-78.3229],p:"marysTunnel",mile:"Mile 32.2",time:"A quick stop",lvl:"Easy",
    d:"The only tunnel on Skyline Drive, blasted through solid granite in 1932. Honk-free zone, but you can still cheer.",
    f:"The tunnel is about 600 feet long and only 12 feet 8 inches tall, so big RVs have to check their height."},
-  {id:"stony",dr:85,n:"Stony Man Summit",cat:"hike",ll:[38.5937,-78.3757],p:"stonyMan",mile:"Mile 41.7 (Skyland)",time:"About 1 hour",lvl:"Easy",
+  {id:"stony",dr:85,n:"Stony Man Summit",cat:"hike",ll:[38.5937,-78.3757],p:"stonySunset",mile:"Mile 41.7 (Skyland)",time:"About 1 hour",lvl:"Easy",
    d:"An easy 1.6-mile loop to the second-highest peak in the park. Huge payoff for very little effort, and great for sunset.",
    f:"From the valley, the cliffs look like the face of a bearded man lying down, which is how it got its name."},
   {id:"hawksbill",dr:90,n:"Hawksbill Summit",cat:"hike",ll:[38.5550,-78.3950],p:"hawksbill",mile:"Mile 45.6",time:"1 to 2 hours",lvl:"Moderate",
@@ -323,7 +342,7 @@ const PLACES=[
   {id:"blackrock",dr:120,n:"Blackrock Summit",cat:"hike",ll:[38.2210,-78.7360],p:"blackrock",mile:"Mile 84.4",time:"About 1 hour",lvl:"Easy",
    d:"An easy 1-mile loop to a giant pile of dark boulders with huge views west. One of the best sunset spots in the south of the park.",
    f:"The jumbled boulders are called talus: rock that broke off the cliffs over thousands of years of freezing and thawing."},
-  {id:"luray",dr:55,n:"Luray Caverns",cat:"cave",ll:[38.6643,-78.4836],p:"sakoPool",mile:"Luray, 15 min from Thornton Gap",time:"About 1.5 hours",lvl:"Easy",
+  {id:"luray",dr:55,n:"Luray Caverns",cat:"cave",ll:[38.6643,-78.4836],p:"luray",mile:"Luray, 15 min from Thornton Gap",time:"About 1.5 hours",lvl:"Easy",
    d:"The largest cave system in the eastern US. A paved walking tour takes you past giant stalactites, Dream Lake and the Great Stalacpipe Organ.",
    f:"The cave stays about 54°F all year, so bring a light jacket even in summer."},
   {id:"dickey",dr:75,n:"Dickey Ridge Visitor Center",cat:"history",ll:[38.8707,-78.2034],p:"gimlet",mile:"Mile 4.6",time:"30 minutes",lvl:"Easy",
@@ -366,11 +385,14 @@ const fmtDr=m=>m<60?m+" min":Math.floor(m/60)+" h"+(m%60?" "+m%60+" min":"");
 
 /* Skyline Drive photo gallery */
 const GALLERY_GROUPS=[
-  ["Inside Luray Caverns",["sakoReflect","sakoForm","luray","wish"]],
+  ["Inside Luray Caverns",["sakoPool","sakoReflect","sakoForm","wish"]],
+  ["Near our cabin",["lakeLaura","shrineMont","r11Counter","r11Store"]],
+  ["Meems Bottom Covered Bridge",["meemsSide","meemsUnder","meemsInside","meemsPlaque"]],
+  ["Driving Skyline Drive",["skyCurve","skyAerial","skyTrees","sky0303","skyBend","skySummer"]],
   ["Overlooks along the drive",["hogwallow","rangeView","pinnacles","franklin","crescent","hogback","thePoint","hazeltop","sandy","hensley","rockytop","hazel","thorofare","ragFromSD"]],
   ["Fall colors",["fallTile","fallFalls","fallPoplar","banner","whiteoakFall","sd2005"]],
   ["Sunrise, sunset and stars",["sunrise","blackrockSunset","stars","peaks","rockyOvl"]],
-  ["Summits and waterfalls",["hawksbillUpper","marysSummit","stonyHiker","whiteoakLow","meadowsView"]],
+  ["Summits and waterfalls",["stonyMan","hawksbillUpper","marysSummit","stonyHiker","whiteoakLow","meadowsView"]],
   ["Wildlife and wildflowers",["bearRoad","bearWet","deer","bear","ladyslipper","hepatica"]],
   ["Every season",["winter","marysTunnelC"]]
 ];
@@ -535,7 +557,7 @@ const dirs=ll=>`https://www.google.com/maps/dir/?api=1&destination=${ll[0]},${ll
 
 /* ---------- hero slideshow ---------- */
 (function(){
-  const h=$("#hero"),keys=["fallTile","hogwallow","sunrise","rangeView","blackrockSunset","franklin"];let i=0;
+  const h=$("#hero"),keys=["stonySunset","fallStraight","skyBend","fallTile","hogwallow","sunrise","rangeView","blackrockSunset","franklin"];let i=0;
   const im=document.createElement("img"),cr=document.createElement("a");cr.className="cr";cr.target="_blank";cr.rel="noopener";
   im.alt="Skyline Drive";im.onerror=()=>{im.style.opacity=0};h.prepend(im);h.appendChild(cr);
   const show=()=>{const p=P[keys[i%keys.length]];im.style.opacity=0;setTimeout(()=>{im.src=img(p,1400);cr.href=page(p);cr.innerHTML="&#128247; "+esc(p.by||"Wikimedia Commons")},350);im.onload=()=>{im.style.opacity=1}};
