@@ -2,7 +2,7 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Ridge Grand Game</title>
+<title>Road to the Crown</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap">
 <style>
@@ -130,20 +130,76 @@ button:focus-visible{outline:2px solid var(--adv);outline-offset:3px}
 .ar-box{background:var(--sheet);border-radius:26px;padding:22px;width:min(420px,calc(100% - 32px));display:flex;flex-direction:column;gap:12px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.5)}
 .ar-box .big{font:700 30px var(--play)}
 .ch{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center}
-.ch .clock{font:700 64px var(--play);color:var(--gold);font-variant-numeric:tabular-nums;line-height:1}
-.ch .card{background:#fff;color:#15181e;border-radius:28px;width:min(640px,100%);min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;box-shadow:0 10px 0 #c9cfd8,0 20px 40px rgba(0,0,0,.4)}
+.ch .clock{font:700 clamp(40px,9vh,64px) var(--play);color:var(--gold);font-variant-numeric:tabular-nums;line-height:1}
+.ch .card{background:#fff;color:#15181e;border-radius:28px;width:min(640px,100%);min-height:min(220px,30vh);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;box-shadow:0 10px 0 #c9cfd8,0 20px 40px rgba(0,0,0,.4)}
 .ch .card small{font:700 13px var(--font);letter-spacing:.12em;text-transform:uppercase;color:#6b7383}
 .ch .card b{font:700 clamp(34px,7vw,64px)/1.05 var(--play);text-wrap:balance}
 .ch .acts{display:grid;grid-template-columns:1fr 1.5fr;gap:12px;width:min(640px,100%)}
 .ch .acts .go{padding:20px;font-size:18px;border-radius:20px}
 .ch .tally{display:flex;gap:28px;color:var(--mut);font-weight:700;font-variant-numeric:tabular-nums}
 @media (prefers-reduced-motion:no-preference){.ch .card.pop{animation:pop .25s ease}@keyframes pop{50%{transform:scale(.95)}}}
+/* new grand game setup */
+a.go{display:block;text-decoration:none}
+.av img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.su{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.su{grid-template-columns:1fr}}
+.su-box{border-radius:18px;padding:10px;display:flex;flex-direction:column;gap:8px;border-top:4px solid var(--x)}
+.su-box.out{grid-column:1/-1}
+.in{width:100%;padding:10px 12px;border-radius:12px;border:0;background:var(--sheet);color:var(--x,var(--fg));font:600 16px var(--play);box-shadow:var(--well-sh)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;min-height:40px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 11px 4px 4px;border-radius:99px;background:var(--raise);box-shadow:var(--raise-sh);font-weight:600;font-size:13px;min-height:40px}
+.chip.on{box-shadow:0 0 0 2px var(--gold),0 0 12px rgba(255,224,138,.35)}
+/* games on the map iPad */
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:min(640px,100%)}
+.opt{padding:14px 10px;border-radius:18px;font:600 clamp(15px,2.2vw,19px)/1.2 var(--play);background:var(--raise);box-shadow:var(--raise-sh);text-align:center;min-height:60px;transition:background .15s}
+.opt.ok{background:#2e7d4f;color:#fff}.opt.no{background:#8a2d33;color:#fff}
+.tq{border-radius:22px;padding:14px 18px;text-align:center;font:600 clamp(18px,2.6vw,26px)/1.25 var(--play);text-wrap:balance}
+.tb{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px}
+.duo{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-aspect-ratio:1/1){.duo{grid-template-columns:1fr;grid-template-rows:1fr 1fr}}
+.tbs{border-radius:22px;padding:12px;display:flex;flex-direction:column;gap:10px;justify-content:center;background:color-mix(in srgb,var(--x) 12%,#202328);box-shadow:inset 0 0 0 3px color-mix(in srgb,var(--x) 45%,transparent);transition:opacity .2s}
+.tbs>span{font:600 17px var(--play);color:var(--x);text-align:center}
+.tbs .opts{width:100%}
+.tbs.lock{opacity:.4}
+.half{border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:color-mix(in srgb,var(--x) 14%,#202328);box-shadow:inset 0 0 0 3px color-mix(in srgb,var(--x) 50%,transparent);font:600 20px var(--play);text-align:center;padding:12px;touch-action:none;cursor:pointer;min-height:0;transition:background .12s}
+.half b{font:700 clamp(44px,10vw,96px)/1 var(--play);color:var(--x)}
+.half small{font:600 16px var(--font);color:var(--mut)}
+.half .bar{width:min(320px,90%);height:14px}
+.half.wait{background:#4a1f24}.half.fire{background:#1f6b3e}.half.fire small{color:#fff}
+.pad{flex:1;width:100%;border-radius:26px;display:grid;place-items:center;font:700 clamp(36px,8vw,72px) var(--play);text-align:center;touch-action:none;color:#fff}
+.pad.wait{background:#5a2328}.pad.fire{background:#1f8a4c}.pad.done{background:var(--well);color:var(--fg);font-size:clamp(26px,5vw,44px)}
+.ch .big{font:700 clamp(24px,4vw,36px)/1.15 var(--play)}
+.rlist{display:flex;flex-direction:column;gap:6px;width:min(420px,100%);max-height:45vh;overflow-y:auto}
+.rlist div{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:14px;background:var(--well);text-align:left}
+.rlist div b{flex:1}.rlist div.out{opacity:.45;text-decoration:line-through}
+.mmw{flex:1;min-height:0;width:100%;display:grid;place-items:center}
+.mm{display:grid;gap:8px;grid-template-columns:repeat(4,var(--s,70px));grid-auto-rows:var(--s,70px)}
+.mm button{border-radius:14px;background:var(--raise);box-shadow:var(--raise-sh);font-size:calc(var(--s,70px)*.5);display:grid;place-items:center;text-align:center;color:var(--dim);line-height:1}
+.mm button.up{background:#fff}.mm button.got{background:#cfeedd;opacity:.75}
+.pic-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between}
+.pic-bar .clk{font:700 34px var(--play);color:var(--gold);font-variant-numeric:tabular-nums;min-width:64px}
+.pic-bar .tally{font-weight:700;color:var(--mut)}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sw{width:34px;height:34px;border-radius:50%;background:var(--x);box-shadow:inset 0 0 0 2px rgba(255,255,255,.25)}
+.sw.on{outline:3px solid #fff;outline-offset:2px}
+.tools .go{width:auto;padding:8px 14px}
+#pc{background:#fff;touch-action:none}
+.acts2{display:grid;grid-template-columns:1fr 1.5fr;gap:12px}
+.acts2 .go{padding:16px;font-size:17px;border-radius:18px}
+.ban{display:flex;flex-direction:column;gap:2px;font:600 clamp(16px,2.4vw,20px) var(--font);color:#b3262c;margin-top:6px}
+.ban span::before{content:"✕ ";opacity:.6}
+@media (max-width:640px){.ar-top{flex-wrap:wrap;row-gap:4px}.ar-top #arQuit{margin-left:auto}.ar-top .mid{order:3;flex-basis:100%}.ar-top .sc b{font-size:24px}}
+.places{display:flex;flex-direction:column;gap:8px;width:100%;text-align:left}
+.plrow{display:flex;align-items:center;gap:10px;border-radius:16px;padding:8px 12px;flex-wrap:wrap}
+.plrow .pl{font:700 18px var(--play);color:var(--gold);width:36px;flex:none}
+.plrow .nm{flex:1;min-width:0;font-weight:600}
+.plrow small{color:var(--mut);width:100%;padding-left:46px}
 </style>
 
 <canvas id="fx"></canvas>
 <div class="wrap">
   <div class="top">
-    <h1>The Road to the Crown <small>Sample round · reach the castle, win the final, and one player is crowned King or Queen</small></h1>
+    <h1>The Road to the Crown <small>Reach the castle, win the final, and one player is crowned King or Queen</small></h1>
     <button class="pill raise" id="newMap">New map</button>
   </div>
   <div class="cols">
@@ -169,8 +225,11 @@ button:focus-visible{outline:2px solid var(--adv);outline-offset:3px}
 <script src="mind.js"></script>
 <script>
 (function(){
+// built-in roster, used only when the game server can't be reached
 const ROSTER={raffael:["RF","#d4f09a"],rasha:["RS","#f7b8d2"],rami:["RM","#aab7ff"],yara:["YR","#ffe08a"],yazan:["YZ","#ffbf99"],rose:["Ro","#ff9fb8"],sako:["SK","#7ee8f0"],sofia:["SF","#9df0c8"],jakob:["Ja","#d8c39a"]};
 const NAMES={raffael:"Raffael",rasha:"Rasha",rami:"Rami",yara:"Yara",yazan:"Yazan",rose:"Rose",sako:"Sako",sofia:"Sofia",jakob:"Jacob"};
+const KEY="rg-crown-v1",TEAMX=["#7ee8f0","#f7b8d2"],TEAMN=["Team Ridge","Team Ember"],GAME_NAME="The Road to the Crown";
+let PEOPLE={},ME=null;Object.keys(NAMES).forEach(id=>PEOPLE[id]={name:NAMES[id],short:ROSTER[id][0],color:ROSTER[id][1]});
 const BASE={
   T:{x:95,y:570,name:"Village",type:"start",next:["v1","r1"]},
   v1:{x:205,y:560,name:"Mill Lane",type:"game",road:"v",next:["v2"]},
@@ -190,12 +249,13 @@ const BASE={
   q2:{x:860,y:250,name:"Royal Bridge",type:"vote",road:"q",next:["S"]},
   S:{x:905,y:120,name:"The Castle",type:"castle",next:[]}
 };
+// every game here really plays: on this iPad (PLAY) or on everyone's phone through Play together (PHONE). Timed games give time points.
 const POOL={
-  game:[["Charades","Party","Map iPad"],["Heads Up","Party","Map iPad"],["Trivia Battle","Trivia","Map iPad"],["Imposter","Secret roles","Map iPad, passed around"],["Memory Match","Puzzle","Map iPad"],["Riddle Rush","Puzzle","Map iPad"],["Most Likely To","Get to know you","Map iPad"],["Codebreaker","Puzzle","Map iPad"],["Pictionary","Party","Map iPad"],["Jigsaw Race","Puzzle","2 devices, one per team"],["Taboo","Party","Map iPad"]],
-  chal:[["Air Hockey","1v1 arcade","2 devices: one player each"],["Tetris Race","1v1 arcade","2 devices: one player each"],["Pong Duel","1v1 arcade","2 devices: one player each"],["Snake Battle","Arcade","2 devices: one per team"],["Spot the Difference","Team puzzle","2 devices: one per team"],["Word Search Race","Team puzzle","2 devices: one per team"],["Whack-a-Mole Race","Arcade","2 devices: one player each"]],
-  show:[["Last One Standing","Elimination","Everyone's phone or 2 devices"],["Trivia Knockout","Elimination","Map iPad"],["Memory Chain","Elimination","Map iPad, passed around"]],
-  castle:[["Mind Gauntlet","Final challenge · a mind game at level 5","Map iPad"]],
-  mind:[["Quick Math","Mind game · math speed","Map iPad","quickmath"],["Color Clash","Mind game · focus","Map iPad","colorclash"],["Number Memory","Mind game · memory","Map iPad","numbermemory"],["Word Scramble","Mind game · words","Map iPad","wordscramble"],["Bigger or Smaller","Mind game · estimation","Map iPad","biggerorsmaller"],["Grid Recall","Mind game · visual memory","Map iPad","gridrecall"],["Liquid Lab","Mind game · logic","Map iPad","liquidsort"],["Echo Tiles","Mind game · memory","Map iPad","echotiles"],["Odd One Out","Mind game · focus","Map iPad","oddone"],["Flash Count","Mind game · estimation","Map iPad","flashcount"],["Number Hunt","Mind game · speed","Map iPad","numberhunt"],["Turn Twin","Mind game · spatial","Map iPad","turntwin"],["Pair Up","Mind game · visual memory","Map iPad","pairup"],["Slide Puzzle","Mind game · spatial","Map iPad","slidepuzzle"],["Arrow Storm","Mind game · focus","Map iPad","arrowstorm"],["True or False","Mind game · math speed","Map iPad","truefalse"],["Number Pattern","Mind game · logic","Map iPad","nextnumber"],["Word Sort","Mind game · words","Map iPad","wordsort"]]
+  game:[["Charades","Party · act it out · timed","This iPad"],["Heads Up","Party · guess the word · timed","This iPad"],["Taboo","Party · describe it · timed","This iPad"],["Pictionary","Party · draw it · timed","This iPad"],["Memory Match","Puzzle · find the pairs · timed","This iPad"],["Trivia Sprint","Quiz · Virginia and more · timed","This iPad"]],
+  chal:[["Air Hockey","1v1 arcade","This iPad · one player per team"],["Tap Race","1v1 arcade","This iPad · one player per team"],["Quick Draw","1v1 reflexes","This iPad · one player per team"],["Trivia Battle","Team quiz · buzz in first","This iPad · both teams"],["Imposter","Secret roles","Everyone's phone"]],
+  show:[["Last One Standing","Reflex elimination","This iPad, passed around"],["Mind Race","Mind game race","Everyone's phone"]],
+  castle:[["Mind Gauntlet","Final challenge · a mind game at level 5","This iPad"]],
+  mind:[["Quick Math","Mind game · math speed","This iPad","quickmath"],["Color Clash","Mind game · focus","This iPad","colorclash"],["Number Memory","Mind game · memory","This iPad","numbermemory"],["Word Scramble","Mind game · words","This iPad","wordscramble"],["Bigger or Smaller","Mind game · estimation","This iPad","biggerorsmaller"],["Grid Recall","Mind game · visual memory","This iPad","gridrecall"],["Liquid Lab","Mind game · logic","This iPad","liquidsort"],["Echo Tiles","Mind game · memory","This iPad","echotiles"],["Odd One Out","Mind game · focus","This iPad","oddone"],["Flash Count","Mind game · estimation","This iPad","flashcount"],["Number Hunt","Mind game · speed","This iPad","numberhunt"],["Turn Twin","Mind game · spatial","This iPad","turntwin"],["Pair Up","Mind game · visual memory","This iPad","pairup"],["Slide Puzzle","Mind game · spatial","This iPad","slidepuzzle"],["Arrow Storm","Mind game · focus","This iPad","arrowstorm"],["True or False","Mind game · math speed","This iPad","truefalse"],["Number Pattern","Mind game · logic","This iPad","nextnumber"],["Word Sort","Mind game · words","This iPad","wordsort"]]
 };
 const EVENTS={tail:{t:"Royal messenger",d:"A messenger on horseback gives you a ride: move 1 stop forward."},bear:{t:"Bear in the cave!",d:"Back away slowly and wait for it to leave: your team freezes for one turn."}};
 const MINDT={c:"#2ec4b6",l:"M"};
@@ -203,27 +263,35 @@ const TYPE={start:{c:"#ffffff"},game:{c:"#ffffff"},chal:{c:"#e5484d",l:"VS"},sho
 const POWERS={shield:{t:"Shield",d:"Blocks your next team freeze"},steal:{t:"Steal",d:"Push the other team back 1 stop"},double:{t:"Double",d:"Your next win gives a free extra step"}};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let N,S,ORDER;
+let N,S=null,ORDER;
 
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
-function buildMap(random){N=JSON.parse(JSON.stringify(BASE));const p={};for(const k in POOL)p[k]=random?shuffle(POOL[k]):POOL[k].slice();
-  for(const id in N){const n=N[id];if(p[n.type])n.g=p[n.type].shift()}
+function pick(a){return a[Math.random()*a.length|0]}
+function buildMap(){N=JSON.parse(JSON.stringify(BASE));const p={};for(const k in POOL)p[k]=shuffle(POOL[k]);
   // the 3 game stops closest to the castle become mind games; their level rises as you get nearer
   Object.keys(N).filter(id=>N[id].type==="game").sort((a,b)=>dist(a)-dist(b)).slice(0,3).forEach(id=>{N[id].g=p.mind.shift();N[id].mind=N[id].g[3]});
-  // stop numbers count steps from the village (shortcut gets its own number)
-  ORDER={};let i=1;["v1","v2","v3","v4","v5","v6","v7","r1","r2","r3","r4","r5","k1","q1","q2"].forEach(id=>ORDER[id]=i++)}
+  for(const id in N){const n=N[id];if(!n.g&&p[n.type])n.g=p[n.type].shift()||pick(POOL[n.type])}}
+// stop numbers count steps from the village (shortcut gets its own number)
+ORDER={};["v1","v2","v3","v4","v5","v6","v7","r1","r2","r3","r4","r5","k1","q1","q2"].forEach((id,i)=>ORDER[id]=i+1);
 function lvl(id){return {0:5,1:5,2:5,3:4,4:3,5:2,6:2}[dist(id)]||1}
 function dist(id){const seen={[id]:0},q=[id];while(q.length){const c=q.shift();if(c==="S")return seen[c];N[c].next.forEach(n=>{if(!(n in seen)){seen[n]=seen[c]+1;q.push(n)}})}return 99}
-function fresh(sample){buildMap(!sample);S={turn:0,over:null,free:false,frozenP:{},log:[],teams:[
-  {name:"Team Ridge",x:"#7ee8f0",ids:["raffael","rami","yara","sofia","jakob"],at:"T",hist:[],frozen:0,powers:[]},
-  {name:"Team Ember",x:"#f7b8d2",ids:["rasha","yazan","rose","sako"],at:"T",hist:[],frozen:0,powers:[]}]};
-  if(sample){const [a,b]=S.teams;a.hist=["T","v1"];a.at="v2";b.hist=["T","r1"];b.at="r2";b.powers=["shield"];
-    N.v1.g=POOL.game[2];if(N.v4.mind){N.r4.g=N.v4.g;N.r4.mind=N.v4.mind;delete N.v4.mind}N.v4.g=POOL.game[0];N.r1.g=POOL.chal[2];N.k1.g=POOL.chal[0];
-    S.log=[["Team Ember sat out a frozen turn","#f7b8d2"],["Team Ridge won Heads Up at Old Oak","#7ee8f0"],["Team Ember: Bear in the cave! at Bear Cave","#f7b8d2"],["Team Ridge sat out a frozen turn","#7ee8f0"],["Team Ember won Pong Duel at Rocky Steps; Ridge froze","#f7b8d2"],["Team Ridge won Trivia Battle at Mill Lane","#7ee8f0"]]}}
 const cur=()=>S.teams[S.turn], other=()=>S.teams[1-S.turn];
 const teamOf=id=>S.teams.find(t=>t.ids.includes(id));
+const everyone=()=>S.teams[0].ids.concat(S.teams[1].ids);
+const ready=t=>t.ids.filter(id=>!S.frozenP[id]);
+const pp=id=>(S&&S.people&&S.people[id])||PEOPLE[id]||{name:id,short:String(id).slice(0,2).toUpperCase(),color:"#9aa3b3"};
+const avH=(id,size,cls,title)=>{const p=pp(id);return `<span class="av${cls?" "+cls:""}" style="--x:${esc(p.color)}${size?`;width:${size}px;height:${size}px;font-size:${Math.round(size*.32)}px`:""}"${title?` title="${esc(title)}"`:""}>${p.avatar?`<img src="${esc(p.avatar)}" alt="">`:esc(p.short)}</span>`};
 function log(t,x){S.log.unshift([t,x||cur().x])}
-function options(){const t=cur();if(S.over||t.frozen)return[];return N[t.at].next}
+function options(){if(!S)return[];const t=cur();if(S.over||t.frozen)return[];return N[t.at].next}
+const tpTxt=l=>l>0?` (+${l} time points)`:"";
+
+// ---------- saving: the whole game lives in this browser and comes back after a reload ----------
+function save(){try{localStorage.setItem(KEY,JSON.stringify({v:1,N,S}))}catch(e){}}
+function loadSaved(){try{const j=JSON.parse(localStorage.getItem(KEY)||"null");
+  if(j&&j.v===1&&j.N&&j.N.S&&j.S&&Array.isArray(j.S.teams)&&j.S.teams.length===2&&j.S.teams.every(t=>t.ids&&t.ids.length&&j.N[t.at]))return j}catch(e){}return null}
+function useSaved(j){N=j.N;S=j.S;S.teams.forEach(t=>{t.tp=t.tp|0;t.hist=t.hist||[];t.powers=t.powers||[]});S.frozenP=S.frozenP||{};S.log=S.log||[];
+  // a game saved by an older version may point at a game that no longer exists: give that stop a playable one
+  for(const id in N){const n=N[id];if(n.g&&!PLAY[n.g[0]]&&!PHONE[n.g[0]]){const k=n.mind?"mind":n.type;n.g=pick(POOL[k]);if(n.mind)n.mind=n.g[3]}}}
 
 // ---------- map art ----------
 function rnd(seed){let s=seed;return()=>(s=(s*16807)%2147483647)/2147483647}
@@ -301,36 +369,40 @@ function drawMap(){
       <text class="num" x="${n.x}" y="${n.y+1}">${ORDER[id]}</text>
       ${ty.l?`<g class="badge"><circle cx="${n.x+16}" cy="${n.y-16}" r="10" fill="${ty.c}" stroke="#fff" stroke-width="2"/><text x="${n.x+16}" y="${n.y-15.5}">${ty.l}</text></g>`:""}</g>`}
   // tokens: team banners
-  S.teams.forEach((t,i)=>{const n=N[t.at],same=S.teams[0].at===S.teams[1].at;let x=n.x+(same?(i?16:-16):0),y=n.y-30;if(t.at==="S"){x=905+(i?30:-30);y=40}
-    s+=`<g class="tok" style="transform:translate(${x}px,${y}px)"><line x1="0" y1="0" x2="0" y2="26" stroke="#4a2d18" stroke-width="3"/><path d="M0 -14 L26 -14 L20 -4 L26 6 L0 6Z" fill="${t.x}" stroke="#15181e" stroke-width="2" ${t.frozen?'stroke-dasharray="3 3"':""}/><text x="11" y="-4">${t.name.split(" ")[1][0]}</text></g>`});
+  if(S)S.teams.forEach((t,i)=>{const n=N[t.at],same=S.teams[0].at===S.teams[1].at;let x=n.x+(same?(i?16:-16):0),y=n.y-30;if(t.at==="S"){x=905+(i?30:-30);y=40}
+    s+=`<g class="tok" style="transform:translate(${x}px,${y}px)"><line x1="0" y1="0" x2="0" y2="26" stroke="#4a2d18" stroke-width="3"/><path d="M0 -14 L26 -14 L20 -4 L26 6 L0 6Z" fill="${t.x}" stroke="#15181e" stroke-width="2" ${t.frozen?'stroke-dasharray="3 3"':""}/><text x="11" y="-4">${esc(initial(t))}</text></g>`});
   $("map").innerHTML=s;
 }
+function initial(t){const w=t.name.trim().split(/\s+/);const a=(w[w.length-1]||"?")[0].toUpperCase(),o=S.teams.find(x=>x!==t),w2=o.name.trim().split(/\s+/);return a===((w2[w2.length-1]||"?")[0]||"").toUpperCase()?String(S.teams.indexOf(t)+1):a}
 
 // ---------- panel ----------
-function side(){const t=cur(),o=other(),max=dist("T");
+function side(){
+  if(!S){$("side").innerHTML=`<div class="card raise turn"><span class="lab">No game yet</span><div class="who"><span><b>Start a grand game</b><small>Pick who plays and split into 2 teams</small></span></div><button class="go p" id="newMap2">New grand game</button></div>`;return}
+  const t=cur(),o=other(),max=dist("T");
   const team=tm=>{const d=dist(tm.at),pct=Math.round(100*(max-d)/max);return `<div class="card raise team" style="--x:${tm.x}">
-    <div class="hd"><span class="dot"></span>${tm.name}<span class="st">${tm.at==="T"?"In the village":esc(N[tm.at].name)}<br>${d===0?"At the castle":d+" to the castle"}</span></div>
+    <div class="hd"><span class="dot"></span>${esc(tm.name)}<span class="st">${tm.at==="T"?"In the village":esc(N[tm.at].name)}<br>${d===0?"At the castle":d+" to the castle"}</span></div>
     <div class="bar"><i style="width:${pct}%"></i></div>
-    <div class="ppl">${tm.ids.map(id=>`<span class="av${S.frozenP[id]?" frz":""}" style="--x:${ROSTER[id][1]}" title="${NAMES[id]}${S.frozenP[id]?" (frozen)":""}">${ROSTER[id][0]}</span>`).join("")}</div>
-    ${tm.frozen||tm.powers.length?`<div class="tags">${tm.frozen?'<span class="tag frz">Team frozen 1 turn</span>':""}${tm.powers.map(p=>`<span class="tag" style="--x:var(--gold)" title="${POWERS[p].d}">${POWERS[p].t}</span>`).join("")}</div>`:""}</div>`};
-  const out=t.ids.filter(id=>S.frozenP[id]).map(id=>NAMES[id]);
+    <div class="ppl">${tm.ids.map(id=>avH(id,0,S.frozenP[id]?"frz":"",pp(id).name+(S.frozenP[id]?" (frozen)":""))).join("")}</div>
+    <div class="tags"><span class="tag" style="--x:var(--gold)" title="Seconds left when you win a timed game">⏱ ${tm.tp} time point${tm.tp===1?"":"s"}</span>${tm.frozen?'<span class="tag frz">Team frozen 1 turn</span>':""}${tm.powers.map(p=>`<span class="tag" style="--x:var(--adv)" title="${POWERS[p].d}">${POWERS[p].t}</span>`).join("")}</div></div>`};
+  const out=t.ids.filter(id=>S.frozenP[id]).map(id=>pp(id).name);
   let act;
-  if(S.over)act=`<div class="hint">${esc(S.over)}</div><button class="go p" id="again">Play a new map</button>`;
-  else if(t.frozen)act=`<div class="hint">${t.name} is frozen. Win a 30-second Thaw game to play this turn anyway, or skip it.</div><div class="row2"><button class="go p" id="thawW">Won the Thaw</button><button class="go g" id="skip">Skip turn</button></div>`;
+  if(S.over)act=`<div class="hint">${esc(S.over)}</div>${S.crowned?`<button class="go p" id="sum" style="--x:var(--gold)">Final summary</button>`:""}<button class="go g" id="again">Play a new map</button>`;
+  else if(t.at==="S")act=`<div class="hint">${esc(t.name)} holds the castle. Crown the winner of the throne duel.</div><button class="go p" id="toCrown" style="--x:var(--gold)">Throne duel</button>`;
+  else if(t.frozen)act=`<div class="hint">${esc(t.name)} is frozen. Win a quick Thaw game (a level 1 mind game) to play this turn anyway, or skip it.</div><div class="row2"><button class="go p" id="thawGo">Play the Thaw</button><button class="go g" id="skip">Skip turn</button></div>`;
   else if(S.free)act=`<div class="hint">Double power-up: take a free extra step. Tap a glowing stop.</div>`;
-  else act=`<div class="hint">Tap a glowing stop on the map to play it.${N[t.at].next.length>1?" The road splits here, so pick your way.":""}${out.length?` <b style="color:#bfe9ff">${out.join(" and ")} sit${out.length>1?"":"s"} out this turn.</b>`:""}</div>${t.powers.includes("steal")&&o.hist.length?`<button class="go g" id="useSteal">Use Steal on ${o.name}</button>`:""}`;
-  $("side").innerHTML=`<div class="card raise turn" style="--x:${t.x}"><span class="lab">Now playing</span><div class="who"><span class="dot"></span><span><b>${S.over?"Game over":t.name+"'s turn"}</b><small>${S.teams[0].name} vs ${S.teams[1].name}</small></span></div>${act}</div>
+  else act=`<div class="hint">Tap a glowing stop on the map to play it.${N[t.at].next.length>1?" The road splits here, so pick your way.":""}${out.length?` <b style="color:#bfe9ff">${esc(out.join(" and "))} sit${out.length>1?"":"s"} out this turn.</b>`:""}</div>${t.powers.includes("steal")&&o.hist.length?`<button class="go g" id="useSteal">Use Steal on ${esc(o.name)}</button>`:""}`;
+  $("side").innerHTML=`<div class="card raise turn" style="--x:${t.x}"><span class="lab">Now playing</span><div class="who"><span class="dot"></span><span><b>${S.over?"Game over":esc(t.name)+"'s turn"}</b><small>${esc(S.teams[0].name)} vs ${esc(S.teams[1].name)}</small></span></div>${act}</div>
     ${S.teams.map(team).join("")}
     <div class="card well"><span class="lab">Royal chronicle</span><div class="log" style="margin-top:8px">${S.log.map(l=>`<div><i style="--x:${l[1]}"></i><span>${esc(l[0])}</span></div>`).join("")||'<span>No moves yet.</span>'}</div></div>`;
 }
-function render(){drawMap();side()}
+function render(){if(S)save();drawMap();side()}
 
 // ---------- moves ----------
 function moveTo(t,id){t.hist.push(t.at);t.at=id}
 function back(t){if(t.hist.length)t.at=t.hist.pop()}
 function stepForward(t,n){for(let i=0;i<n;i++){const nx=N[t.at].next.filter(x=>x!=="S"&&N[x].type!=="vote");if(!nx.length)break;nx.sort((a,b)=>dist(a)-dist(b));moveTo(t,nx[0])}}
 function freeze(t){if(t.powers.includes("shield")){t.powers.splice(t.powers.indexOf("shield"),1);toast(t.name+"'s Shield blocked the freeze");log(t.name+" raised a Shield and stayed unfrozen",t.x);return}t.frozen=1}
-function maybePower(t){const o=S.teams.find(x=>x!==t);if(dist(t.at)>dist(o.at)&&t.powers.length<2){const k=["shield","steal","double"][Math.random()*3|0];t.powers.push(k);toast(t.name+" earned a power-up: "+POWERS[k].t+" ("+POWERS[k].d.toLowerCase()+")");log(t.name+" earned "+POWERS[k].t+" for being behind",t.x)}}
+function maybePower(t){const o=S.teams.find(x=>x!==t);if(dist(t.at)>dist(o.at)&&t.powers.length<2){const k=pick(["shield","steal","double"]);t.powers.push(k);toast(t.name+" earned a power-up: "+POWERS[k].t+" ("+POWERS[k].d.toLowerCase()+")");log(t.name+" earned "+POWERS[k].t+" for being behind",t.x)}}
 function won(t){if(t.powers.includes("double")){t.powers.splice(t.powers.indexOf("double"),1);S.free=true;toast("Double! Take a free extra step")}}
 function endTurn(){if(S.free){render();return}
   const t=cur();t.ids.forEach(id=>{if(S.frozenP[id]==="next")return;if(S.frozenP[id])delete S.frozenP[id]});t.ids.forEach(id=>{if(S.frozenP[id]==="next")S.frozenP[id]=1});
@@ -339,63 +411,273 @@ function endTurn(){if(S.free){render();return}
 // ---------- sheets ----------
 const X='<button class="x well" data-shut aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>';
 let locked=false;
-function open(h,lock){locked=!!lock;$("sheet").innerHTML=h;$("sheet").classList.add("on");$("scrim").classList.add("on");$("sheet").scrollTop=0}
+function open(h,lock,keepScroll){locked=!!lock;const sh=$("sheet"),y=sh.scrollTop;sh.innerHTML=h;sh.classList.add("on");$("scrim").classList.add("on");sh.scrollTop=keepScroll?y:0}
 function shut(){locked=false;$("sheet").classList.remove("on");$("scrim").classList.remove("on")}
-const avBtn=(id,attr,dis,note)=>`<button class="pbtn" ${attr} ${dis?"disabled":""}><span class="av" style="--x:${ROSTER[id][1]}">${ROSTER[id][0]}</span>${NAMES[id]}<small>${note||teamOf(id).name}</small></button>`;
+const avBtn=(id,attr,dis,note)=>`<button class="pbtn" ${attr} ${dis?"disabled":""}>${avH(id)}${esc(pp(id).name)}<small>${esc(note||teamOf(id).name)}</small></button>`;
+
+// new grand game: who plays, 2 teams, team names
+let SU=null;
+function setup(){const ids=Object.keys(PEOPLE);SU={g:{},names:TEAMN.slice()};ids.forEach(id=>SU.g[id]=0);
+  if(S&&S.teams.some(t=>t.ids.some(id=>id in PEOPLE))){ids.forEach(id=>SU.g[id]=-1);S.teams.forEach((t,i)=>{SU.names[i]=t.name;t.ids.forEach(id=>{if(id in PEOPLE)SU.g[id]=i})})}
+  else randomTeams();drawSetup(true)}
+function randomTeams(){let ids=Object.keys(SU.g).filter(id=>SU.g[id]!==-1);if(!ids.length)ids=Object.keys(SU.g);const f=Math.random()<.5?0:1;shuffle(ids).forEach((id,i)=>SU.g[id]=(i+f)%2)}
+function drawSetup(top){const ids=Object.keys(PEOPLE),cnt=i=>ids.filter(id=>SU.g[id]===i).length,ok=cnt(0)>0&&cnt(1)>0;
+  const chip=id=>`<button class="chip" data-mv="${esc(id)}">${avH(id,32)}${esc(pp(id).name)}</button>`;
+  const box=i=>`<div class="su-box well${i<0?" out":""}" style="--x:${i<0?"#6b7383":TEAMX[i]}">${i<0?`<span class="lab">Not playing</span>`:`<input class="in" data-tn="${i}" value="${esc(SU.names[i])}" maxlength="24" aria-label="Team ${i+1} name"><span class="lab">${cnt(i)} player${cnt(i)===1?"":"s"}</span>`}
+    <div class="chips">${ids.filter(id=>SU.g[id]===i).map(chip).join("")||`<span class="hint">${i<0?"Everyone is playing.":"Nobody yet."}</span>`}</div></div>`;
+  open(`<div class="sh-top"><span class="ic" style="--x:#ffd23f">♛</span><span class="t"><b>New grand game</b><small>Pick who plays and split into 2 teams</small></span>${X}</div>
+    <p class="hint" style="margin:0">Tap a player to move them: ${esc(SU.names[0])} → ${esc(SU.names[1])} → Not playing → back. Tap a team name to rename it.</p>
+    <div class="su">${box(0)}${box(1)}${box(-1)}</div>
+    <div class="row2"><button class="go g" id="suRand">Random teams</button><button class="go p" id="suGo" style="--x:var(--gold)" ${ok?"":"disabled"}>${ok?"Start the grand game":"Each team needs a player"}</button></div>
+    ${S&&!S.over?`<p class="hint" style="margin:0;text-align:center">Starting replaces the game in progress. Close this to keep playing it.</p>`:""}`,0,!top)}
+function startGame(){const ids=Object.keys(PEOPLE),t=[0,1].map(i=>ids.filter(id=>SU.g[id]===i));if(!t[0].length||!t[1].length)return;
+  buildMap();const people={};ids.forEach(id=>{if(SU.g[id]>=0)people[id]=PEOPLE[id]});
+  S={turn:Math.random()<.5?0:1,over:null,crowned:null,free:false,frozenP:{},log:[],people,teams:[0,1].map(i=>({name:(SU.names[i]||"").trim().slice(0,24)||TEAMN[i],x:TEAMX[i],ids:t[i],at:"T",hist:[],frozen:0,powers:[],tp:0}))};
+  if(S.teams[0].name===S.teams[1].name)S.teams[1].name+=" 2";
+  log(`New map: ${S.teams[0].name} vs ${S.teams[1].name}. Games shuffled onto the stops`,"#9aa3b3");shut();render();toast(cur().name+" goes first. Tap a glowing stop")}
+
 let pend;
 function stop(id){const n=N[id],t=cur(),o=other(),ty=n.mind?MINDT:TYPE[n.type];pend=id;
   if(S.free){S.free=false;if(id==="S"||n.type==="vote"){toast("The free step can't skip a vote or the castle");render();stop(id);return}if(n.type!=="event"){moveTo(t,id);log(t.name+" took a free step to "+n.name,t.x);endTurn();return}}
   const head=(k,lock)=>`<div class="sh-top"><span class="ic" style="--x:${ty.c}">${id==="S"?"♛":ORDER[id]}</span><span class="t"><b>${esc(n.name)}</b><small>${k}</small></span>${lock?"":X}</div>`;
-  const dev=n.g?`<div class="info well"><span><b>${esc(n.g[0])}</b> · ${esc(n.g[1])}</span>${n.mind||id==="S"?`<span style="color:#2ec4b6;font-weight:600">Level ${id==="S"?5:lvl(id)} of 5 · mind games get harder the closer you are to the castle</span>`:""}<span>Plays on: ${esc(n.g[2])}</span></div>`:"";
-  const sitting=t.ids.filter(i=>S.frozenP[i]).map(i=>NAMES[i]);const sitNote=sitting.length?`<p class="hint" style="margin:0;color:#bfe9ff">${sitting.join(" and ")} ${sitting.length>1?"are":"is"} frozen and can't play this one.</p>`:"";
+  const timed=TIMED.has(n.g&&n.g[0])||n.mind||id==="S";
+  const dev=n.g?`<div class="info well"><span><b>${esc(n.g[0])}</b> · ${esc(n.g[1])}</span>${n.mind||id==="S"?`<span style="color:#2ec4b6;font-weight:600">Level ${id==="S"?5:lvl(id)} of 5 · mind games get harder the closer you are to the castle</span>`:""}<span>Plays on: ${esc(n.g[2])}</span>${timed?`<span style="color:var(--gold)">Timed: win with seconds left and they count as time points for ${esc(t.name)}.</span>`:""}</div>`:"";
+  const sitting=t.ids.filter(i=>S.frozenP[i]).map(i=>pp(i).name);const sitNote=sitting.length?`<p class="hint" style="margin:0;color:#bfe9ff">${esc(sitting.join(" and "))} ${sitting.length>1?"are":"is"} frozen and can't play this one.</p>`:"";
   if(n.type==="event"){moveTo(t,id);const e=EVENTS[n.ev];if(n.ev==="tail")stepForward(t,1);else freeze(t);log(t.name+": "+e.t+" at "+n.name,t.x);
     open(head("Surprise event",1)+`<div class="info well"><span><b>${e.t}</b></span><span>${e.d}</span></div><button class="go p" data-done style="--x:#b48cff">OK</button>`,1);return}
   if(n.type==="vote"){moveTo(t,id);
-    open(head(`Royal vote · ${ORDER[id]===14?"first":"last"} vote before the castle`,1)+`<p class="hint" style="margin:0">${t.name} reached ${esc(n.name)}. Everyone votes in secret on the iPad or their phone. The player with the most votes is frozen and sits out their team's next turn.</p>
-      <span class="lab">Who got the most votes?</span><div class="pgrid">${Object.keys(NAMES).map(p=>{const last=teamOf(p).ids.every(i=>i===p||S.frozenP[i]);return avBtn(p,`data-vote="${p}"`,S.frozenP[p]||last,S.frozenP[p]?"Frozen":last?"Last one in":"")}).join("")}</div>`,1);return}
-  if(n.type==="game")open(head("Game stop")+dev+sitNote+`<p class="hint" style="margin:0">${t.name} plays. Win to move onto this stop, lose to stay put.</p>${playBtn(n)}<div class="row2"><button class="go p" data-res="win" style="--x:${t.x}">We won</button><button class="go g" data-res="lose">We lost</button></div>`);
-  if(n.type==="chal")open(head("Challenge · shorter road, higher risk")+dev+sitNote+`<div class="vs"><span style="color:${t.x}">${t.name}</span><span>VS</span><span style="color:${o.x}">${o.name}</span></div><p class="hint" style="margin:0">Winner moves forward. Loser's whole team freezes for one turn.</p>${playBtn(n)}<div class="row2"><button class="go p" data-res="cw" style="--x:${t.x}">${t.name} won</button><button class="go p" data-res="cl" style="--x:${o.x}">${o.name} won</button></div>`);
-  if(n.type==="show")open(head("Showdown · everyone plays")+dev+`<p class="hint" style="margin:0">All 9 players play an elimination game. The last one standing earns their team 2 steps.</p>${playBtn(n)}<span class="lab">Who was the last one standing?</span><div class="pgrid">${Object.keys(NAMES).map(p=>avBtn(p,`data-surv="${p}"`)).join("")}</div>`);
-  if(n.type==="castle")open(head("The castle gates · final challenge")+dev+sitNote+`<p class="hint" style="margin:0">Win this and ${t.name} takes the castle, then one of you is crowned. Lose and you fall back one stop.</p>${playBtn(n)}<div class="row2"><button class="go p" data-res="fw" style="--x:${t.x}">We won</button><button class="go g" data-res="fl">We lost</button></div>`);
+    open(head(`Royal vote · ${ORDER[id]===14?"first":"last"} vote before the castle`,1)+`<p class="hint" style="margin:0">${esc(t.name)} reached ${esc(n.name)}. Everyone votes in secret (whisper it to the host, or write it on a scrap of paper). The player with the most votes is frozen and sits out their team's next turn.</p>
+      <span class="lab">Who got the most votes?</span><div class="pgrid">${everyone().map(p=>{const last=teamOf(p).ids.every(i=>i===p||S.frozenP[i]);return avBtn(p,`data-vote="${esc(p)}"`,S.frozenP[p]||last,S.frozenP[p]?"Frozen":last?"Last one in":"")}).join("")}</div>`,1);return}
+  if(n.type==="game")open(head("Game stop")+dev+sitNote+`<p class="hint" style="margin:0">${esc(t.name)} plays. Win to move onto this stop, lose to stay put.</p>${playBtn(n)}<div class="row2"><button class="go g" data-res="win">We won</button><button class="go g" data-res="lose">We lost</button></div>`);
+  if(n.type==="chal")open(head("Challenge · shorter road, higher risk")+dev+sitNote+`<div class="vs"><span style="color:${t.x}">${esc(t.name)}</span><span>VS</span><span style="color:${o.x}">${esc(o.name)}</span></div><p class="hint" style="margin:0">Winner moves forward. Loser's whole team freezes for one turn.</p>${playBtn(n)}<div class="row2"><button class="go g" data-res="cw">${esc(t.name)} won</button><button class="go g" data-res="cl">${esc(o.name)} won</button></div>`);
+  if(n.type==="show")open(head("Showdown · everyone plays")+dev+`<p class="hint" style="margin:0">All ${everyone().length} players play an elimination game. The last one standing earns their team 2 steps.</p>${playBtn(n)}<span class="lab">Who was the last one standing?</span><div class="pgrid">${everyone().map(p=>avBtn(p,`data-surv="${esc(p)}"`)).join("")}</div>`);
+  if(n.type==="castle")open(head("The castle gates · final challenge")+dev+sitNote+`<p class="hint" style="margin:0">Win this and ${esc(t.name)} takes the castle, then one of you is crowned. Lose and you fall back one stop.</p>${playBtn(n)}<div class="row2"><button class="go g" data-res="fw">We won</button><button class="go g" data-res="fl">We lost</button></div>`);
 }
-function result(r){const id=pend,n=N[id],t=cur(),o=other();shut();
-  if(r==="win"){moveTo(t,id);log(t.name+" won "+n.g[0]+" at "+n.name,t.x);won(t)}
+function result(r,left){const id=pend,n=N[id],t=cur(),o=other();shut();left=Math.max(0,left|0);
+  if(left&&(r==="win"||r==="fw"))t.tp+=left;else left=0;
+  if(r==="win"){moveTo(t,id);log(t.name+" won "+n.g[0]+" at "+n.name+tpTxt(left),t.x);won(t)}
   else if(r==="lose"){log(t.name+" lost "+n.g[0]+" at "+n.name,t.x);maybePower(t)}
   else if(r==="cw"){moveTo(t,id);freeze(o);log(t.name+" beat "+o.name+" at "+n.g[0]+"; "+o.name+" froze",t.x);won(t)}
   else if(r==="cl"){freeze(t);stepForward(o,1);log(o.name+" won the "+n.g[0]+" challenge and moved ahead; "+t.name+" froze",o.x);maybePower(t)}
-  else if(r==="fw"){moveTo(t,id);log(t.name+" won "+n.g[0]+" and stormed the castle!",t.x);render();crownSheet(t);return}
+  else if(r==="fw"){moveTo(t,id);log(t.name+" won "+n.g[0]+" and stormed the castle!"+tpTxt(left),t.x);render();duel=[];crownSheet(t);return}
   else if(r==="fl"){back(t);log(t.name+" lost at the castle gates and fell back",t.x);maybePower(t)}
   endTurn()}
-function crownSheet(t){open(`<div class="sh-top"><span class="ic" style="--x:#f5b300">♛</span><span class="t"><b>Throne duel</b><small>${t.name} holds the castle. One last 1v1 game between its players decides who wears the crown.</small></span></div>
-  <span class="lab">Who won the throne duel?</span>${t.ids.map(id=>`<div class="crownrow well"><span class="av" style="--x:${ROSTER[id][1]}">${ROSTER[id][0]}</span><b>${NAMES[id]}</b><button class="go p" style="--x:#f5b300" data-crown="${id},King">King</button><button class="go p" style="--x:#f7b8d2" data-crown="${id},Queen">Queen</button></div>`).join("")}`,1)}
-function crown(id,title){const t=teamOf(id);S.over=`Long live ${title} ${NAMES[id]}! ${t.name} took the castle.`;log(NAMES[id]+" was crowned "+title,t.x);render();burst();
-  open(`<div class="win"><svg width="84" height="58" viewBox="0 0 26 18"><path d="M2 16 L4 5 L9 10 L13 2 L17 10 L22 5 L24 16Z" fill="#ffd23f" stroke="#b07a00" stroke-width=".8"/><circle cx="13" cy="12" r="1.6" fill="#e5484d"/><circle cx="7" cy="13" r="1.2" fill="#3b6fa0"/><circle cx="19" cy="13" r="1.2" fill="#3b6fa0"/></svg>
-   <span class="av" style="--x:${ROSTER[id][1]};width:64px;height:64px;font-size:20px">${ROSTER[id][0]}</span><div class="big" style="color:#ffd23f">Long live ${title} ${NAMES[id]}!</div>
-   <p class="hint">${t.name} took the castle. The ${title.toLowerCase()} gets 20 bonus points and every teammate gets 10 on the trip leaderboard.</p><button class="go p" id="again" style="--x:#ffd23f">Play a new map</button></div>`)}
+function survive(p){const w=teamOf(p),t=cur();shut();moveTo(t,pend);stepForward(w,2);log("Showdown at "+N[pend].name+": "+pp(p).name+" survived, "+w.name+" jumped 2 stops",w.x);endTurn()}
+
+// the throne duel: two players of the winning team, Tap Race on this iPad or a Mind race on phones; then the host crowns the winner
+let duel=[],duelWin=null;
+function crownSheet(t,keep){t=t||S.teams.find(x=>x.at==="S");if(!t)return;
+  const many=t.ids.length>1,rows=duelWin&&t.ids.includes(duelWin)?[duelWin,...t.ids.filter(i=>i!==duelWin)]:t.ids;
+  open(`<div class="sh-top"><span class="ic" style="--x:#f5b300">♛</span><span class="t"><b>Throne duel</b><small>${esc(t.name)} holds the castle. ${many?"One last 1v1 game between its players decides who wears the crown.":"Its only player wears the crown."}</small></span></div>
+  ${many?`<div class="info well"><span><b>Pick two duelists</b> · ${duel.length}/2 picked</span><div class="chips">${t.ids.map(id=>`<button class="chip${duel.includes(id)?" on":""}" data-duel="${esc(id)}">${avH(id,32)}${esc(pp(id).name)}</button>`).join("")}</div></div>
+  <div class="row2"><button class="go p" id="duelGo" style="--x:#ffd23f" ${duel.length===2?"":"disabled"}>Tap Race on this iPad</button><a class="go g" target="_blank" rel="noopener" href="play.html?new=race&amp;players=${encodeURIComponent((duel.length===2?duel:t.ids).join(","))}&amp;mind=${pick(MindGames.list).id}&amp;level=5">Mind race on phones</a></div>`:""}
+  <span class="lab">Crown the winner</span>${rows.map(id=>`<div class="crownrow well">${avH(id)}<b>${esc(pp(id).name)}${id===duelWin?' <span class="tag" style="--x:var(--gold)">Won the duel</span>':""}</b><button class="go p" style="--x:#f5b300" data-crown="${esc(id)},King">King</button><button class="go p" style="--x:#f7b8d2" data-crown="${esc(id)},Queen">Queen</button></div>`).join("")}`,1,keep)}
+function crown(id,title){const t=teamOf(id);S.over=`Long live ${title} ${pp(id).name}! ${t.name} took the castle.`;S.crowned={id,title};duel=[];duelWin=null;
+  log(pp(id).name+" was crowned "+title,t.x);render();burst();summary()}
+function places(){const id=S.crowned.id,t=teamOf(id),o=S.teams.find(x=>x!==t),rest=t.ids.filter(x=>x!==id);
+  return {t,o,order:[id,...rest,...o.ids],places:[1,...rest.map(()=>2),...o.ids.map(()=>3)]}}
+const bonusOf=t=>Math.floor((t.tp|0)/10);
+function summary(){if(!S||!S.crowned)return;const {id,title}=S.crowned,P=places(),t=P.t,o=P.o;
+  const url=`admin.html?record=1&game=${encodeURIComponent(GAME_NAME)}&order=${P.order.map(encodeURIComponent).join(",")}&places=${P.places.join(",")}&bonus=${P.order.map(x=>bonusOf(teamOf(x))).join(",")}`;
+  const row=(pl,ids,note)=>ids.length?`<div class="plrow well"><span class="pl">${pl}</span><span class="ppl">${ids.map(x=>avH(x,0,"",pp(x).name)).join("")}</span><span class="nm">${esc(ids.map(x=>pp(x).name).join(", "))}</span><small>${note}</small></div>`:"";
+  const tl=tm=>`${esc(tm.name)} · ${tm.tp} time points = ${bonusOf(tm)} bonus coin${bonusOf(tm)===1?"":"s"} each`;
+  open(`<div class="win"><svg width="84" height="58" viewBox="0 0 26 18" aria-hidden="true"><path d="M2 16 L4 5 L9 10 L13 2 L17 10 L22 5 L24 16Z" fill="#ffd23f" stroke="#b07a00" stroke-width=".8"/><circle cx="13" cy="12" r="1.6" fill="#e5484d"/><circle cx="7" cy="13" r="1.2" fill="#3b6fa0"/><circle cx="19" cy="13" r="1.2" fill="#3b6fa0"/></svg>
+   ${avH(id,64)}<div class="big" style="color:#ffd23f">Long live ${title} ${esc(pp(id).name)}!</div>
+   <p class="hint" style="margin:0">${esc(t.name)} took the castle. Final places for the scoreboard:</p>
+   <div class="places">${row("1st",[id],`${title} · ${tl(t)}`)}${row("2nd",t.ids.filter(x=>x!==id),tl(t))}${row("3rd",o.ids,tl(o))}</div>
+   ${ME&&+ME.is_admin?`<a class="go p" href="${esc(url)}" style="--x:#7be08a">Record on the scoreboard</a>`:`<p class="hint" style="margin:0">${ME?"Ask the admin to record this game on the scoreboard.":"Log in as the admin on the home page to record this game on the scoreboard."}</p>`}
+   <div class="row2" style="width:100%"><button class="go g" data-shut>Close</button><button class="go p" id="again" style="--x:#ffd23f">Play a new map</button></div></div>`)}
 
 // ---------- fx ----------
-function toast(m){const t=$("toast");t.textContent=m;t.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove("on"),2400)}
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove("on"),2600)}
 function burst(){if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;const c=$("fx"),x=c.getContext("2d");c.width=innerWidth*devicePixelRatio;c.height=innerHeight*devicePixelRatio;x.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
   const cols=["#ffd23f","#e5484d","#7ee8f0","#f7b8d2","#d4f09a","#8e5cf7"];const ps=Array.from({length:180},()=>({x:innerWidth/2,y:innerHeight*.35,vx:(Math.random()-.5)*15,vy:Math.random()*-12-3,r:Math.random()*4+2,c:cols[Math.random()*6|0],a:Math.random()*6}));
   let k=0;(function f(){x.clearRect(0,0,innerWidth,innerHeight);ps.forEach(p=>{p.vy+=.35;p.x+=p.vx;p.y+=p.vy;p.a+=.2;x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillStyle=p.c;x.fillRect(-p.r,-p.r/2,p.r*2,p.r);x.restore()});if(++k<140)requestAnimationFrame(f);else x.clearRect(0,0,innerWidth,innerHeight)})()}
 
+// ---------- word and question decks ----------
+const WORDS=[["Animal","Black bear"],["Action","Pitching a tent"],["Place","Skyline Drive"],["Action","Roasting marshmallows"],["Thing","Hiking boots"],["Movie","The Lion King"],["Action","Crossing a creek"],["Animal","Deer"],["Thing","Campfire"],["Action","Getting lost on a trail"],["Place","Waterfall"],["Movie","Frozen"],["Thing","Flashlight"],["Action","Taking a selfie"],["Animal","Owl"],["Action","Fishing"],["Movie","Harry Potter"],["Thing","Sleeping bag"],["Action","Climbing a mountain"],["Animal","Snake"],["Thing","Crown"],["Action","Riding a horse"],["Movie","Shrek"],["Place","Castle"],["Action","Paddling a canoe"],["Animal","Raccoon"],["Action","Brushing your teeth"],["Movie","Finding Nemo"],["Action","Chopping wood"],["Animal","Penguin"]];
+const HEADS=[["Character","Mickey Mouse"],["Character","SpongeBob"],["Character","Batman"],["Character","Pikachu"],["Character","Elsa"],["Character","Darth Vader"],["Character","Mario"],["Character","Shrek"],["Food","Pizza"],["Food","Pancakes"],["Food","Hot dog"],["Food","Ice cream"],["Food","Tacos"],["Food","S'mores"],["Animal","Kangaroo"],["Animal","Dolphin"],["Animal","Giraffe"],["Animal","Skunk"],["Animal","Firefly"],["Thing","Volcano"],["Thing","Rainbow"],["Thing","Snowman"],["Thing","Treehouse"],["Thing","Roller coaster"],["Thing","Compass"],["Thing","Hammock"],["Job","Astronaut"],["Job","Pirate"],["Job","Park ranger"],["Job","Firefighter"],["Thing","Dinosaur"],["Thing","Robot"],["Thing","Unicorn"],["Sport","Basketball"],["Sport","Soccer"],["Thing","Guitar"],["Thing","Birthday cake"],["Place","Mountain top"],["Place","Movie theater"],["Place","Beach"]];
+const TABOO=[["Campfire",["Fire","Wood","Marshmallow","Camp"]],["Bear",["Honey","Grizzly","Teddy","Cave"]],["Mountain",["Hill","Climb","High","Peak"]],["Waterfall",["Water","River","Fall","Drop"]],["Tent",["Camp","Sleep","Zip","Pole"]],["Pizza",["Cheese","Italy","Slice","Pepperoni"]],["Castle",["King","Queen","Princess","Tower"]],["Crown",["King","Queen","Head","Gold"]],["Hiking",["Walk","Trail","Boots","Mountain"]],["Snowman",["Snow","Winter","Carrot","Frozen"]],["Map",["Road","Find","Directions","Paper"]],["Canoe",["Boat","Paddle","River","Row"]],["Owl",["Bird","Night","Hoot","Wise"]],["Rainbow",["Colors","Rain","Sky","Arc"]],["Flashlight",["Light","Dark","Battery","Torch"]],["Birthday",["Cake","Candles","Party","Age"]],["Deer",["Antlers","Bambi","Forest","Animal"]],["Pancake",["Breakfast","Syrup","Flip","Flat"]],["Guitar",["Strings","Music","Play","Rock"]],["Astronaut",["Space","Moon","Rocket","NASA"]],["Dragon",["Fire","Fly","Wings","Monster"]],["Popcorn",["Movie","Butter","Corn","Pop"]],["Selfie",["Phone","Photo","Picture","Camera"]],["Picnic",["Food","Blanket","Park","Basket"]],["Fishing",["Fish","Rod","Lake","Hook"]],["Shenandoah",["Park","Virginia","Valley","River"]],["Skyline Drive",["Road","Car","View","Mountains"]],["Treasure",["Gold","Pirate","Chest","Map"]],["Thunder",["Storm","Lightning","Loud","Rain"]],["Ice cream",["Cold","Cone","Scoop","Vanilla"]]];
+const PICT=["Tent","Bear","Castle","Crown","Fish","Tree","Sun","Car","House","Pizza","Rainbow","Snowman","Mountain","Boat","Bridge","Guitar","Cat","Ice cream","Flower","Rocket","Spider","Owl","Campfire","Bicycle","Clock","Train","Umbrella","Dragon","Waterfall","Butterfly","Moon","Key","Glasses","Hamburger","Birthday cake","Snail","Ladder","Kite","Apple","Deer"];
+// question, right answer, then 3 wrong ones
+const TRIVIA=[["Which mountains run through Shenandoah National Park?","Blue Ridge Mountains","Rocky Mountains","Sierra Nevada","Cascade Range"],["What is the famous scenic road through Shenandoah National Park?","Skyline Drive","Route 66","Sunset Boulevard","Lakeshore Drive"],["About how long is Skyline Drive?","105 miles","25 miles","300 miles","500 miles"],["What is the capital of Virginia?","Richmond","Virginia Beach","Norfolk","Roanoke"],["Which long hiking trail passes through Shenandoah?","Appalachian Trail","Pacific Crest Trail","Oregon Trail","Silk Road"],["What is Virginia's state bird?","Northern cardinal","Bald eagle","Blue jay","Robin"],["Which flower is Virginia's state flower?","Dogwood","Rose","Sunflower","Tulip"],["Shenandoah became a national park in which decade?","1930s","1880s","1960s","1990s"],["Which first US president was born in Virginia?","George Washington","Abraham Lincoln","John Adams","Theodore Roosevelt"],["How many US presidents were born in Virginia?","8","2","5","12"],["What was Thomas Jefferson's home in Virginia called?","Monticello","Mount Vernon","The White House","Graceland"],["Which cave near Shenandoah has a giant stalactite organ?","Luray Caverns","Carlsbad Caverns","Mammoth Cave","Ruby Falls"],["Which bear lives in Shenandoah National Park?","Black bear","Grizzly bear","Polar bear","Panda"],["What is the highest peak in Shenandoah National Park?","Hawksbill","Old Rag","Mount Mitchell","Pikes Peak"],["Which Shenandoah hike is famous for its big rock scramble?","Old Rag","Half Dome","Angels Landing","Diamond Head"],["The Shenandoah River flows into which river?","Potomac","Mississippi","Hudson","Colorado"],["What is Virginia's nickname?","Old Dominion","Sunshine State","Lone Star State","Garden State"],["Which ocean does Virginia touch?","Atlantic","Pacific","Arctic","Indian"],["Which was the first lasting English town in America, in Virginia?","Jamestown","Plymouth","Boston","Williamsburg"],["Finish the slogan: Virginia is for...","Lovers","Lawyers","Lizards","Lemons"],["How many legs does a spider have?","8","6","10","12"],["What is the largest planet in our solar system?","Jupiter","Saturn","Earth","Neptune"],["What gas do plants take in from the air?","Carbon dioxide","Oxygen","Helium","Nitrogen"],["What is the fastest land animal?","Cheetah","Lion","Horse","Greyhound"],["How many continents are there?","7","5","6","9"],["Which of these is a mammal?","Bat","Shark","Penguin","Frog"],["At what temperature (°F) does water boil at sea level?","212","100","180","250"],["Who painted the Mona Lisa?","Leonardo da Vinci","Pablo Picasso","Vincent van Gogh","Michelangelo"],["What is the tallest animal?","Giraffe","Elephant","Moose","Ostrich"],["How many minutes are in 3 hours?","180","120","300","160"],["Which planet is called the Red Planet?","Mars","Venus","Jupiter","Mercury"],["What is the largest ocean?","Pacific","Atlantic","Indian","Arctic"],["Which fruit has its seeds on the outside?","Strawberry","Banana","Apple","Grape"],["What is the name of Harry Potter's owl?","Hedwig","Errol","Fawkes","Scabbers"],["Which instrument has 88 keys?","Piano","Guitar","Violin","Trumpet"],["What do you call a baby deer?","Fawn","Calf","Cub","Kid"],["In which direction does the sun rise?","East","West","North","South"],["Which tree grows acorns?","Oak","Pine","Maple","Birch"],["How many days are in a leap year?","366","365","364","367"],["What is 9 times 9?","81","72","99","91"],["What is the capital of the United States?","Washington, D.C.","New York City","Philadelphia","Richmond"],["What is the largest US state by area?","Alaska","Texas","California","Montana"],["Which animal is known for building dams?","Beaver","Otter","Squirrel","Raccoon"],["What color do you get by mixing blue and yellow?","Green","Purple","Orange","Brown"],["How many sides does a hexagon have?","6","5","7","8"],["Which is the smallest of these?","Ant","Mouse","Frog","Sparrow"]];
+const ICONS=["🌲","🦌","🐻","⛺","🔥","🦉","🐟","🏔️","🌈","👑","🍕","🦊"];
+const TIMED=new Set(["Charades","Heads Up","Taboo","Pictionary","Memory Match","Trivia Sprint","Mind Gauntlet"]);
+
 // ---------- playable games ----------
-const PLAY={"Air Hockey":airHockey,"Charades":charades,"Mind Gauntlet":mindStop};POOL.mind.forEach(m=>PLAY[m[0]]=mindStop);
-function mindStop(n){const t=cur(),fin=n.type==="castle",game=fin?pick(MindGames.list).id:n.mind,level=fin?5:lvl(pend);
-  openArena(`<div class="ar-top"><span class="sc" style="color:${t.x}">${t.name}</span><span class="mid">${fin?"Mind Gauntlet · the castle gate":esc(n.name)}</span><button class="x well" id="arQuit" aria-label="Leave the game">✕</button></div><div id="mgHost" style="flex:1;display:flex;min-height:0"></div>`);
-  const g=MindGames.play($("mgHost"),{game,level,team:t.name,color:t.x,doneLabel:"Back to the map",onDone:win=>{closeArena();result(win?(fin?"fw":"win"):(fin?"fl":"lose"))}});
-  cleanup=()=>g.stop()}
-function pick(a){return a[Math.random()*a.length|0]}
-function playBtn(n){return PLAY[n.g[0]]?`<button class="go p" data-demo style="--x:#ffd23f">Play ${esc(n.g[0])} now</button>`:`<button class="go g" data-demo>Open ${esc(n.g[0])}</button>`}
-let loop=null,cleanup=null;
+const PLAY={"Air Hockey":airHockey,"Charades":charades,"Heads Up":headsUp,"Taboo":taboo,"Pictionary":pictionary,"Memory Match":memoryMatch,"Trivia Sprint":triviaSprint,"Trivia Battle":triviaBattle,"Tap Race":n=>tapRace(cur(),other(),`Tap Race · ${esc(n.name)}`,(i,sc)=>{const w=i?other():cur(),l=i?cur():other();arenaOver(w.name+" wins!",w.x,`${sc[0]} to ${sc[1]} taps. ${esc(w.name)} moves forward and ${esc(l.name)} freezes for a turn.`,i?"cl":"cw")}),"Quick Draw":quickDraw,"Last One Standing":lastStanding,"Mind Gauntlet":mindStop};POOL.mind.forEach(m=>PLAY[m[0]]=mindStop);
+// games played on everyone's own phone through Play together; the host enters the result here
+const PHONE={
+  "Imposter":{url:()=>"play.html?new=imposter&players="+encodeURIComponent(ready(S.teams[0]).concat(ready(S.teams[1])).join(",")),how:()=>`Everyone in both teams plays Imposter on their own phone. If the imposter gets away, the imposter's team wins this challenge. If the imposter is caught, the other team wins.`},
+  "Mind Race":{url:()=>`play.html?new=race&players=${encodeURIComponent(everyone().join(","))}&mind=${pick(MindGames.list).id}&level=${lvl(pend)}`,how:()=>`Everyone plays the same mind game on their own phone at the same moment. The best player is the last one standing.`}};
+function playBtn(n){const g=n.g[0];if(PLAY[g])return `<button class="go p" data-demo style="--x:#ffd23f">Play ${esc(g)} now</button>`;
+  const ph=PHONE[g];return `<p class="hint" style="margin:0">${esc(ph.how())} It opens Play together in a new tab: everyone taps Ready on their phone. When it's over, come back here and tap the result.</p><a class="go p" target="_blank" rel="noopener" href="${esc(ph.url())}" style="--x:#ffd23f">Open ${esc(g)} on everyone's phone</a>`}
+let loop=null,cleanup=null,onQuit=null;
+const QUIT='<button class="x well" id="arQuit" aria-label="Leave the game">✕</button>';
+const arTop=(mid,t)=>{t=t||cur();return `<div class="ar-top"><span class="sc" style="color:${t.x}">${esc(t.name)}</span><span class="mid">${mid}</span>${QUIT}</div>`};
+const duoTop=(A,B,mid)=>`<div class="ar-top"><span class="sc" style="color:${A.x}">${esc(A.name)}<b id="sL">0</b></span><span class="mid">${mid}</span><span class="sc" style="color:${B.x}"><b id="sR">0</b>${esc(B.name)}</span>${QUIT}</div>`;
 function openArena(h){const A=$("arena");A.innerHTML=h;A.hidden=false}
-function closeArena(){if(loop)cancelAnimationFrame(loop);loop=null;if(cleanup)cleanup();cleanup=null;$("arena").hidden=true;$("arena").innerHTML=""}
+function closeArena(){if(loop)cancelAnimationFrame(loop);loop=null;if(cleanup)cleanup();cleanup=null;onQuit=null;$("arena").hidden=true;$("arena").innerHTML=""}
+// res: win:<seconds left> · lose · cw · cl · fw:<seconds left> · fl · surv:<id> · duel:<id>
 function arenaOver(title,color,text,res,label){const d=document.createElement("div");d.className="ar-over";
-  d.innerHTML=`<div class="ar-box"><div class="big" style="color:${color}">${title}</div><p class="hint" style="margin:0">${text}</p><button class="go p" style="--x:${color}" data-arres="${res}">${label||"Back to the map"}</button></div>`;$("arena").appendChild(d);
-  if(res.startsWith("c")&&res==="cw"||res==="win")burst()}
+  d.innerHTML=`<div class="ar-box"><div class="big" style="color:${color}">${esc(title)}</div><p class="hint" style="margin:0">${text}</p><button class="go p" style="--x:${color}" data-arres="${esc(res)}">${label||"Back to the map"}</button></div>`;$("arena").appendChild(d);
+  if(/^(win|cw|fw|surv|duel)/.test(res))burst()}
+const leftNote=l=>l>0?` <b style="color:var(--gold)">${l} second${l===1?"":"s"} left: +${l} time points.</b>`:"";
+// a timer that counts down once a second; stops by itself at 0
+function clock(sec,tick,end){let left=sec;const id=setInterval(()=>{left--;tick(left);if(left<=0){clearInterval(id);end()}},1000);return {stop:()=>clearInterval(id),get left(){return left},cut(s){left=Math.max(1,left-s);tick(left)}}}
+
+// mind games (mind.js): stop games, the castle gate and the Thaw
+function mindPlay(o){const t=cur();let left=0;
+  openArena(arTop(o.mid)+`<div id="mgHost" style="flex:1;display:flex;min-height:0"></div>`);
+  const g=MindGames.play($("mgHost"),{game:o.game,level:o.level,team:t.name,color:t.x,doneLabel:"Back to the map",
+    onFinish:f=>{left=f.win?f.left|0:0;if(left)setTimeout(()=>{const p=document.querySelector("#mgHost .mg-end p");if(p)p.insertAdjacentHTML("beforeend",leftNote(left))},0)},
+    onDone:win=>{closeArena();o.end(win,win?left:0)}});
+  cleanup=()=>g.stop()}
+function mindStop(n){const fin=n.type==="castle";
+  mindPlay({game:fin?pick(MindGames.list).id:n.mind,level:fin?5:lvl(pend),mid:fin?"Mind Gauntlet · the castle gate":esc(n.g[0])+" · "+esc(n.name),end:(win,l)=>result(win?(fin?"fw":"win"):(fin?"fl":"lose"),l)})}
+function thaw(){mindPlay({game:pick(MindGames.list).id,level:1,mid:"Thaw game · win to play this turn",end:(win,l)=>{const t=cur();t.frozen=0;
+  if(win){t.tp+=l;log(t.name+" won the Thaw and is back in"+tpTxt(l),t.x);render();toast(t.name+" thawed out. Tap a glowing stop")}else{log(t.name+" lost the Thaw and sat out a frozen turn",t.x);endTurn()}}})}
+
+// word card games: one player holds the iPad, the team guesses against the clock
+function cardGame(n,c){const t=cur();let deck=shuffle(c.deck),i=0,got=0,skip=0,tm=null,gone=false;
+  openArena(arTop(`${c.name} · ${esc(n.name)}`)+`<div class="ch"><div class="card"><small>How to play</small><b>${c.title}</b><p class="hint" style="margin:0;color:#4a5160;max-width:46ch">${c.how} Get <b style="font:inherit;color:#15181e">${c.need} words in ${c.time} seconds</b> to win this stop. Seconds left count as time points.</p></div>
+    <div class="acts" style="grid-template-columns:1fr"><button class="go p" id="chGo" style="--x:${t.x}">${c.start}</button></div></div>`);
+  const box=()=>$("arena").querySelector(".ch");
+  const go=()=>{let k=3;const cd=()=>{if(gone)return;if(k===0){play();return}box().innerHTML=`<div class="clock">${k--}</div><p class="hint">Get ready...</p>`;setTimeout(cd,700)};cd()};
+  const play=()=>{box().innerHTML=`<div class="clock" id="chT">${c.time}</div><div class="card" id="chC"></div><div class="acts"><button class="go g" id="chS">${c.skip||"Skip"}</button><button class="go p" id="chY" style="--x:#5fc46a">Got it!</button></div><div class="tally"><span id="chG">Correct: 0 / ${c.need}</span><span id="chK">Skipped: 0</span></div>`;
+    show();tm=clock(c.time,l=>{$("chT")&&($("chT").textContent=l)},end)};
+  const show=()=>{const w=deck[i%deck.length],el=$("chC");el.innerHTML=c.card(w);el.classList.remove("pop");void el.offsetWidth;el.classList.add("pop")};
+  const end=()=>{if(gone)return;gone=true;tm&&tm.stop();const w=got>=c.need,l=w?tm.left:0;arenaOver(w?"You did it!":"Time's up",w?"#5fc46a":"#ff8f8f",`${esc(t.name)} got ${got} word${got===1?"":"s"}${w?` and moves onto ${esc(n.name)}.`+leftNote(l):`. You needed ${c.need}, so you stay where you are.`}`,w?"win:"+l:"lose")};
+  const onClick=e=>{const b=e.target.closest("button");if(!b||gone)return;if(b.id==="chGo")go();else if(b.id==="chY"){got++;i++;$("chG").textContent=`Correct: ${got} / ${c.need}`;if(got>=c.need){end();return}show()}else if(b.id==="chS"){skip++;i++;$("chK").textContent="Skipped: "+skip;show()}};
+  $("arena").addEventListener("click",onClick);
+  cleanup=()=>{gone=true;tm&&tm.stop();$("arena").removeEventListener("click",onClick)}}
+function charades(n){cardGame(n,{name:"Charades",title:"Act it out!",need:5,time:60,deck:WORDS,start:"I'm the actor, start!",how:`One actor holds the iPad so only they see the word and acts it out with no talking. ${esc(cur().name)} guesses.`,card:w=>`<small>${w[0]}</small><b>${esc(w[1])}</b>`})}
+function headsUp(n){cardGame(n,{name:"Heads Up",title:"Guess who or what!",need:5,time:60,deck:HEADS,start:"I'm the guesser, start!",skip:"Pass",how:`The guesser holds the iPad up on their forehead, screen facing the team, and must not peek. The team gives clues without saying the word and taps Got it or Pass.`,card:w=>`<small>${w[0]}</small><b>${esc(w[1])}</b>`})}
+function taboo(n){cardGame(n,{name:"Taboo",title:"Describe it, don't say it!",need:4,time:75,deck:TABOO,start:"I'm the clue giver, start!",skip:"Buzz! Skip it",how:`One clue giver holds the iPad and describes the word without saying it or any of the blocked words under it. ${esc(cur().name)} guesses. Said a blocked word? Tap Buzz to skip.`,card:w=>`<small>Get them to say</small><b>${esc(w[0])}</b><div class="ban">${w[1].map(x=>`<span>${esc(x)}</span>`).join("")}</div>`})}
+
+// Pictionary: the drawer peeks at the word, draws, the team guesses
+function pictionary(n){const t=cur(),NEED=3,TIME=120,COLS=["#15181e","#e5484d","#3b6fa0","#2e8b57","#f5b300"];let deck=shuffle(PICT),i=0,got=0,tm=null,gone=false,col=COLS[0],last=null;
+  openArena(arTop(`Pictionary · ${esc(n.name)}`)+`<div class="pic-bar"><span class="clk" id="pcT">${TIME}</span><span class="tally" id="pcG">Guessed: 0 / ${NEED}</span><div class="tools">${COLS.map((c,k)=>`<button class="sw${k?"":" on"}" data-col="${c}" style="--x:${c}" aria-label="Pen color"></button>`).join("")}<button class="sw" data-col="erase" style="--x:#fff" aria-label="Eraser"></button><button class="go g" id="pcClr">Clear</button></div></div>
+    <canvas id="pc"></canvas><div class="acts2"><button class="go g" id="pcS">Skip word</button><button class="go p" id="pcY" style="--x:#5fc46a">They got it!</button></div>`);
+  const cv=$("pc"),ctx=cv.getContext("2d");
+  const size=()=>{const r=cv.getBoundingClientRect(),d=devicePixelRatio||1,old=document.createElement("canvas");old.width=cv.width;old.height=cv.height;if(cv.width)old.getContext("2d").drawImage(cv,0,0);
+    cv.width=Math.max(1,r.width*d);cv.height=Math.max(1,r.height*d);ctx.setTransform(d,0,0,d,0,0);ctx.fillStyle="#fff";ctx.fillRect(0,0,r.width,r.height);if(old.width>1)ctx.drawImage(old,0,0,old.width/d,old.height/d)};
+  const clear=()=>{const r=cv.getBoundingClientRect();ctx.fillStyle="#fff";ctx.fillRect(0,0,r.width,r.height)};
+  size();addEventListener("resize",size);
+  const pt=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top]};
+  const line=(a,b)=>{ctx.strokeStyle=col==="erase"?"#fff":col;ctx.lineWidth=col==="erase"?28:6;ctx.lineCap=ctx.lineJoin="round";ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0]+.01,b[1]);ctx.stroke()};
+  cv.addEventListener("pointerdown",e=>{last=pt(e);line(last,last);cv.setPointerCapture&&cv.setPointerCapture(e.pointerId)});
+  cv.addEventListener("pointermove",e=>{if(!last)return;const p=pt(e);line(last,p);last=p});
+  const up=()=>last=null;cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
+  const over=h=>{const o=$("pcO");if(o)o.remove();if(!h)return;const d=document.createElement("div");d.className="ar-over";d.id="pcO";d.innerHTML=`<div class="ar-box">${h}</div>`;$("arena").appendChild(d)};
+  const peek=()=>over(`<span class="lab">${got?"Next word":"Drawer only"}</span><div class="big">Only the drawer looks!</div><p class="hint" style="margin:0">Everyone else, look away.</p><button class="go p" id="pcShow" style="--x:${t.x}">Show me the word</button>`);
+  over(`<span class="lab">How to play</span><div class="big">Draw it!</div><p class="hint" style="margin:0">One drawer sees the word and draws it. No letters or numbers! ${esc(t.name)} guesses out loud. Get <b>${NEED} words in ${TIME} seconds</b> to win. Seconds left count as time points.</p><button class="go p" id="pcGo" style="--x:${t.x}">I'm the drawer</button>`);
+  const end=()=>{if(gone)return;gone=true;tm&&tm.stop();over();const w=got>=NEED,l=w?tm.left:0;arenaOver(w?"You did it!":"Time's up",w?"#5fc46a":"#ff8f8f",`${esc(t.name)} guessed ${got} drawing${got===1?"":"s"}${w?` and moves onto ${esc(n.name)}.`+leftNote(l):`. You needed ${NEED}, so you stay where you are.`}`,w?"win:"+l:"lose")};
+  const onClick=e=>{const b=e.target.closest("button");if(!b||gone)return;
+    if(b.id==="pcGo")peek();
+    else if(b.id==="pcShow")over(`<span class="lab">Your word</span><div class="big" style="color:var(--gold)">${esc(deck[i%deck.length])}</div><button class="go p" id="pcDraw" style="--x:${t.x}">Hide it and start drawing</button>`);
+    else if(b.id==="pcDraw"){over();clear();if(!tm)tm=clock(TIME,l=>{$("pcT")&&($("pcT").textContent=l)},end)}
+    else if(b.id==="pcClr")clear();
+    else if(b.dataset.col){col=b.dataset.col;$("arena").querySelectorAll(".sw").forEach(s=>s.classList.toggle("on",s===b))}
+    else if(b.id==="pcY"&&tm){got++;i++;$("pcG").textContent=`Guessed: ${got} / ${NEED}`;if(got>=NEED)end();else peek()}
+    else if(b.id==="pcS"&&tm){i++;peek()}};
+  $("arena").addEventListener("click",onClick);
+  cleanup=()=>{gone=true;tm&&tm.stop();removeEventListener("resize",size);$("arena").removeEventListener("click",onClick)}}
+
+// Memory Match: the team takes turns flipping two cards
+function memoryMatch(n){const t=cur(),TIME=90,PAIRS=8;let tm=null,up=[],got=0,busy=false,gone=false,moves=0;
+  const ic=shuffle(ICONS).slice(0,PAIRS),deck=shuffle(ic.concat(ic));
+  openArena(arTop(`Memory Match · ${esc(n.name)}`)+`<div class="ch"><div class="card"><small>How to play</small><b>Find the pairs!</b><p class="hint" style="margin:0;color:#4a5160;max-width:46ch">Take turns: each player flips two cards. A pair stays open. Find all <b style="font:inherit;color:#15181e">${PAIRS} pairs in ${TIME} seconds</b> to win. Seconds left count as time points.</p></div><div class="acts" style="grid-template-columns:1fr"><button class="go p" id="mmGo" style="--x:${t.x}">Start</button></div></div>`);
+  const box=()=>$("arena").querySelector(".ch");
+  const fit=()=>{const w=$("mmW");if(!w)return;const r=w.getBoundingClientRect(),s=Math.max(40,Math.floor(Math.min((r.width-24)/4,(r.height-24)/4,140)));$("mm").style.setProperty("--s",s+"px")};
+  const end=()=>{if(gone)return;gone=true;tm&&tm.stop();const w=got>=PAIRS,l=w?tm.left:0;arenaOver(w?"All pairs found!":"Time's up",w?"#5fc46a":"#ff8f8f",`${esc(t.name)} found ${got} of ${PAIRS} pairs in ${moves} tries${w?` and moves onto ${esc(n.name)}.`+leftNote(l):`, so you stay where you are.`}`,w?"win:"+l:"lose")};
+  const onClick=e=>{const b=e.target.closest("button");if(!b||gone)return;
+    if(b.id==="mmGo"){box().innerHTML=`<div class="clock" id="mmT">${TIME}</div><div class="tally"><span id="mmG">Pairs: 0 / ${PAIRS}</span><span id="mmM">Tries: 0</span></div><div class="mmw" id="mmW"><div class="mm" id="mm">${deck.map((_,k)=>`<button data-k="${k}" aria-label="Card ${k+1}">?</button>`).join("")}</div></div>`;fit();
+      tm=clock(TIME,l=>{$("mmT")&&($("mmT").textContent=l)},end);return}
+    const k=b.dataset.k;if(k===undefined||busy||b.classList.contains("up")||b.classList.contains("got"))return;
+    b.classList.add("up");b.textContent=deck[k];up.push(b);if(up.length<2)return;
+    moves++;$("mmM").textContent="Tries: "+moves;const [a,c]=up;up=[];
+    if(deck[a.dataset.k]===deck[c.dataset.k]){a.classList.add("got");c.classList.add("got");got++;$("mmG").textContent=`Pairs: ${got} / ${PAIRS}`;if(got>=PAIRS)setTimeout(end,350)}
+    else{busy=true;setTimeout(()=>{if(gone)return;[a,c].forEach(x=>{x.classList.remove("up");x.textContent="?"});busy=false},750)}};
+  $("arena").addEventListener("click",onClick);addEventListener("resize",fit);
+  cleanup=()=>{gone=true;tm&&tm.stop();removeEventListener("resize",fit);$("arena").removeEventListener("click",onClick)}}
+
+// Trivia Sprint: the team answers against the clock, a wrong answer costs 5 seconds
+function triviaSprint(n){const t=cur(),NEED=6,TIME=75;let qs=shuffle(TRIVIA),qi=0,got=0,tm=null,gone=false,busy=false;
+  openArena(arTop(`Trivia Sprint · ${esc(n.name)}`)+`<div class="ch"><div class="card"><small>How to play</small><b>Quick, answer!</b><p class="hint" style="margin:0;color:#4a5160;max-width:46ch">${esc(t.name)} answers together. Get <b style="font:inherit;color:#15181e">${NEED} right in ${TIME} seconds</b> to win. A wrong answer costs 5 seconds. Seconds left count as time points.</p></div><div class="acts" style="grid-template-columns:1fr"><button class="go p" id="tsGo" style="--x:${t.x}">Start</button></div></div>`);
+  const box=()=>$("arena").querySelector(".ch");
+  const ask=()=>{busy=false;const q=qs[qi++%qs.length],o=shuffle(q.slice(1));$("tsQ").textContent=q[0];$("tsO").innerHTML=o.map(a=>`<button class="opt" data-a="${a===q[1]?1:0}">${esc(a)}</button>`).join("")};
+  const end=()=>{if(gone)return;gone=true;tm&&tm.stop();const w=got>=NEED,l=w?tm.left:0;arenaOver(w?"You did it!":"Time's up",w?"#5fc46a":"#ff8f8f",`${esc(t.name)} got ${got} right${w?` and moves onto ${esc(n.name)}.`+leftNote(l):`. You needed ${NEED}, so you stay where you are.`}`,w?"win:"+l:"lose")};
+  const onClick=e=>{const b=e.target.closest("button");if(!b||gone)return;
+    if(b.id==="tsGo"){box().innerHTML=`<div class="clock" id="tsT">${TIME}</div><div class="tq well" id="tsQ" style="width:min(640px,100%)"></div><div class="opts" id="tsO"></div><div class="tally"><span id="tsG">Right: 0 / ${NEED}</span></div>`;ask();tm=clock(TIME,l=>{$("tsT")&&($("tsT").textContent=l)},end);return}
+    if(b.dataset.a===undefined||busy)return;busy=true;
+    if(b.dataset.a==="1"){b.classList.add("ok");got++;$("tsG").textContent=`Right: ${got} / ${NEED}`;if(got>=NEED){end();return}setTimeout(()=>!gone&&ask(),550)}
+    else{b.classList.add("no");$("tsO").querySelector('[data-a="1"]').classList.add("ok");tm.cut(5);setTimeout(()=>!gone&&ask(),1100)}};
+  $("arena").addEventListener("click",onClick);
+  cleanup=()=>{gone=true;tm&&tm.stop();$("arena").removeEventListener("click",onClick)}}
+
+// Trivia Battle: both teams buzz in on their own side; first right answer scores, a wrong one locks your side out
+function triviaBattle(n){const L=cur(),R=other(),GOAL=5,sc=[0,0];let qs=shuffle(TRIVIA),qi=0,lock=[0,0],busy=true,gone=false;
+  openArena(duoTop(L,R,`Trivia Battle · first to ${GOAL} · ${esc(n.name)}`)+`<div class="tb"><div class="tq well" id="tbQ">Get ready...</div><div class="duo">${[L,R].map((t,i)=>`<div class="tbs" id="tbS${i}" style="--x:${t.x}"><span>${esc(t.name)}</span><div class="opts" id="tbO${i}"></div></div>`).join("")}</div></div><div class="ar-help">Each team taps answers on its own side. First right answer wins the point. A wrong answer locks your side out of that question.</div>`);
+  let q,o;
+  const ask=()=>{if(gone)return;q=qs[qi++%qs.length];o=shuffle(q.slice(1));lock=[0,0];busy=false;$("tbQ").textContent=q[0];
+    [0,1].forEach(i=>{$("tbS"+i).classList.remove("lock");$("tbO"+i).innerHTML=o.map(a=>`<button class="opt" data-a="${a===q[1]?1:0}">${esc(a)}</button>`).join("")})};
+  const reveal=()=>[0,1].forEach(i=>$("tbO"+i).querySelector('[data-a="1"]').classList.add("ok"));
+  const onDown=e=>{const b=e.target.closest(".opt");if(!b||busy||gone)return;const i=+b.closest(".tbs").id.slice(3);if(lock[i])return;
+    if(b.dataset.a==="1"){busy=true;b.classList.add("ok");sc[i]++;$(i?"sR":"sL").textContent=sc[i];
+      if(sc[i]>=GOAL){gone=true;const w=i?R:L,l=i?L:R;setTimeout(()=>arenaOver(w.name+" wins!",w.x,`${sc[0]} to ${sc[1]}. ${esc(w.name)} moves forward and ${esc(l.name)} freezes for a turn.`,i?"cl":"cw"),700);return}
+      toast((i?R:L).name+" got it!");setTimeout(ask,1200)}
+    else{b.classList.add("no");lock[i]=1;$("tbS"+i).classList.add("lock");if(lock[0]&&lock[1]){busy=true;reveal();setTimeout(ask,1600)}}};
+  $("arena").addEventListener("pointerdown",onDown);setTimeout(ask,900);
+  cleanup=()=>{gone=true;$("arena").removeEventListener("pointerdown",onDown)}}
+
+// Tap Race: one player per side taps their half as fast as they can
+function tapRace(A,B,mid,done){const GOAL=40,sc=[0,0];let live=false,gone=false;
+  openArena(duoTop(A,B,mid)+`<div class="duo">${[A,B].map((t,i)=>`<div class="half" data-h="${i}" style="--x:${t.x}"><span>${esc(t.name)}</span><b id="h${i}">0</b><div class="bar"><i id="hb${i}" style="width:0%"></i></div><small id="hm${i}">Get ready...</small></div>`).join("")}</div><div class="ar-help">Tap your own side as fast as you can. First to ${GOAL} taps wins. On a laptop: A key for the left side, L key for the right.</div>`);
+  const msg=m=>[0,1].forEach(i=>$("hm"+i).textContent=m);
+  let k=3;const cd=()=>{if(gone)return;if(k===0){live=true;msg("GO! Tap tap tap!");return}msg(k--+"...");setTimeout(cd,700)};setTimeout(cd,400);
+  const hit=i=>{if(!live||gone)return;sc[i]++;$("h"+i).textContent=sc[i];$("hb"+i).style.width=Math.min(100,100*sc[i]/GOAL)+"%";$(i?"sR":"sL").textContent=sc[i];
+    if(sc[i]>=GOAL){gone=true;msg("");$("hm"+i).textContent="Winner!";setTimeout(()=>done(i,sc),500)}};
+  const onDown=e=>{const h=e.target.closest(".half");if(h){e.preventDefault();hit(+h.dataset.h)}};
+  const kd=e=>{if(e.repeat)return;const k=e.key.toLowerCase();if(k==="a")hit(0);else if(k==="l")hit(1)};
+  $("arena").addEventListener("pointerdown",onDown);addEventListener("keydown",kd);
+  cleanup=()=>{gone=true;$("arena").removeEventListener("pointerdown",onDown);removeEventListener("keydown",kd)}}
+
+// Quick Draw: wait for green, then tap your side first; first to 3 rounds
+function quickDraw(n){const L=cur(),R=other(),GOAL=3,sc=[0,0];let st="",timer=null,gone=false;
+  openArena(duoTop(L,R,`Quick Draw · first to ${GOAL} · ${esc(n.name)}`)+`<div class="duo">${[L,R].map((t,i)=>`<div class="half" data-h="${i}" style="--x:${t.x}"><span>${esc(t.name)}</span><b id="h${i}">0</b><small id="hm${i}">Get ready...</small></div>`).join("")}</div><div class="ar-help">One player from each team. Wait for green, then tap your side first. Tapping too soon gives the point away. On a laptop: A key for the left side, L key for the right.</div>`);
+  const look=(cls,m)=>[0,1].forEach(i=>{const h=$("arena").querySelector(`.half[data-h="${i}"]`);h.classList.remove("wait","fire");if(cls)h.classList.add(cls);$("hm"+i).textContent=m});
+  const round=()=>{if(gone)return;st="wait";look("wait","Wait for green...");timer=setTimeout(()=>{st="fire";look("fire","TAP!")},1500+Math.random()*2500)};
+  const point=(i,why)=>{st="";clearTimeout(timer);sc[i]++;$("h"+i).textContent=sc[i];$(i?"sR":"sL").textContent=sc[i];look("",why);
+    if(sc[i]>=GOAL){gone=true;const w=i?R:L,l=i?L:R;setTimeout(()=>arenaOver(w.name+" wins!",w.x,`${sc[0]} to ${sc[1]}. ${esc(w.name)} moves forward and ${esc(l.name)} freezes for a turn.`,i?"cl":"cw"),900)}else setTimeout(round,1600)};
+  const hit=i=>{if(gone)return;const a=i?R:L,b=i?L:R;if(st==="wait")point(1-i,a.name+" tapped too soon! Point to "+b.name);else if(st==="fire")point(i,a.name+" was faster!")};
+  const onDown=e=>{const h=e.target.closest(".half");if(h){e.preventDefault();hit(+h.dataset.h)}};
+  const kd=e=>{if(e.repeat)return;const k=e.key.toLowerCase();if(k==="a")hit(0);else if(k==="l")hit(1)};
+  $("arena").addEventListener("pointerdown",onDown);addEventListener("keydown",kd);setTimeout(round,900);
+  cleanup=()=>{gone=true;clearTimeout(timer);$("arena").removeEventListener("pointerdown",onDown);removeEventListener("keydown",kd)}}
+
+// Last One Standing: pass the iPad; each round everyone taps once on green and the slowest half is out
+function lastStanding(n){let alive=shuffle(everyone()),round=1,times={},qi=0,timer=null,green=0,st="",gone=false;
+  openArena(arTop(`Last One Standing · ${esc(n.name)}`)+`<div class="ch"></div>`);
+  const box=()=>$("arena").querySelector(".ch"),sec=ms=>ms===Infinity?"Too soon":(ms/1000).toFixed(3)+" s";
+  const intro=()=>{box().innerHTML=`<div class="card"><small>How to play</small><b>Fastest finger wins</b><p class="hint" style="margin:0;color:#4a5160;max-width:46ch">Pass the iPad around. When it's your go, tap the big pad as soon as it turns green. Tapping too soon counts as slowest. After each round the slowest half is out, until one player is left.</p></div><div class="acts" style="grid-template-columns:1fr"><button class="go p" id="lsGo" style="--x:#f5b300">Start round 1</button></div>`};
+  const turn=()=>{if(gone)return;if(qi>=alive.length){endRound();return}const id=alive[qi],p=pp(id);st="";
+    box().innerHTML=`<p class="hint">Round ${round} · ${alive.length} players left · turn ${qi+1} of ${alive.length}</p>${avH(id,72)}<div class="big">Pass the iPad to ${esc(p.name)}</div><button class="go p" id="lsReady" style="--x:${esc(p.color)};max-width:360px">I'm ${esc(p.name)}, ready!</button>`};
+  const pad=()=>{st="wait";box().innerHTML=`<button class="pad wait" id="lsPad">Wait for green...</button>`;timer=setTimeout(()=>{if(gone)return;st="fire";green=performance.now();const b=$("lsPad");b.className="pad fire";b.textContent="TAP!"},1200+Math.random()*2600)};
+  const hit=()=>{if(st!=="wait"&&st!=="fire")return;const id=alive[qi];clearTimeout(timer);times[id]=st==="wait"?Infinity:performance.now()-green;st="shown";
+    const b=$("lsPad");b.className="pad done";b.textContent=`${pp(id).name}: ${sec(times[id])}`;qi++;setTimeout(turn,1300)};
+  const endRound=()=>{const sorted=alive.slice().sort((a,b)=>times[a]-times[b]),k=Math.max(1,Math.floor(alive.length/2)),out=new Set(sorted.slice(sorted.length-k));
+    alive=sorted.filter(x=>!out.has(x));
+    if(alive.length===1){const w=alive[0],tm=teamOf(w);box().innerHTML=`<div class="rlist">${sorted.map(x=>`<div class="${out.has(x)?"out":""}">${avH(x,28)}<b>${esc(pp(x).name)}</b><span>${sec(times[x])}</span></div>`).join("")}</div>`;gone=true;
+      setTimeout(()=>arenaOver(pp(w).name+" is the last one standing!",tm.x,`${esc(tm.name)} jumps 2 stops.`,"surv:"+w),600);return}
+    box().innerHTML=`<div class="big">Round ${round} results</div><div class="rlist">${sorted.map(x=>`<div class="${out.has(x)?"out":""}">${avH(x,28)}<b>${esc(pp(x).name)}</b><span>${sec(times[x])}${out.has(x)?" · out":""}</span></div>`).join("")}</div><button class="go p" id="lsGo" style="--x:#f5b300;max-width:360px">Start round ${round+1}</button>`;round++};
+  const onClick=e=>{const b=e.target.closest("button");if(!b||gone)return;if(b.id==="lsGo"){qi=0;times={};alive=shuffle(alive);turn()}else if(b.id==="lsReady")pad()};
+  const onDown=e=>{if(e.target.closest("#lsPad")){e.preventDefault();hit()}};
+  $("arena").addEventListener("click",onClick);$("arena").addEventListener("pointerdown",onDown);intro();
+  cleanup=()=>{gone=true;clearTimeout(timer);$("arena").removeEventListener("click",onClick);$("arena").removeEventListener("pointerdown",onDown)}}
 
 function airHockey(n){const L=cur(),R=other(),GOAL=3;
-  openArena(`<div class="ar-top"><span class="sc" style="color:${L.x}">${L.name}<b id="sL">0</b></span><span class="mid">Air Hockey · first to ${GOAL} wins · ${esc(n.name)}</span><span class="sc" style="color:${R.x}"><b id="sR">0</b>${R.name}</span><button class="x well" id="arQuit" aria-label="Leave the game">✕</button></div>
+  openArena(duoTop(L,R,`Air Hockey · first to ${GOAL} wins · ${esc(n.name)}`)+`
    <canvas id="hc"></canvas><div class="ar-help">One player on each side drags their paddle. On a laptop: W A S D for the left player, arrow keys for the right.</div>`);
   const cv=$("hc"),ctx=cv.getContext("2d");let W,H,k,ox,oy;const T={w:2,h:1};
   function size(){const r=cv.getBoundingClientRect(),dpr=devicePixelRatio||1;cv.width=r.width*dpr;cv.height=r.height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -431,7 +713,7 @@ function airHockey(n){const L=cur(),R=other(),GOAL=3;
     const v=Math.hypot(puck.vx,puck.vy),MAX=.06;if(v>MAX){puck.vx*=MAX/v;puck.vy*=MAX/v}
     puck.vx*=.996;puck.vy*=.996}
   function goal(s){sc[s]++;$("s"+s).textContent=sc[s];toast((s==="L"?L:R).name+" scores!");
-    if(sc[s]>=GOAL){done=true;const w=s==="L"?L:R;arenaOver(w.name+" wins!",w.x,`${sc.L} to ${sc.R}. ${s==="L"?"You move forward and "+R.name+" freezes for a turn.":R.name+" moves ahead and "+L.name+" freezes for a turn."}`,s==="L"?"cw":"cl")}
+    if(sc[s]>=GOAL){done=true;const w=s==="L"?L:R;arenaOver(w.name+" wins!",w.x,`${sc.L} to ${sc.R}. ${esc(s==="L"?L.name+" moves forward and "+R.name+" freezes for a turn.":R.name+" moves ahead and "+L.name+" freezes for a turn.")}`,s==="L"?"cw":"cl")}
     else serve(s==="L"?"R":"L")}
   function X(x){return ox+x*k}function Y(y){return oy+y*k}
   function draw(){ctx.clearRect(0,0,W,H);
@@ -455,40 +737,48 @@ function airHockey(n){const L=cur(),R=other(),GOAL=3;
   serve(Math.random()<.5?"L":"R");
   (function f(){if(!done)step();draw();loop=requestAnimationFrame(f)})()}
 
-const WORDS=[["Animal","Black bear"],["Action","Pitching a tent"],["Place","Skyline Drive"],["Action","Roasting marshmallows"],["Thing","Hiking boots"],["Movie","The Lion King"],["Action","Crossing a creek"],["Animal","Deer"],["Thing","Campfire"],["Action","Getting lost on a trail"],["Place","Waterfall"],["Movie","Frozen"],["Thing","Flashlight"],["Action","Taking a selfie"],["Animal","Owl"],["Action","Fishing"],["Movie","Harry Potter"],["Thing","Sleeping bag"],["Action","Climbing a mountain"],["Animal","Snake"],["Thing","Crown"],["Action","Riding a horse"],["Movie","Shrek"],["Place","Castle"]];
-function charades(n){const t=cur(),NEED=5,TIME=60;let deck=shuffle(WORDS),i=0,got=0,skip=0,left=TIME,timer=null,gone=false;
-  const intro=()=>openArena(`<div class="ar-top"><span class="sc" style="color:${t.x}">${t.name}</span><span class="mid">Charades · ${esc(n.name)}</span><button class="x well" id="arQuit" aria-label="Leave the game">✕</button></div>
-    <div class="ch"><div class="card"><small>How to play</small><b>Act it out!</b><p class="hint" style="margin:0;color:#4a5160;max-width:44ch">One actor holds the iPad so only they see the word and acts it out with no talking. ${t.name} guesses. Get <b style="font:inherit;color:#15181e">${NEED} words in ${TIME} seconds</b> to win this stop.</p></div>
-    <div class="acts" style="grid-template-columns:1fr"><button class="go p" id="chGo" style="--x:${t.x}">I'm the actor, start!</button></div></div>`);
-  intro();
-  const go=()=>{let c=3;const cd=()=>{if(gone)return;$("arena").querySelector(".ch").innerHTML=`<div class="clock">${c}</div><p class="hint">Get ready...</p>`;if(c--===0){play();return}setTimeout(cd,700)};cd()};
-  const play=()=>{const ch=$("arena").querySelector(".ch");ch.innerHTML=`<div class="clock" id="chT">${left}</div><div class="card" id="chC"></div><div class="acts"><button class="go g" id="chS">Skip</button><button class="go p" id="chY" style="--x:#5fc46a">Got it!</button></div><div class="tally"><span id="chG">Correct: 0 / ${NEED}</span><span id="chK">Skipped: 0</span></div>`;
-    show();timer=setInterval(()=>{left--;$("chT")&&($("chT").textContent=left);if(left<=0)end()},1000)};
-  const show=()=>{const w=deck[i%deck.length],c=$("chC");c.innerHTML=`<small>${w[0]}</small><b>${esc(w[1])}</b>`;c.classList.remove("pop");void c.offsetWidth;c.classList.add("pop")};
-  const end=()=>{clearInterval(timer);timer=null;const w=got>=NEED;arenaOver(w?"You did it!":"Time's up",w?"#5fc46a":"#ff8f8f",`${t.name} got ${got} word${got===1?"":"s"}${w?` and moves onto ${esc(n.name)}.`:`. You needed ${NEED}, so you stay where you are.`}`,w?"win":"lose")};
-  const onClick=e=>{const b=e.target.closest("button");if(!b)return;if(b.id==="chGo")go();else if(b.id==="chY"){got++;i++;$("chG").textContent=`Correct: ${got} / ${NEED}`;if(got>=NEED){end();return}show()}else if(b.id==="chS"){skip++;i++;$("chK").textContent="Skipped: "+skip;show()}};
-  $("arena").addEventListener("click",onClick);
-  cleanup=()=>{gone=true;clearInterval(timer);$("arena").removeEventListener("click",onClick)}}
 
 // ---------- input ----------
 $("map").addEventListener("click",e=>{const g=e.target.closest(".node.opt");if(g)stop(g.dataset.n)});
 $("map").addEventListener("keydown",e=>{const g=e.target.closest(".node.opt");if(g&&(e.key==="Enter"||e.key===" ")){e.preventDefault();stop(g.dataset.n)}});
+document.addEventListener("input",e=>{const i=e.target.closest("[data-tn]");if(i&&SU)SU.names[+i.dataset.tn]=i.value});
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const d=b.dataset;
   if(d.shut!==undefined)shut();
   else if(d.done!==undefined){shut();endTurn()}
-  else if(d.res)result(d.res);
-  else if(d.vote){const p=d.vote,tm=teamOf(p);S.frozenP[p]=tm===cur()?"next":1;shut();log("Royal vote at "+N[pend].name+": "+NAMES[p]+" is frozen for a turn","#e0459b");toast(NAMES[p]+" was voted out and frozen for one turn");endTurn()}
-  else if(d.surv){const p=d.surv,w=teamOf(p),t=cur();shut();moveTo(t,pend);stepForward(w,2);log("Showdown at "+N[pend].name+": "+NAMES[p]+" survived, "+w.name+" jumped 2 stops",w.x);endTurn()}
-  else if(d.crown){const [id,title]=d.crown.split(",");crown(id,title)}
-  else if(d.demo!==undefined){const n=N[pend];if(n.g&&PLAY[n.g[0]]){shut();PLAY[n.g[0]](n)}else toast("This game isn't built yet. In the full version it opens on the right devices")}
-  else if(b.id==="arQuit")closeArena();
-  else if(d.arres){const r=d.arres;closeArena();result(r)}
-  else if(b.id==="thawW"){const t=cur();t.frozen=0;log(t.name+" won the Thaw and is back in",t.x);render()}
+  else if(d.res)result(d.res,0);
+  else if(d.vote){const p=d.vote,tm=teamOf(p);S.frozenP[p]=tm===cur()?"next":1;shut();log("Royal vote at "+N[pend].name+": "+pp(p).name+" is frozen for a turn","#e0459b");toast(pp(p).name+" was voted out and frozen for one turn");endTurn()}
+  else if(d.surv)survive(d.surv);
+  else if(d.crown){const i=d.crown.lastIndexOf(",");crown(d.crown.slice(0,i),d.crown.slice(i+1))}
+  else if(d.mv){const g=SU.g[d.mv];SU.g[d.mv]=g===0?1:g===1?-1:0;drawSetup()}
+  else if(d.duel){const id=d.duel;duel=duel.includes(id)?duel.filter(x=>x!==id):duel.concat(id).slice(-2);crownSheet(null,true)}
+  else if(d.demo!==undefined){const n=N[pend];if(n.g&&PLAY[n.g[0]]){shut();PLAY[n.g[0]](n);const id=pend;onQuit=()=>stop(id)}}
+  else if(b.id==="arQuit"){const f=onQuit;closeArena();f&&f()}
+  else if(d.arres){const r=d.arres,i=r.indexOf(":"),k=i<0?r:r.slice(0,i),v=i<0?"":r.slice(i+1);closeArena();
+    if(k==="surv")survive(v);else if(k==="duel"){duelWin=v;crownSheet()}else result(k,+v||0)}
+  else if(b.id==="suRand"){randomTeams();drawSetup()}
+  else if(b.id==="suGo")startGame();
+  else if(b.id==="duelGo"&&duel.length===2){const [a,c]=duel.map(id=>({name:pp(id).name,x:pp(id).color}));shut();
+    tapRace(a,c,"Throne duel · Tap Race",i=>{const w=duel[i];arenaOver(pp(w).name+" wins the duel!","#ffd23f",`Now crown ${esc(pp(w).name)} King or Queen.`,"duel:"+w,"Back to the crowning")});onQuit=()=>crownSheet()}
+  else if(b.id==="toCrown")crownSheet();
+  else if(b.id==="sum")summary();
+  else if(b.id==="thawGo"){thaw();onQuit=()=>render()}
   else if(b.id==="skip"){const t=cur();t.frozen=0;log(t.name+" sat out a frozen turn",t.x);endTurn()}
   else if(b.id==="useSteal"){const t=cur(),o=other();t.powers.splice(t.powers.indexOf("steal"),1);back(o);log(t.name+" used Steal: "+o.name+" pushed back 1 stop",t.x);toast("Steal! "+o.name+" goes back 1 stop");render()}
-  else if(b.id==="again"||b.id==="newMap"){if(b.id==="newMap"&&!S.over&&!confirm("Start a new map? The game in progress will be lost."))return;shut();fresh(false);log("New map: games shuffled onto the stops","#9aa3b3");render();toast("New map ready. "+cur().name+" goes first")}
+  else if(b.id==="again"||b.id==="newMap"||b.id==="newMap2")setup();
 });
-$("scrim").onclick=()=>{if(!locked)shut()};document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!locked)shut()});
-fresh(true);render();
+$("scrim").onclick=()=>{if(!locked)shut()};document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!locked&&$("arena").hidden)shut()});
+
+// ---------- start: resume the saved game, or set up a new one ----------
+(async function(){
+  const saved=loadSaved();
+  if(saved){useSaved(saved);render();if(!S.over&&S.teams.some(t=>t.at==="S"))crownSheet();else if(!S.over)toast("Welcome back! "+cur().name+"'s turn")}
+  else{buildMap();render()}
+  // who plays and who is the admin come from the game server; the map still works without it
+  try{const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),4000);
+    const r=await fetch("api.php?a=state",{credentials:"same-origin",signal:ctl.signal});clearTimeout(to);const j=await r.json();
+    if(j&&Array.isArray(j.players)&&j.players.length){PEOPLE={};j.players.forEach(p=>PEOPLE[p.id]={name:p.name,short:p.short||String(p.name).slice(0,2),color:p.color||"#9aa3b3",avatar:p.avatar||""})}
+    ME=j&&j.me||null}catch(e){}
+  if(!S)setup();
+})();
 })();
 </script>
