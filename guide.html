@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Shenandoah Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+/* Shenandoah Guide: tabs for places, map, Skyline Drive photos, history, videos, quiz and road-trip bingo. */
+:root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--ink:#15181e;--well:#202328;
+  --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
+  --in-sh:inset 3px 3px 8px rgba(0,0,0,.5);
+  --teal:#2ec4b6;--gold:#ffd23f;--green:#6fc04a;--red:#ff7b6b;--blue:#5cc8ee;--purple:#b392f0;
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--play:"Fredoka","Inter",system-ui,sans-serif}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:linear-gradient(170deg,#2c3037 0%,#22252b 55%,#1b1d22 100%) fixed;color:var(--fg);font:15px/1.55 var(--font);min-height:100vh;-webkit-font-smoothing:antialiased}
+a{color:var(--teal)}
+[hidden]{display:none!important}
+.wrap{max-width:1000px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(40px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:18px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pill{display:inline-flex;align-items:center;gap:6px;color:var(--fg);font-size:13px;font-weight:600;text-decoration:none;padding:9px 14px;border-radius:99px;background:var(--raise);box-shadow:var(--raise-sh);border:0;cursor:pointer;font-family:var(--font)}
+.hero{position:relative;border-radius:28px;overflow:hidden;min-height:230px;box-shadow:var(--raise-sh);background:#2a4a3a}
+.hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 1s}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 30%,rgba(0,0,0,.72))}
+.hero .t{position:absolute;left:22px;right:22px;bottom:18px;z-index:1}
+.hero h1{margin:0;font:700 clamp(32px,6vw,52px)/1 var(--play);color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.35)}
+.hero p{margin:6px 0 0;font-weight:600;color:#fff}
+.hero .cr{position:absolute;right:12px;top:10px;z-index:1;font-size:11px;color:rgba(255,255,255,.8);text-decoration:none;background:rgba(0,0,0,.35);padding:3px 8px;border-radius:99px}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;scrollbar-width:none;position:sticky;top:0;z-index:20;background:linear-gradient(#24272d 70%,rgba(36,39,45,0))}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:none;border:0;cursor:pointer;padding:10px 15px;border-radius:99px;font:600 14px var(--font);color:var(--mut);background:var(--raise);box-shadow:var(--raise-sh)}
+.tabs button.on{color:var(--ink);background:var(--x,var(--teal));box-shadow:0 0 16px color-mix(in srgb,var(--x,var(--teal)) 45%,transparent)}
+h2{margin:6px 0 2px;font:600 26px var(--play)}
+.sub{margin:0 0 6px;color:var(--mut)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.card{border-radius:24px;background:var(--raise);box-shadow:var(--raise-sh);overflow:hidden;display:flex;flex-direction:column}
+.ph{position:relative;aspect-ratio:16/10;background:linear-gradient(135deg,#3b6b4f,#24443a);overflow:hidden}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph .cr{position:absolute;right:8px;bottom:8px;font-size:10.5px;color:#fff;text-decoration:none;background:rgba(0,0,0,.5);padding:2px 7px;border-radius:99px}
+.ph .tag{position:absolute;left:10px;top:10px;font:700 12px var(--font);color:var(--ink);background:var(--x,var(--gold));padding:4px 10px;border-radius:99px}
+.card .b{padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px;flex:1}
+.card h3{margin:0;font:600 20px var(--play)}
+.card p{margin:0;color:#c9cfda;font-size:14px}
+.meta{display:flex;flex-wrap:wrap;gap:6px}
+.meta span{font-size:12px;font-weight:600;color:var(--mut);background:var(--well);box-shadow:var(--in-sh);padding:4px 9px;border-radius:99px}
+.acts{display:flex;gap:8px;margin-top:auto;padding-top:4px;flex-wrap:wrap}
+.btn{border:0;cursor:pointer;padding:10px 14px;border-radius:14px;font:700 13.5px var(--font);background:var(--teal);color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn.ghost{background:#353a43;color:var(--fg)}
+.btn.big{padding:14px 20px;font-size:15.5px;border-radius:16px}
+.fact{font-size:13px;color:var(--gold);font-weight:600}
+#map{height:min(70vh,560px);border-radius:24px;box-shadow:var(--raise-sh);overflow:hidden;background:#2a2e35}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#2a2e35;color:var(--fg)}
+.leaflet-popup-content{margin:12px 14px;font:14px/1.45 var(--font)}
+.leaflet-popup-content b{font:600 16px var(--play)}
+.leaflet-container a.leaflet-popup-close-button{color:var(--mut)}
+.pin{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--x);border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.5);display:grid;place-items:center}
+.pin i{transform:rotate(45deg);font-style:normal;font-size:14px}
+.legend{display:flex;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--mut)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend b{width:12px;height:12px;border-radius:50%;background:var(--x)}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.gallery figure{margin:0;border-radius:20px;overflow:hidden;background:var(--raise);box-shadow:var(--raise-sh);cursor:zoom-in}
+.gallery .ph{aspect-ratio:4/3}
+.gallery figcaption{padding:10px 12px;font-size:13px;font-weight:600}
+.lb{position:fixed;inset:0;z-index:60;background:rgba(10,11,14,.94);display:grid;place-items:center;padding:16px}
+.lb img{max-width:100%;max-height:78vh;border-radius:16px}
+.lb .cap{color:#fff;text-align:center;margin-top:10px;font-weight:600}
+.lb .cap a{color:var(--mut);font-size:12px;font-weight:500}
+.lb .x{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:16px}
+.lb .nav{position:absolute;top:50%;transform:translateY(-50%);font-size:22px;width:46px;height:46px;justify-content:center;padding:0}
+.lb .prev{left:10px}.lb .next{right:10px}
+.tl{position:relative;display:flex;flex-direction:column;gap:14px;padding-left:28px}
+.tl::before{content:"";position:absolute;left:10px;top:6px;bottom:6px;width:3px;border-radius:3px;background:linear-gradient(var(--teal),var(--gold),var(--red))}
+.ev{position:relative;padding:14px 16px;border-radius:20px;background:var(--raise);box-shadow:var(--raise-sh)}
+.ev::before{content:"";position:absolute;left:-24px;top:18px;width:13px;height:13px;border-radius:50%;background:var(--x,var(--teal));box-shadow:0 0 0 4px #24272d}
+.ev .yr{font:700 14px var(--play);color:var(--x,var(--teal));letter-spacing:.3px}
+.ev h3{margin:2px 0 4px;font:600 19px var(--play)}
+.ev p{margin:0;color:#c9cfda;font-size:14.5px}
+.ev img{width:100%;border-radius:14px;margin-top:10px;display:block}
+.ev .cr{font-size:11px;color:var(--mut)}
+.vids{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+a.vid{display:flex;flex-direction:column;border-radius:20px;overflow:hidden;background:var(--raise);box-shadow:var(--raise-sh);color:inherit;text-decoration:none}
+a.vid .ph{aspect-ratio:16/9}
+a.vid .play{position:absolute;inset:0;display:grid;place-items:center}
+a.vid .play b{width:56px;height:40px;border-radius:12px;background:#ff3d3d;display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+a.vid .b{padding:10px 13px 13px}
+a.vid h3{margin:0 0 2px;font:600 16px var(--play)}
+a.vid span{font-size:12.5px;color:var(--mut)}
+.vgrp{margin:8px 0 4px;font:600 15px var(--play);color:var(--gold)}
+.panel{border-radius:26px;background:var(--raise);box-shadow:var(--raise-sh);padding:20px}
+.qsets{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.qset{border:0;cursor:pointer;text-align:left;padding:16px;border-radius:20px;background:var(--well);box-shadow:var(--in-sh);color:var(--fg);font-family:var(--font);display:flex;flex-direction:column;gap:4px}
+.qset.on{box-shadow:0 0 0 2px var(--x),0 0 16px color-mix(in srgb,var(--x) 35%,transparent);background:#2c3138}
+.qset .e{font-size:28px}
+.qset b{font:600 18px var(--play)}
+.qset span{font-size:12.5px;color:var(--mut)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:0;cursor:pointer;padding:8px 12px;border-radius:99px;font:600 13.5px var(--font);background:var(--well);box-shadow:var(--in-sh);color:var(--mut)}
+.chip.on{background:var(--x,var(--teal));color:var(--ink);box-shadow:none}
+.lbl{font:600 13px var(--font);color:var(--mut);text-transform:uppercase;letter-spacing:.6px;margin:16px 0 8px}
+.qhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.turn{display:inline-flex;align-items:center;gap:8px;font:600 18px var(--play)}
+.dot{width:14px;height:14px;border-radius:50%;background:var(--x)}
+.timer{height:8px;border-radius:8px;background:var(--well);box-shadow:var(--in-sh);overflow:hidden;margin:12px 0}
+.timer i{display:block;height:100%;background:linear-gradient(90deg,var(--green),var(--gold),var(--red));transform-origin:left;transition:transform .1s linear}
+.q{font:600 clamp(20px,4vw,26px)/1.3 var(--play);margin:8px 0 14px}
+.opts{display:grid;gap:10px}
+@media (min-width:640px){.opts{grid-template-columns:1fr 1fr}}
+.opt{border:0;cursor:pointer;text-align:left;padding:15px 16px;border-radius:16px;font:600 15.5px var(--font);background:var(--well);box-shadow:var(--in-sh);color:var(--fg);transition:transform .1s}
+.opt:active{transform:scale(.98)}
+.opt.ok{background:var(--green);color:var(--ink);box-shadow:0 0 18px rgba(111,192,74,.5)}
+.opt.no{background:var(--red);color:var(--ink)}
+.why{margin-top:14px;padding:12px 14px;border-radius:14px;background:#24303a;color:#d6e6f2;font-size:14.5px}
+.why b{color:var(--gold)}
+.board{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--well);box-shadow:var(--in-sh)}
+.row .n{font:700 18px var(--play);width:28px;color:var(--mut)}
+.row .nm{flex:1;font-weight:600}
+.row .s{font:700 18px var(--play)}
+.row.first{background:linear-gradient(90deg,rgba(255,210,63,.22),var(--well))}
+.big{font:700 clamp(30px,6vw,44px)/1.1 var(--play);margin:6px 0}
+.center{text-align:center}
+.bingo{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+@media (max-width:480px){.bingo{gap:4px}.panel{padding:16px 12px}}
+.sq{border:0;cursor:pointer;aspect-ratio:1;min-width:0;overflow:hidden;border-radius:14px;background:var(--well);box-shadow:var(--in-sh);color:var(--fg);font:600 clamp(9.5px,2.3vw,13px)/1.2 var(--font);padding:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;overflow-wrap:anywhere}
+.sq .e{font-size:clamp(18px,5vw,28px)}
+.sq.on{background:var(--green);color:var(--ink);box-shadow:0 0 12px rgba(111,192,74,.45)}
+.sq.free{background:var(--gold);color:var(--ink)}
+.sq.win{animation:pulse 1s ease-in-out infinite alternate}
+@keyframes pulse{to{transform:scale(1.06)}}
+.facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.fc{padding:16px;border-radius:20px;background:var(--raise);box-shadow:var(--raise-sh)}
+.fc b{display:block;font:700 30px var(--play);color:var(--x,var(--gold))}
+.fc span{font-size:13.5px;color:#c9cfda}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#eef1f6;color:#15181e;font:700 14px var(--font);padding:11px 18px;border-radius:99px;z-index:80;box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:calc(100vw - 32px);text-align:center}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:70}
+.foot{color:var(--mut);font-size:12px;text-align:center;margin-top:10px}
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<div class="wrap">
+  <div class="top">
+    <a class="pill" href="./">&larr; Games</a>
+    <span class="pill" id="who" hidden></span>
+  </div>
+
+  <div class="hero" id="hero">
+    <div class="t"><h1>Shenandoah Guide</h1><p>Mountains, caves, waterfalls, history, and a few challenges for the crew.</p></div>
+  </div>
+
+  <nav class="tabs" id="tabs"></nav>
+
+  <main id="view"></main>
+
+  <p class="foot">Photos come from Wikimedia Commons (tap a credit to see the photographer and license). Map data &copy; OpenStreetMap contributors. Videos open on YouTube and belong to their creators. Check <a href="https://www.nps.gov/shen/planyourvisit/conditions.htm" target="_blank" rel="noopener">park conditions</a> before you go.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="rg.js"></script>
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store={get(k,d){try{const v=localStorage.getItem("rg-guide-"+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem("rg-guide-"+k,JSON.stringify(v))}catch(e){}}};
+
+/* Wikimedia Commons photos, hotlinked by file name. by = photographer when known; the link always shows the full credit and license. */
+const img=(f,w=900)=>"https://commons.wikimedia.org/wiki/Special:FilePath/"+encodeURIComponent(f)+"?width="+w;
+const page=f=>"https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(f.replace(/ /g,"_"));
+const P={
+  sandy:{f:"2016-10-24 13 08 17 View north from the Sandy Bottom Overlook along Shenandoah National Park's Skyline Drive in Rockingham County, Virginia.jpg",by:"Famartin",cap:"Sandy Bottom Overlook in fall"},
+  hensley:{f:"2016-10-25 09 47 24 View north-northwest from the Hensley Hollow Overlook along Shenandoah National Park's Skyline Drive in Rockingham County, Virginia.jpg",by:"Famartin",cap:"Hensley Hollow Overlook"},
+  rockytop:{f:"2016-10-24 12 22 33 View west from the Rockytop Overlook along Shenandoah National Park's Skyline Drive in Rockingham County, Virginia.jpg",by:"Famartin",cap:"Rockytop Overlook, looking west"},
+  hogwallow:{f:"2016-10-25 13 11 18 Panorama southeast from the Hogwallow Flats Overlook along Shenandoah National Park's Skyline Drive in Rappahannock County, Virginia.jpg",by:"Famartin",cap:"Hogwallow Flats panorama"},
+  gimlet:{f:"2016-10-25 12 53 39 View northwest from the Gimlet Ridge Overlook along Shenandoah National Park's Skyline Drive in Warren County, Virginia.jpg",by:"Famartin",cap:"Gimlet Ridge Overlook"},
+  sd2005:{f:"Skyline drive 20050521 123518 2.jpg",cap:"The road itself, curving along the ridge"},
+  banner:{f:"Shenandoah National Park banner Fall colors.jpg",cap:"Fall colors over the Blue Ridge"},
+  ragFromSD:{f:"Old Rag Mountain from Skyline Drive.jpg",cap:"Old Rag seen from Skyline Drive"},
+  thorofare:{f:"View from Thorofare Mountain Overlook (52898952697).jpg",cap:"Thorofare Mountain Overlook"},
+  sp2020:{f:"Shenandoah 2020.jpg",cap:"Shenandoah views"},
+  rag:{f:"Old Rag Mountain.jpg",cap:"Old Rag Mountain"},
+  dark:{f:"Early Fall at Dark Hollow Falls (22028259442).jpg",cap:"Dark Hollow Falls"},
+  rose:{f:"Rose river falls Shenandoha Virginia USA.jpg",cap:"Rose River Falls"},
+  luray:{f:"Luray Caverns, Dream Lake - mirror-lake of caverns (2015-05-09 14.01.21 by Stan Mouser).jpg",by:"Stan Mouser",cap:"Dream Lake, Luray Caverns"},
+  wish:{f:"2018-04-28 16 28 28 The Wishing Well within Luray Caverns in Luray, Page County, Virginia.jpg",by:"Famartin",cap:"The Wishing Well, Luray Caverns"},
+  lurayEntrance:{f:"2018-04-28 15 38 42 Original 1878 entrance to Luray Caverns in Luray, Page County, Virginia.jpg",by:"Famartin",cap:"The original 1878 cave entrance"},
+  meadows:{f:"Big Meadows Lodge (13084688304).jpg",cap:"Big Meadows Lodge"},
+  wayside:{f:"Big Meadows Wayside (49669882606).jpg",cap:"Big Meadows Wayside"},
+  bear:{f:"Juvenile American black bear at Old Rag mountain.jpg",cap:"Young black bear near Old Rag"},
+  homestead:{f:"Shenandoah Homestead (6613546223).jpg",cap:"An old mountain homestead"},
+  jackson:{f:"Map of the Shenandoah Valley, to illustrate the Valley Campaign of \"Stonewall\" Jackson, 1862- LOC 99448345.jpg",by:"Library of Congress",cap:"1862 map of Jackson's Valley Campaign"}
+};
+const credit=p=>`<a class="cr" href="${page(p.f)}" target="_blank" rel="noopener">&#128247; ${esc(p.by||"Wikimedia Commons")}</a>`;
+const photo=(p,w,extra="")=>`<div class="ph">${extra}<img loading="lazy" src="${img(p.f,w)}" alt="${esc(p.cap)}" onerror="this.remove()">${credit(p)}</div>`;
+
+const CAT={view:{c:"#2ec4b6",e:"\u{1F304}",n:"Views"},hike:{c:"#6fc04a",e:"\u{1F97E}",n:"Hikes"},water:{c:"#5cc8ee",e:"\u{1F4A7}",n:"Water"},history:{c:"#ff7b6b",e:"\u{1F3DB}️",n:"History"},town:{c:"#b392f0",e:"\u{1F3D8}️",n:"Towns & food"},cave:{c:"#ffd23f",e:"\u{1F987}",n:"Underground"}};
+const PLACES=[
+  {id:"skyline",n:"Skyline Drive",cat:"view",ll:[38.6610,-78.3203],p:"hogwallow",mile:"Mile 0 to 105",time:"Half a day or more",lvl:"Easy",
+   d:"The 105-mile road along the top of the Blue Ridge, with about 70 overlooks. Drive slow (the limit is 35 mph), stop often, and watch for bears and deer on the shoulder.",
+   f:"Concrete mile markers count from 0 at Front Royal to 105 at Rockfish Gap. Every place in the park is described by its mile."},
+  {id:"marys",n:"Mary's Rock Tunnel",cat:"view",ll:[38.6488,-78.3229],p:"sd2005",mile:"Mile 32.2",time:"A quick stop",lvl:"Easy",
+   d:"The only tunnel on Skyline Drive, blasted through solid granite in 1932. Honk-free zone, but you can still cheer.",
+   f:"The tunnel is about 600 feet long and only 12 feet 8 inches tall, so big RVs have to check their height."},
+  {id:"stony",n:"Stony Man Summit",cat:"hike",ll:[38.5937,-78.3757],p:"thorofare",mile:"Mile 41.7 (Skyland)",time:"About 1 hour",lvl:"Easy",
+   d:"An easy 1.6-mile loop to the second-highest peak in the park. Huge payoff for very little effort, and great for sunset.",
+   f:"From the valley, the cliffs look like the face of a bearded man lying down, which is how it got its name."},
+  {id:"hawksbill",n:"Hawksbill Summit",cat:"hike",ll:[38.5550,-78.3950],p:"rockytop",mile:"Mile 45.6",time:"1 to 2 hours",lvl:"Moderate",
+   d:"The highest point in Shenandoah National Park at 4,051 feet, with a stone observation platform and 360-degree views.",
+   f:"Peregrine falcons were brought back to nest on Hawksbill's cliffs after they disappeared from the area."},
+  {id:"dark",n:"Dark Hollow Falls",cat:"water",ll:[38.5196,-78.4291],p:"dark",mile:"Mile 50.7",time:"About 1.5 hours",lvl:"Moderate",
+   d:"A 70-foot waterfall at the end of a 1.4-mile round trip. It is all downhill on the way in, so save some energy for the climb back.",
+   f:"Thomas Jefferson is said to have visited these falls. It is the closest waterfall to Skyline Drive."},
+  {id:"rose",n:"Rose River Falls",cat:"water",ll:[38.5266,-78.4170],p:"rose",mile:"Mile 49.4 (Fishers Gap)",time:"2 to 3 hours",lvl:"Moderate",
+   d:"A quieter loop through the woods past several cascades. Combine it with Dark Hollow Falls for a full waterfall day.",
+   f:"The loop follows the Rose River, which flows east out of the park toward the Rapidan."},
+  {id:"meadows",n:"Big Meadows",cat:"view",ll:[38.5241,-78.4396],p:"meadows",mile:"Mile 51",time:"1 to 3 hours",lvl:"Easy",
+   d:"A wide open meadow where deer graze at dusk. There is a lodge, the Byrd Visitor Center, a wayside for blackberry ice cream, and amazing stargazing.",
+   f:"President Franklin Roosevelt dedicated the park here on July 3, 1936."},
+  {id:"rag",n:"Old Rag Mountain",cat:"hike",ll:[38.5512,-78.3157],p:"rag",mile:"Outside the drive (east side)",time:"7 to 8 hours",lvl:"Hard",
+   d:"The most famous hike in the park: a 9-mile loop with a wild rock scramble near the top. Needs a day-use ticket on recreation.gov from March to November.",
+   f:"Old Rag's granite is over a billion years old, some of the oldest rock in the region."},
+  {id:"luray",n:"Luray Caverns",cat:"cave",ll:[38.6643,-78.4836],p:"luray",mile:"Luray, 15 min from Thornton Gap",time:"About 1.5 hours",lvl:"Easy",
+   d:"The largest cave system in the eastern US. A paved walking tour takes you past giant stalactites, Dream Lake and the Great Stalacpipe Organ.",
+   f:"The cave stays about 54°F all year, so bring a light jacket even in summer."},
+  {id:"dickey",n:"Dickey Ridge Visitor Center",cat:"history",ll:[38.8707,-78.2034],p:"gimlet",mile:"Mile 4.6",time:"30 minutes",lvl:"Easy",
+   d:"The first stop from the north entrance. Get maps, ask rangers about bear sightings, and pick up Junior Ranger booklets.",
+   f:"The building started life in 1938 as a dining hall for travelers on the new road."},
+  {id:"rapidan",n:"Rapidan Camp",cat:"history",ll:[38.4800,-78.4180],p:"homestead",mile:"Mile 52.8 (Mill Prong trail)",time:"3 to 4 hours",lvl:"Moderate",
+   d:"President Herbert Hoover's summer fishing retreat, the first presidential 'Camp David'. A 4-mile hike, or a ranger-led van tour from Byrd Visitor Center.",
+   f:"Hoover paid for the land himself and later gave the camp to the park."},
+  {id:"newmarket",n:"New Market Battlefield",cat:"history",ll:[38.6633,-78.6618],p:"jackson",mile:"New Market, 35 min west of Luray",time:"1 to 2 hours",lvl:"Easy",
+   d:"Walk the Field of Lost Shoes where 257 young cadets from the Virginia Military Institute charged in 1864. There is a museum and an old farmhouse.",
+   f:"The mud was so deep that it pulled the shoes off the cadets' feet, which is how the field got its nickname."},
+  {id:"river",n:"Shenandoah River",cat:"water",ll:[38.7000,-78.5000],p:"sp2020",mile:"Front Royal and Luray outfitters",time:"Half a day",lvl:"Easy",
+   d:"Rent tubes, canoes or kayaks and float the South Fork. Most outfitters drive you upstream and you float back to the car.",
+   f:"The Shenandoah is one of the few big rivers in the US that flows north."},
+  {id:"frontroyal",n:"Front Royal",cat:"town",ll:[38.9182,-78.1944],p:"banner",mile:"North entrance, Mile 0",time:"As long as you like",lvl:"Easy",
+   d:"Small town at the start of Skyline Drive with diners, breweries and outfitters. Good place to fill the gas tank, since there are few stations in the park.",
+   f:"The only gas inside the park is at Big Meadows Wayside."},
+  {id:"lurayTown",n:"Luray",cat:"town",ll:[38.6654,-78.4597],p:"wish",mile:"Off US 211, west of Thornton Gap",time:"As long as you like",lvl:"Easy",
+   d:"Home of the caverns, a cute Main Street, the Luray Singing Tower bells, and an easy town walk along Hawksbill Creek.",
+   f:"The Singing Tower has 47 bells, and free carillon concerts in summer."}
+];
+
+/* Skyline Drive photo gallery */
+const GALLERY=["hogwallow","sandy","hensley","rockytop","gimlet","sd2005","banner","ragFromSD","thorofare"];
+
+const HISTORY=[
+  {y:"Thousands of years ago",t:"The first people",c:"#2ec4b6",d:"Native Americans hunted, gathered and camped in these mountains for at least 9,000 years. Later the Monacan and Manahoac peoples lived east of the Blue Ridge, and Shawnee bands moved through the Valley. Nobody knows for sure where the name Shenandoah comes from; a favorite legend says it means 'Daughter of the Stars.'"},
+  {y:"1716",t:"The Knights of the Golden Horseshoe",c:"#2ec4b6",d:"Virginia's governor Alexander Spotswood led an expedition over the Blue Ridge into the Valley. Back home he gave each man a small golden horseshoe pin, which gave the trip its name."},
+  {y:"1730s to 1750s",t:"Settlers arrive",c:"#ffd23f",d:"German and Scots-Irish families came down the Great Wagon Road from Pennsylvania and started farms in the Valley and on the mountain slopes. Many of their descendants lived in the hollows for the next 200 years.",p:"homestead"},
+  {y:"1862",t:"Stonewall Jackson's Valley Campaign",c:"#ff7b6b",d:"Confederate general Thomas 'Stonewall' Jackson marched his army about 646 miles in 48 days, using the mountain gaps to hide his moves. He beat much larger Union armies at Front Royal, Winchester, Cross Keys and Port Republic. His soldiers were nicknamed 'foot cavalry' for marching so fast.",p:"jackson"},
+  {y:"May 15, 1864",t:"The Battle of New Market",c:"#ff7b6b",d:"257 cadets from the Virginia Military Institute, some only 15 years old, were sent into battle and charged across a muddy wheat field. The mud sucked off their shoes, and the place is still called the Field of Lost Shoes."},
+  {y:"Fall 1864",t:"'The Burning'",c:"#ff7b6b",d:"The Valley grew so much grain that it was called the Breadbasket of the Confederacy. Union general Philip Sheridan's troops burned barns, mills and crops across the Valley so it could no longer feed the Southern armies. Locals remembered it simply as 'The Burning.'"},
+  {y:"August 13, 1878",t:"Luray Caverns discovered",c:"#ffd23f",d:"Local tinsmith Andrew Campbell, his brother William, his nephew Quint and photographer Benton Stebbins felt cool air blowing out of a sinkhole. They dug in, slid down a rope by candlelight, and found one of the most spectacular caves in the world.",p:"lurayEntrance"},
+  {y:"1890s",t:"Skyland resort",c:"#ffd23f",d:"George Freeman Pollock opened a mountain camp near Stony Man that became the Skyland resort. City visitors came up for fresh air, dances and costume parties. His love of the mountains helped push for a national park."},
+  {y:"1929 to 1933",t:"A president's fishing camp",c:"#b392f0",d:"President Herbert Hoover built Rapidan Camp on a trout stream as a weekend escape from Washington. British prime minister Ramsay MacDonald visited him there in 1929."},
+  {y:"1931 to 1939",t:"Building Skyline Drive",c:"#b392f0",d:"Workers carved a road along the crest of the Blue Ridge, blasted Mary's Rock Tunnel, and built the overlooks and stone walls. The first section opened in 1934 and the full 105 miles were finished in 1939.",p:"sd2005"},
+  {y:"1933 to 1942",t:"The Civilian Conservation Corps",c:"#b392f0",d:"During the Great Depression, thousands of young men in the CCC lived in camps in the park. They planted trees, built trails, picnic areas and the rock walls you still see along the drive, and sent most of their pay home to their families."},
+  {y:"1930s",t:"The families who had to leave",c:"#ff7b6b",d:"Around 500 families lived on the land that became the park. Most were moved out, some against their will, to resettlement homes in the valleys. You can still find old stone walls, chimneys and family cemeteries along the trails. Please leave them as you find them."},
+  {y:"July 3, 1936",t:"The park is dedicated",c:"#6fc04a",d:"President Franklin D. Roosevelt dedicated Shenandoah National Park in front of a big crowd at Big Meadows.",p:"meadows"},
+  {y:"1976",t:"Wilderness",c:"#6fc04a",d:"About 40 percent of the park was named official wilderness, where nature is left alone. Forests that were farms in 1930 have grown back so well that it is hard to believe they were ever cleared."},
+  {y:"2008",t:"A national landmark",c:"#6fc04a",d:"The Skyline Drive Historic District, with its overlooks, stone walls and buildings, became a National Historic Landmark."}
+];
+
+const VIDEOS=[
+  {g:"Skyline Drive",items:[
+    {id:"cVfZB_wktdM",t:"A Day in Shenandoah: Skyline Drive 4K timelapse",s:"Sunrise to sunset in a few minutes"},
+    {id:"pr1FoOFRgQ8",t:"Skyline Drive: Shenandoah National Park",s:"A tour of the drive"},
+    {id:"movQWfOifgc",t:"Top 5 overlooks in the North District",s:"Where to stop near Front Royal"},
+    {id:"7Ku2UMmRlDw",t:"Top overlooks in the South District",s:"The quieter southern end"},
+    {id:"IeS8chxeBBU",t:"Epic fall drive with hikes and overlooks",s:"Fall colors"}]},
+  {g:"Hikes and waterfalls",items:[
+    {id:"ujqdCZtYPd4",t:"Dark Hollow Falls hike",s:"What the trail looks like"},
+    {id:"hd2mmUzUtcs",t:"Dark Hollow Falls and Rose River loop",s:"Waterfall day"},
+    {id:"Mbt-6mqfvr0",t:"Old Rag hike and rock scramble POV",s:"See the scramble before you try it"},
+    {id:"RKUhYuV3C_c",t:"Old Rag: what you should know",s:"Tickets, timing and tips"}]},
+  {g:"Luray Caverns",items:[
+    {id:"lTqnpc2Utzc",t:"Luray Caverns full tour",s:"Walk through the whole cave"},
+    {id:"b8tb0oE80IU",t:"Luray Caverns history, facts and audio tour",s:"The story of the discovery"}]},
+  {g:"History",items:[
+    {id:"Dixji4Ngo1I",t:"The displaced families of Shenandoah National Park",s:"Who lived here before the park"},
+    {id:"3SNyZAROWII",t:"A Richer Land: creating Shenandoah National Park",s:"Documentary"},
+    {id:"yJMLp8vnblY",t:"VMI cadets at New Market",s:"Battlefield history"}]}
+];
+
+const FACTS=[
+  {b:"105",t:"miles of Skyline Drive, from Front Royal to Rockfish Gap",c:"#2ec4b6"},
+  {b:"35",t:"mph speed limit on the whole drive",c:"#ffd23f"},
+  {b:"4,051 ft",t:"Hawksbill, the highest peak in the park",c:"#6fc04a"},
+  {b:"~70",t:"scenic overlooks along the road",c:"#5cc8ee"},
+  {b:"500+",t:"miles of trails, including 101 miles of the Appalachian Trail",c:"#b392f0"},
+  {b:"1",t:"tunnel: Mary's Rock",c:"#ff7b6b"},
+  {b:"54°F",t:"inside Luray Caverns, all year round",c:"#ffd23f"},
+  {b:"1936",t:"the year FDR dedicated the park",c:"#ff7b6b"}
+];
+
+/* Quiz sets: [question, [options], index of right answer, explanation] */
+const QUIZ={
+  skyline:{n:"Skyline Drive",e:"\u{1F697}",c:"#2ec4b6",q:[
+    ["How long is Skyline Drive?",["55 miles","105 miles","205 miles","75 miles"],1,"It runs <b>105 miles</b> along the Blue Ridge, from Front Royal to Rockfish Gap."],
+    ["What is the speed limit on Skyline Drive?",["25 mph","45 mph","35 mph","55 mph"],2,"<b>35 mph</b> everywhere. Bears and deer cross often."],
+    ["How many tunnels are on Skyline Drive?",["None","One","Three","Seven"],1,"Just <b>one</b>: Mary's Rock Tunnel near mile 32."],
+    ["Mile marker 0 is at which town?",["Luray","Waynesboro","Front Royal","Harrisonburg"],2,"<b>Front Royal</b> is the north entrance. The markers count up going south."],
+    ["About how many overlooks does the drive have?",["10","25","70","200"],2,"There are about <b>70</b> overlooks, so you can stop a lot."],
+    ["When was the whole drive finished?",["1909","1939","1969","1999"],1,"Construction began in 1931 and all 105 miles were done in <b>1939</b>."],
+    ["Which mountain range does Skyline Drive follow?",["The Rockies","The Blue Ridge","The Adirondacks","The Ozarks"],1,"It follows the crest of the <b>Blue Ridge</b>, part of the Appalachians."],
+    ["Where is the only gas station inside the park?",["Big Meadows","Dickey Ridge","Mary's Rock","Old Rag"],0,"Fill up at <b>Big Meadows Wayside</b>, or better yet, before you drive in."]]},
+  history:{n:"History",e:"\u{1F4DC}",c:"#ff7b6b",q:[
+    ["Which president dedicated the park in 1936?",["Herbert Hoover","Franklin D. Roosevelt","Teddy Roosevelt","Harry Truman"],1,"<b>Franklin D. Roosevelt</b> dedicated it at Big Meadows on July 3, 1936."],
+    ["Which president had a fishing camp in the park?",["George Washington","Abraham Lincoln","Herbert Hoover","John F. Kennedy"],2,"<b>Herbert Hoover</b> built Rapidan Camp, an early 'Camp David'."],
+    ["Who built the overlooks, trails and stone walls in the 1930s?",["The army","The Civilian Conservation Corps","A railroad company","Prisoners"],1,"Young men of the <b>CCC</b> did it during the Great Depression."],
+    ["The Shenandoah Valley was called the Breadbasket of the...",["Confederacy","Union","Colonies","World"],0,"It fed the <b>Confederacy</b>, which is why it was burned in 1864."],
+    ["What was the nickname of Stonewall Jackson's fast-marching soldiers?",["Mountain goats","Foot cavalry","Iron legs","Valley runners"],1,"They marched so fast they were called <b>foot cavalry</b>."],
+    ["What is the battlefield at New Market nicknamed?",["Field of Lost Shoes","Bloody Meadow","Cadet Hill","Muddy Run"],0,"The <b>Field of Lost Shoes</b>, because the mud pulled the cadets' shoes off."],
+    ["About how many families had to leave to make the park?",["10","50","500","5,000"],2,"Around <b>500 families</b> were moved out of the mountains."],
+    ["The 1716 explorers who crossed the Blue Ridge were called the Knights of the Golden...",["Crown","Sword","Horseshoe","Apple"],2,"The governor gave each a tiny <b>golden horseshoe</b> pin."]]},
+  nature:{n:"Wildlife & nature",e:"\u{1F43B}",c:"#6fc04a",q:[
+    ["What is the highest peak in the park?",["Old Rag","Stony Man","Hawksbill","Mary's Rock"],2,"<b>Hawksbill</b> tops out at 4,051 feet."],
+    ["Which big animal is common in Shenandoah?",["Grizzly bear","Black bear","Moose","Mountain lion"],1,"The park has one of the densest <b>black bear</b> populations in the country."],
+    ["Which way does the Shenandoah River flow?",["South","East","West","North"],3,"It flows <b>north</b> to meet the Potomac at Harpers Ferry."],
+    ["What does Stony Man look like from far away?",["A sleeping dog","A bearded man's face","A castle","A ship"],1,"The cliffs look like <b>a bearded man's face</b>."],
+    ["How tall is Dark Hollow Falls?",["20 feet","70 feet","200 feet","500 feet"],1,"It drops about <b>70 feet</b>."],
+    ["What should you do if you see a bear?",["Run away fast","Feed it","Stay back and make noise","Climb a tree"],2,"<b>Keep your distance</b>, stay calm, and make noise. Never feed wildlife."],
+    ["Old Rag's granite is about how old?",["1,000 years","1 million years","1 billion years","10,000 years"],2,"Over <b>a billion years</b> old."],
+    ["Which famous long trail runs through the park?",["Pacific Crest Trail","Appalachian Trail","Oregon Trail","Continental Divide Trail"],1,"About 101 miles of the <b>Appalachian Trail</b> run through Shenandoah."]]},
+  cave:{n:"Luray Caverns",e:"\u{1F987}",c:"#ffd23f",q:[
+    ["What year was Luray Caverns discovered?",["1778","1878","1928","1958"],1,"It was found on August 13, <b>1878</b>."],
+    ["How did the discoverers find the cave?",["A dog fell in","Cool air from a sinkhole","A map from a pirate","An earthquake"],1,"They felt <b>cool air</b> blowing out of a sinkhole and dug in."],
+    ["What instrument is played using the cave's stalactites?",["The Great Stalacpipe Organ","The Rock Guitar","The Cave Drum","The Crystal Harp"],0,"The <b>Great Stalacpipe Organ</b> taps stalactites with rubber mallets."],
+    ["What temperature is it inside, all year?",["34°F","54°F","74°F","94°F"],1,"About <b>54°F</b>. Bring a sweater."],
+    ["Stalactites hang from the ceiling. Stalagmites...",["Hang from walls","Grow up from the floor","Float in water","Are made of ice"],1,"They <b>grow up from the floor</b>. Tip: stalac<b>t</b>ites hold <b>t</b>ight to the ceiling."],
+    ["Dream Lake in the cave is famous for...",["Glowing fish","Being a perfect mirror","Being hot","Having a waterfall"],1,"It is so still and shallow it looks like <b>a perfect mirror</b> of the ceiling."]]}
+};
+
+const BINGO=[["\u{1F43B}","Black bear"],["\u{1F98C}","Deer"],["\u{1F983}","Wild turkey"],["\u{1F985}","Hawk"],["\u{1F987}","Bat"],
+  ["\u{1F687}","Mary's Rock Tunnel"],["0️⃣","Mile marker 0"],["\u{1F9F1}","Stone wall"],["\u{1F304}","Overlook stop"],["\u{1F4A7}","Waterfall"],
+  ["\u{1F33B}","Wildflowers"],["\u{1F344}","Mushroom"],["\u{1F4F8}","Group photo"],["\u{1F3D4}️","Summit"],["\u{1F9D7}","Rock scramble"],
+  ["\u{1F366}","Blackberry ice cream"],["\u{1F6B2}","Cyclist"],["\u{1F3D5}️","Campsite"],["\u{1F3A8}","Fall colors"],["\u{1F31F}","Stargazing"],
+  ["\u{1F98B}","Butterfly"],["\u{1F43F}️","Squirrel"],["\u{1F9ED}","Trail sign"],["\u{1F96A}","Picnic"],["\u{1F30C}","Sunset"]];
+
+/* ---------- small helpers ---------- */
+function toast(m){const t=document.createElement("div");t.className="toast";t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
+function confetti(){
+  const cv=$("#confetti"),x=cv.getContext("2d");cv.width=innerWidth;cv.height=innerHeight;
+  const cols=["#2ec4b6","#ffd23f","#6fc04a","#ff7b6b","#5cc8ee","#b392f0"];
+  const ps=Array.from({length:140},()=>({x:Math.random()*cv.width,y:-20-Math.random()*cv.height*.5,r:4+Math.random()*5,c:cols[Math.random()*6|0],vx:-1.5+Math.random()*3,vy:2+Math.random()*3,a:Math.random()*6}));
+  let n=0;(function f(){x.clearRect(0,0,cv.width,cv.height);ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.a+=.1;x.fillStyle=p.c;x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillRect(-p.r,-p.r/2,p.r*2,p.r);x.restore()});if(++n<200)requestAnimationFrame(f);else x.clearRect(0,0,cv.width,cv.height)})();
+}
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const dirs=ll=>`https://www.google.com/maps/dir/?api=1&destination=${ll[0]},${ll[1]}`;
+
+/* ---------- hero slideshow ---------- */
+(function(){
+  const h=$("#hero"),keys=["hogwallow","sandy","rockytop","gimlet","hensley"];let i=0;
+  const im=document.createElement("img"),cr=document.createElement("a");cr.className="cr";cr.target="_blank";cr.rel="noopener";
+  im.alt="Skyline Drive";im.onerror=()=>{im.style.opacity=0};h.prepend(im);h.appendChild(cr);
+  const show=()=>{const p=P[keys[i%keys.length]];im.style.opacity=0;setTimeout(()=>{im.src=img(p.f,1400);cr.href=page(p.f);cr.innerHTML="&#128247; "+esc(p.by||"Wikimedia Commons")},350);im.onload=()=>{im.style.opacity=1}};
+  show();setInterval(()=>{i++;show()},7000);
+})();
+
+/* ---------- tabs ---------- */
+const TABS=[["places","\u{1F4CD} Places","#2ec4b6"],["map","\u{1F5FA}️ Map","#5cc8ee"],["skyline","\u{1F304} Skyline Drive","#ffd23f"],["history","\u{1F4DC} History","#ff7b6b"],["quiz","\u{1F3C6} Quiz","#b392f0"],["bingo","\u{1F3B2} Bingo","#6fc04a"],["videos","▶️ Videos","#ff7b6b"]];
+let tab=store.get("tab","places");if(!TABS.some(t=>t[0]===tab))tab="places";
+function drawTabs(){$("#tabs").innerHTML=TABS.map(([k,l,c])=>`<button data-k="${k}" class="${k===tab?"on":""}" style="--x:${c}">${l}</button>`).join("");
+  $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>go(b.dataset.k))}
+function go(k){tab=k;store.set("tab",k);drawTabs();stopTimer();VIEWS[k]();const t=$("#tabs");if(t.getBoundingClientRect().top<0||scrollY>t.offsetTop)scrollTo({top:t.offsetTop-4,behavior:"smooth"})}
+
+/* ---------- places ---------- */
+let placeFilter="all";
+function placeCard(pl){const c=CAT[pl.cat],p=P[pl.p];
+  return `<article class="card" id="pl-${pl.id}">${photo(p,700,`<span class="tag" style="--x:${c.c}">${c.e} ${c.n}</span>`)}
+  <div class="b"><h3>${esc(pl.n)}</h3>
+  <div class="meta"><span>${esc(pl.mile)}</span><span>⏱ ${esc(pl.time)}</span><span>${pl.lvl==="Hard"?"\u{1F525}":pl.lvl==="Moderate"?"\u{1F4AA}":"\u{1F642}"} ${esc(pl.lvl)}</span></div>
+  <p>${esc(pl.d)}</p><p class="fact">\u{1F4A1} ${esc(pl.f)}</p>
+  <div class="acts"><a class="btn" href="${dirs(pl.ll)}" target="_blank" rel="noopener">Directions</a><button class="btn ghost" data-map="${pl.id}">Show on map</button></div></div></article>`}
+const VIEWS={};
+VIEWS.places=()=>{
+  const list=PLACES.filter(p=>placeFilter==="all"||p.cat===placeFilter);
+  $("#view").innerHTML=`<h2>Places to visit</h2><p class="sub">Tap a filter, then tap Directions to open your maps app.</p>
+  <div class="chips" style="margin:6px 0 14px"><button class="chip ${placeFilter==="all"?"on":""}" data-f="all">All</button>${Object.entries(CAT).map(([k,c])=>`<button class="chip ${placeFilter===k?"on":""}" data-f="${k}" style="--x:${c.c}">${c.e} ${c.n}</button>`).join("")}</div>
+  <div class="grid">${list.map(placeCard).join("")}</div>
+  <h2 style="margin-top:22px">Quick facts</h2><div class="facts">${FACTS.map(f=>`<div class="fc" style="--x:${f.c}"><b>${f.b}</b><span>${esc(f.t)}</span></div>`).join("")}</div>`;
+  $("#view").querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{placeFilter=b.dataset.f;VIEWS.places()});
+  $("#view").querySelectorAll("[data-map]").forEach(b=>b.onclick=()=>{focusId=b.dataset.map;go("map")});
+};
+
+/* ---------- map ---------- */
+let focusId=null;
+VIEWS.map=()=>{
+  $("#view").innerHTML=`<h2>Map</h2><p class="sub">Tap a pin to see the place. Skyline Drive runs along the ridge in the middle.</p>
+  <div class="legend" style="margin-bottom:10px">${Object.values(CAT).map(c=>`<span style="--x:${c.c}"><b></b>${c.n}</span>`).join("")}</div><div id="map"></div>`;
+  if(!window.L){$("#map").innerHTML=`<p style="padding:20px;color:var(--mut)">The map could not load here. Each place card has a Directions button that opens your maps app.</p>`;return}
+  const m=L.map("map",{scrollWheelZoom:false}).setView([38.65,-78.38],10);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
+  const marks={};
+  PLACES.forEach(pl=>{const c=CAT[pl.cat],p=P[pl.p];
+    const ic=L.divIcon({className:"",html:`<div class="pin" style="--x:${c.c}"><i>${c.e}</i></div>`,iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-28]});
+    marks[pl.id]=L.marker(pl.ll,{icon:ic}).addTo(m).bindPopup(`<img src="${img(p.f,400)}" alt="" style="width:100%;border-radius:10px;margin-bottom:6px" onerror="this.remove()"><b>${esc(pl.n)}</b><br><span style="color:#9aa3b3">${esc(pl.mile)} · ${esc(pl.time)}</span><br><a href="${dirs(pl.ll)}" target="_blank" rel="noopener">Directions</a> · <a href="#" data-card="${pl.id}">Read more</a>`,{maxWidth:240});
+  });
+  m.on("popupopen",e=>{const a=e.popup.getElement().querySelector("[data-card]");if(a)a.onclick=ev=>{ev.preventDefault();placeFilter="all";go("places");setTimeout(()=>{const el=document.getElementById("pl-"+a.dataset.card);if(el)el.scrollIntoView({behavior:"smooth",block:"center"})},50)}});
+  if(focusId&&marks[focusId]){m.setView(marks[focusId].getLatLng(),12);marks[focusId].openPopup();focusId=null}
+};
+
+/* ---------- Skyline Drive gallery ---------- */
+VIEWS.skyline=()=>{
+  $("#view").innerHTML=`<h2>Skyline Drive photos</h2><p class="sub">The views you will see from the overlooks. Tap a photo to see it big.</p>
+  <div class="gallery">${GALLERY.map((k,i)=>`<figure data-i="${i}">${photo(P[k],600)}<figcaption>${esc(P[k].cap)}</figcaption></figure>`).join("")}</div>
+  <h2 style="margin-top:22px">Tips for the drive</h2>
+  <div class="grid">
+    <div class="card"><div class="b"><h3>\u{1F39F}️ Entry</h3><p>The park charges an entrance fee per car (or use an America the Beautiful pass). There are four entrances: Front Royal (mile 0), Thornton Gap (31.5), Swift Run Gap (65.5) and Rockfish Gap (105).</p></div></div>
+    <div class="card"><div class="b"><h3>\u{1F4F5} Signal</h3><p>Cell service is spotty on the ridge. Download offline maps before you go, and agree on a meeting spot in case the group gets split up.</p></div></div>
+    <div class="card"><div class="b"><h3>\u{1F305} Best light</h3><p>Sunrise from the east-facing overlooks and sunset from the west-facing ones. Big Meadows is great for stars after dark.</p></div></div>
+  </div>`;
+  $("#view").querySelectorAll("figure").forEach(f=>f.onclick=e=>{if(e.target.closest("a"))return;lightbox(+f.dataset.i)});
+};
+function lightbox(i){
+  const d=document.createElement("div");d.className="lb";
+  const draw=()=>{const p=P[GALLERY[i]];d.innerHTML=`<button class="pill x">Close ✕</button><button class="pill nav prev">‹</button><button class="pill nav next">›</button>
+    <div><img src="${img(p.f,1600)}" alt="${esc(p.cap)}"><div class="cap">${esc(p.cap)}<br><a href="${page(p.f)}" target="_blank" rel="noopener">Photo: ${esc(p.by||"Wikimedia Commons")} (tap for license)</a></div></div>`;
+    d.querySelector(".x").onclick=()=>d.remove();
+    d.querySelector(".prev").onclick=()=>{i=(i+GALLERY.length-1)%GALLERY.length;draw()};
+    d.querySelector(".next").onclick=()=>{i=(i+1)%GALLERY.length;draw()}};
+  draw();d.onclick=e=>{if(e.target===d)d.remove()};document.body.appendChild(d);
+}
+
+/* ---------- history ---------- */
+VIEWS.history=()=>{
+  $("#view").innerHTML=`<h2>History of the Shenandoah</h2><p class="sub">From the first people to the park you will visit. Read it, then try the History quiz.</p>
+  <div class="tl">${HISTORY.map(h=>`<div class="ev" style="--x:${h.c}"><div class="yr">${esc(h.y)}</div><h3>${esc(h.t)}</h3><p>${esc(h.d)}</p>${h.p?`<img loading="lazy" src="${img(P[h.p].f,800)}" alt="${esc(P[h.p].cap)}" onerror="this.nextElementSibling.remove();this.remove()"><a class="cr" href="${page(P[h.p].f)}" target="_blank" rel="noopener">${esc(P[h.p].cap)}. Photo: ${esc(P[h.p].by||"Wikimedia Commons")}</a>`:""}</div>`).join("")}</div>
+  <div style="margin-top:16px"><button class="btn big" id="toQuiz">\u{1F3C6} Take the History quiz</button></div>`;
+  $("#toQuiz").onclick=()=>{quiz.set="history";go("quiz")};
+};
+
+/* ---------- videos ---------- */
+VIEWS.videos=()=>{
+  $("#view").innerHTML=`<h2>Videos</h2><p class="sub">Watch before the trip to pick your favorites. Each one opens on YouTube.</p>
+  ${VIDEOS.map(g=>`<div class="vgrp">${esc(g.g)}</div><div class="vids">${g.items.map(v=>`<a class="vid" href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener"><div class="ph"><img loading="lazy" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg" alt=""><div class="play"><b>▶</b></div></div><div class="b"><h3>${esc(v.t)}</h3><span>${esc(v.s)}</span></div></a>`).join("")}</div>`).join("")}`;
+};
+
+/* ---------- quiz (solo or pass-the-phone) ---------- */
+const COLORS=["#2ec4b6","#ffd23f","#ff7b6b","#6fc04a","#5cc8ee","#b392f0","#ff9f43","#f78fb3","#a3e635"];
+let roster=["Raffael","Rasha","Rami","Yara","Yazan","Rose","Sako","Sofia","Jacob"].map((n,i)=>({name:n,color:COLORS[i]}));
+let me=null;
+const quiz={set:"skyline",players:[],rounds:5,state:null};
+let tmr=null;function stopTimer(){if(tmr){clearInterval(tmr);tmr=null}}
+VIEWS.quiz=()=>{
+  if(quiz.state)return quizTurn();
+  if(!quiz.players.length&&me)quiz.players=[me];
+  const best=store.get("best",{});
+  $("#view").innerHTML=`<div class="panel"><h2>\u{1F3C6} Shenandoah Quiz</h2><p class="sub">Play alone or pass the phone around. 15 seconds per question, faster answers score more.</p>
+  <div class="lbl">Pick a topic</div>
+  <div class="qsets">${Object.entries(QUIZ).map(([k,s])=>`<button class="qset ${quiz.set===k?"on":""}" data-s="${k}" style="--x:${s.c}"><span class="e">${s.e}</span><b>${s.n}</b><span>${s.q.length} questions${best[k]!=null?` · your best ${best[k]}`:""}</span></button>`).join("")}
+  <button class="qset ${quiz.set==="mix"?"on":""}" data-s="mix" style="--x:#ff9f43"><span class="e">\u{1F3B2}</span><b>Mix it up</b><span>Random from every topic${best.mix!=null?` · your best ${best.mix}`:""}</span></button></div>
+  <div class="lbl">Who's playing? (tap to add)</div>
+  <div class="chips">${roster.map(p=>`<button class="chip ${quiz.players.some(q=>q.name===p.name)?"on":""}" data-p="${esc(p.name)}" style="--x:${p.color}">${esc(p.name)}</button>`).join("")}</div>
+  <div class="lbl">Questions each</div>
+  <div class="chips">${[3,5,8].map(n=>`<button class="chip ${quiz.rounds===n?"on":""}" data-r="${n}">${n}</button>`).join("")}</div>
+  <div style="margin-top:20px"><button class="btn big" id="start">Start quiz</button></div></div>`;
+  const v=$("#view");
+  v.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{quiz.set=b.dataset.s;VIEWS.quiz()});
+  v.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{const p=roster.find(r=>r.name===b.dataset.p),i=quiz.players.findIndex(q=>q.name===p.name);i>=0?quiz.players.splice(i,1):quiz.players.push(p);VIEWS.quiz()});
+  v.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{quiz.rounds=+b.dataset.r;VIEWS.quiz()});
+  $("#start").onclick=startQuiz;
+};
+function startQuiz(){
+  const players=quiz.players.length?quiz.players:[{name:"You",color:"#2ec4b6"}];
+  const pool=quiz.set==="mix"?Object.values(QUIZ).flatMap(s=>s.q):QUIZ[quiz.set].q;
+  const need=players.length*quiz.rounds;let qs=[];while(qs.length<need)qs=qs.concat(shuffle(pool));
+  quiz.state={players:players.map(p=>({...p,score:0,right:0})),qs:qs.slice(0,need),i:0,phase:"pass"};
+  if(players.length===1)quiz.state.phase="ask";
+  quizTurn();
+}
+function quizTurn(){
+  const s=quiz.state;stopTimer();
+  if(s.i>=s.qs.length)return quizEnd();
+  const pl=s.players[s.i%s.players.length],round=Math.floor(s.i/s.players.length)+1,[q,opts,ans,why]=s.qs[s.i];
+  const head=`<div class="qhead"><span class="turn"><span class="dot" style="--x:${pl.color}"></span>${esc(pl.name)}</span><span style="color:var(--mut);font-weight:600">Question ${round} of ${quiz.rounds} · ${pl.score} pts</span></div>`;
+  if(s.phase==="pass"){
+    $("#view").innerHTML=`<div class="panel center">${head}<p class="big" style="margin-top:26px">Pass the phone to<br><span style="color:${pl.color}">${esc(pl.name)}</span></p><p class="sub">No peeking, everyone else!</p><button class="btn big" id="ready">I'm ready</button>
+    <div style="margin-top:18px"><button class="btn ghost" id="quit">Quit quiz</button></div></div>`;
+    $("#ready").onclick=()=>{s.phase="ask";quizTurn()};$("#quit").onclick=()=>{quiz.state=null;VIEWS.quiz()};return;
+  }
+  const order=shuffle(opts.map((o,k)=>k));
+  $("#view").innerHTML=`<div class="panel">${head}<div class="timer"><i id="bar"></i></div><div class="q">${esc(q)}</div>
+  <div class="opts">${order.map(k=>`<button class="opt" data-k="${k}">${esc(opts[k])}</button>`).join("")}</div><div id="after"></div></div>`;
+  const T=15000,t0=Date.now();let done=false;
+  const finish=k=>{if(done)return;done=true;stopTimer();
+    const left=Math.max(0,T-(Date.now()-t0)),ok=k===ans;
+    $("#view").querySelectorAll(".opt").forEach(b=>{b.disabled=true;const bk=+b.dataset.k;if(bk===ans)b.classList.add("ok");else if(bk===k)b.classList.add("no")});
+    let pts=0;if(ok){pts=100+Math.round(left/T*100);pl.score+=pts;pl.right++}
+    const last=s.i+1>=s.qs.length,nextPl=s.players[(s.i+1)%s.players.length];
+    $("#after").innerHTML=`<div class="why">${ok?`✅ <b>+${pts} points!</b> `:k==null?"⏰ Time's up! ":"❌ Not quite. "}${why}</div>
+    <div style="margin-top:14px"><button class="btn big" id="next">${last?"See results":s.players.length>1?`Next: ${esc(nextPl.name)}`:"Next question"}</button></div>`;
+    if(ok&&left>T*.7)toast(["Lightning fast! ⚡","Nailed it! \u{1F3AF}","Park ranger level! \u{1F332}"][Math.random()*3|0]);
+    $("#next").onclick=()=>{s.i++;s.phase=s.players.length>1?"pass":"ask";quizTurn()};
+  };
+  $("#view").querySelectorAll(".opt").forEach(b=>b.onclick=()=>finish(+b.dataset.k));
+  tmr=setInterval(()=>{const f=1-(Date.now()-t0)/T;const bar=$("#bar");if(bar)bar.style.transform=`scaleX(${Math.max(0,f)})`;if(f<=0)finish(null)},100);
+}
+function quizEnd(){
+  const s=quiz.state,ps=s.players.slice().sort((a,b)=>b.score-a.score),top=ps[0];
+  if(s.players.length===1){const best=store.get("best",{});if(best[quiz.set]==null||top.score>best[quiz.set]){best[quiz.set]=top.score;store.set("best",best)}}
+  confetti();
+  const medal=["\u{1F947}","\u{1F948}","\u{1F949}"];
+  const title=s.players.length>1?`${esc(top.name)} wins!`:top.right===quiz.rounds?"Perfect score!":top.right>=quiz.rounds*.6?"Great job!":"Nice try!";
+  $("#view").innerHTML=`<div class="panel center"><p class="big">\u{1F451} ${title}</p><p class="sub">${QUIZ[quiz.set]?QUIZ[quiz.set].n:"Mixed"} quiz</p>
+  <div class="board" style="text-align:left">${ps.map((p,i)=>`<div class="row ${i===0?"first":""}"><span class="n">${medal[i]||i+1}</span><span class="dot" style="--x:${p.color}"></span><span class="nm">${esc(p.name)}</span><span style="color:var(--mut);font-size:13px">${p.right}/${quiz.rounds} right</span><span class="s">${p.score}</span></div>`).join("")}</div>
+  <div class="acts" style="justify-content:center"><button class="btn big" id="again">Play again</button><button class="btn big ghost" id="menu">Pick another topic</button></div></div>`;
+  $("#again").onclick=()=>{quiz.players=s.players.map(({name,color})=>({name,color}));startQuiz()};
+  $("#menu").onclick=()=>{quiz.state=null;VIEWS.quiz()};
+}
+
+/* ---------- road-trip bingo ---------- */
+function bingoCard(){let c=store.get("bingo",null);if(!c||c.cells.length!==25){const items=shuffle(BINGO.slice()).slice(0,24);items.splice(12,0,["\u{1F3D4}️","FREE"]);c={cells:items,on:[12]};store.set("bingo",c)}return c}
+const LINES=[...[0,1,2,3,4].map(r=>[0,1,2,3,4].map(c=>r*5+c)),...[0,1,2,3,4].map(c=>[0,1,2,3,4].map(r=>r*5+c)),[0,6,12,18,24],[4,8,12,16,20]];
+VIEWS.bingo=()=>{
+  const c=bingoCard(),on=new Set(c.on);
+  const wins=LINES.filter(l=>l.every(i=>on.has(i))),winCells=new Set(wins.flat());
+  $("#view").innerHTML=`<div class="panel"><h2>\u{1F3B2} Skyline Drive Bingo</h2><p class="sub">Tap a square when you spot it on the trip. Five in a row (across, down or diagonal) wins! Everyone gets their own card on their phone.</p>
+  <div class="bingo">${c.cells.map(([e,t],i)=>`<button class="sq ${i===12?"free":""} ${on.has(i)&&i!==12?"on":""} ${winCells.has(i)?"win":""}" data-i="${i}"><span class="e">${e}</span>${esc(t)}</button>`).join("")}</div>
+  <p class="center" style="font:600 18px var(--play);margin:14px 0 4px">${wins.length?`\u{1F389} BINGO${wins.length>1?" x"+wins.length:""}! Shout it out!`:`${on.size-1} of 24 spotted`}</p>
+  <div class="acts" style="justify-content:center"><button class="btn ghost" id="newcard">New card</button></div></div>`;
+  $("#view").querySelectorAll(".sq").forEach(b=>b.onclick=()=>{const i=+b.dataset.i;if(i===12)return;const before=LINES.filter(l=>l.every(j=>on.has(j))).length;on.has(i)?on.delete(i):on.add(i);c.on=[...on];store.set("bingo",c);const after=LINES.filter(l=>l.every(j=>on.has(j))).length;if(after>before){confetti();toast("BINGO! \u{1F389}")}VIEWS.bingo()});
+  $("#newcard").onclick=()=>{if(confirm("Start a fresh bingo card?")){store.set("bingo",null);VIEWS.bingo()}};
+};
+
+/* ---------- start: players log in like the rest of the site; the preview works without a server ---------- */
+async function boot(){
+  drawTabs();VIEWS[tab]();
+  if(!window.RG)return;
+  try{
+    const r=await RG.login();
+    me={name:r.me.name,color:r.me.color};
+    if(r.state&&r.state.players)roster=r.state.players.map(p=>({name:p.name,color:p.color}));
+    const w=$("#who");w.hidden=false;w.innerHTML=RG.av(r.me,22)+" "+esc(r.me.name);
+    if(tab==="quiz"&&!quiz.state)VIEWS.quiz();
+  }catch(e){/* no game server (file or preview): the guide still works */}
+}
+boot();
+})();
+</script>
+</body>
+</html>
