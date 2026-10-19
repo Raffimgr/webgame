@@ -23,8 +23,14 @@ const st=document.createElement("style");st.textContent=CSS;document.head.append
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
-let off=0; // server time minus this phone's time, in seconds
-function clock(room){if(room&&room.now)off=room.now-Date.now()/1000}
+let off=0,best=[]; // server time minus this phone's time, in seconds
+/* t0/t1 (ms) = when the request left and the answer came back: the reply with the shortest round trip gives the best reading. */
+function clock(room,t0,t1){
+  if(!room||!room.now)return;
+  if(!t0){if(!best.length)off=room.now-Date.now()/1000;return}
+  best.push({rtt:t1-t0,off:room.now-(t0+t1)/2000});if(best.length>12)best.shift();
+  off=best.reduce((a,b)=>b.rtt<a.rtt?b:a).off;
+}
 const serverNow=()=>Date.now()/1000+off;
 
 function members(room){return room.game==="poker"?room.seats.map(s=>s.id):room.players.map(p=>p.id)}

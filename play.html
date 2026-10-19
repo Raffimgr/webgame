@@ -108,6 +108,24 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--teal);outline-offse
 .rr .v{text-align:right;font:700 20px var(--play);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--gold)}
 .rr .v small{display:block;font:700 12px var(--font);color:var(--mut)}
 .saved{text-align:center;font-weight:700;color:var(--green)}
+/* trivia */
+.ta{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border-radius:18px;background:#eef1f6;color:#15181e;box-shadow:0 5px 0 #b8bfca;font-weight:700;font-size:17px;text-align:left}
+.ta .tl{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#15181e;color:#eef1f6;flex:none;font:700 16px var(--play)}
+.ta .tx{flex:1;min-width:0}
+.ta:disabled{cursor:default}
+.ta.pick{background:var(--teal)}
+.ta.ok{background:var(--green)}
+.ta.no{background:var(--red)}
+.ta:disabled:not(.pick):not(.ok):not(.no){opacity:.75}
+.tbarw{height:10px;border-radius:99px;background:var(--well);box-shadow:var(--well-sh);overflow:hidden}
+.tbar{height:100%;background:var(--gold);border-radius:99px;transition:width .1s linear}
+/* last one standing */
+.pad{width:100%;min-height:52vh;border-radius:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;background:#e5484d;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.4);touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.pad b{font:700 clamp(36px,11vw,64px)/1.05 var(--play)}
+.pad small{font-weight:600;opacity:.85}
+.pad.green{background:#22c55e}
+.pad.early{background:#7a1f22}
+.pad.done{background:var(--raise);color:var(--fg);box-shadow:var(--raise-sh);min-height:30vh}
 </style>
 </head>
 <body>
@@ -130,6 +148,9 @@ let me=null,people={},coins=[10,7,5,4,3,2,1],roomId=null,room=null,rooms=null,in
 const GAMES={
   imposter:{name:"Imposter",ic:"?",x:"#e0459b",how:"Everyone gets the secret word on their phone, except one imposter. Take turns saying one word about it, then vote out the faker.",min:3},
   race:{name:"Mind race",ic:"⚡",x:"#2ec4b6",how:"Everyone plays the same mind game at the same moment. Finish first with the most seconds left to win.",min:2},
+  trivia:{name:"Trivia race",ic:"Q",x:"#aab7ff",how:"The same 10 questions on every phone at once. A right answer scores the seconds that were left.",min:2},
+  reaction:{name:"Last One Standing",ic:"●",x:"#7be08a",how:"Tap the moment your screen turns green. Too early, or the slowest, and you're out. Last one in wins.",min:2},
+  likely:{name:"Most Likely To",ic:"★",x:"#ffbf99",how:"\"Who is most likely to…?\" Everyone votes on their phone. Score a point when you pick the same person as most of the group.",min:3},
   poker:{name:"Poker",ic:"♠",x:"#ffd23f",how:"Texas Hold'em. Each phone shows only its own cards. Others can watch.",min:2}};
 const CATS=["any","Camping","Animals","Food","Places","Jobs","Sports","At home","Nature"];
 const MINDCOL={quickmath:"#ffd23f",colorclash:"#f7b8d2",numbermemory:"#aab7ff",wordscramble:"#d4f09a",biggerorsmaller:"#ffbf99",gridrecall:"#7ee8f0"};
@@ -144,7 +165,7 @@ function schedule(ms){clearTimeout(timer);timer=setTimeout(tick,ms)}
 async function tick(){
   clearTimeout(timer);if(document.hidden)return;
   try{
-    if(roomId){const j=await RG.api("room_state",undefined,{q:"&id="+roomId+(room&&room.id===roomId?"&v="+room.v:"")});if(j.same){if(j.now)L.clock({now:j.now})}else setRoom(j.room)}
+    if(roomId){const t0=Date.now(),j=await RG.api("room_state",undefined,{q:"&id="+roomId+(room&&room.id===roomId?"&v="+room.v:"")}),t1=Date.now();L.clock(j.same?{now:j.now}:j.room,t0,t1);if(!j.same)setRoom(j.room)}
     else if(mode==="hub"){const [a,b]=await Promise.all([RG.api("room_list"),RG.api("invites")]);rooms=a.rooms;invites=b.invites;draw()}
     fails=0;
   }catch(e){
@@ -189,7 +210,26 @@ function draw(){
   if(L.countdown(room,()=>draw()))return; // the countdown covers the screen; the game draws when it ends
   if(room.game==="race")return drawRace();
   if(room.game==="imposter")return drawImposter();
+  if(room.game==="trivia")return drawTrivia();
+  if(room.game==="reaction")return drawReaction();
+  if(room.game==="likely")return drawLikely();
 }
+
+/* Timed games move on when time is up: any phone may give the server a nudge (it checks the clock itself). */
+let nudging=0;
+async function nudge(){if(nudging>Date.now()||!roomId)return;nudging=Date.now()+900;
+  try{const j=await RG.api("room_move",{id:roomId,do:"tick"});if(j.room&&(!room||j.room.v!==room.v))setRoom(j.room)}catch(e){}}
+setInterval(()=>{
+  const r=room;if(!r||r.status!=="playing"||!r.me.in)return;const now=L.serverNow();
+  if(r.game==="trivia"){
+    const t=$("#tt");if(t&&r.phase==="q"){const left=Math.max(0,r.at+r.time-now);t.textContent=Math.ceil(left);const bar=$("#tbar");if(bar)bar.style.width=(left/r.time*100)+"%"}
+    if((r.phase==="q"&&now>=r.at+r.time)||(r.phase==="reveal"&&now>=r.at+r.show))nudge();
+  }
+  if(r.game==="reaction"){
+    const pad=$("#pad");if(pad&&r.phase==="wait"&&!pad.dataset.done){const g=now>=r.go_at;if(g!==pad.classList.contains("green")){pad.classList.toggle("green",g);pad.querySelector("b").textContent=g?"TAP!":"Wait for green…"}}
+    if((r.phase==="wait"&&now>=r.go_at+3)||(r.phase==="result"&&now>=r.at+3.5))nudge();
+  }
+},100);
 
 function roomRow(r,inv){
   const g=GAMES[r.game]||{name:r.game},ids=r.members;
@@ -325,6 +365,69 @@ function drawImposter(){
   on("end",()=>{if(confirm("End this round without a winner?"))send("room_close")});
 }
 
+/* ---------- trivia race ---------- */
+function board(pts,lim){return `<div class="col" style="gap:6px">${Object.entries(pts||{}).sort((a,b)=>b[1]-a[1]).slice(0,lim||20).map(([id,n],k)=>`<div class="lb-row">${av(id,30)}<span class="n">${esc(nameOf(id))}</span><span class="chip">${n}</span></div>`).join("")}</div>`}
+function drawTrivia(){
+  const r=room,mine=r.me.in,rev=r.phase==="reveal",my=r.mine,L2="ABCD";
+  setTitle("Trivia race",`Question ${r.i+1} of ${r.n}`);
+  const opt=(o,k)=>{let cls="",tag="";
+    if(rev){if(k===r.right)cls="ok";else if(my&&my[0]===k)cls="no"}else if(my&&my[0]===k)cls="pick";
+    if(rev){const who=Object.entries(r.ans||{}).filter(([,a])=>a[0]===k).map(([id])=>id);tag=who.length?`<span class="avs">${who.map(i=>av(i,22)).join("")}</span>`:""}
+    return `<button class="ta ${cls}" data-k="${k}" ${!mine||my||rev||busy?"disabled":""}><span class="tl">${L2[k]}</span><span class="tx">${esc(o)}</span>${tag}</button>`};
+  const left=Math.max(0,Math.ceil(r.at+r.time-L.serverNow()));
+  const myGain=rev&&my?my[1]:null;
+  app.innerHTML=`<div class="col">
+    ${rev?"":`<div class="tbarw"><div class="tbar" id="tbar" style="width:${left/r.time*100}%"></div></div>`}
+    <div class="secret" style="gap:4px"><small>${rev?"The answer":"Question "+(r.i+1)} · ${rev?"next one coming…":`<span id="tt">${left}</span> s`}</small><b style="font-size:clamp(22px,6vw,32px)">${esc(r.q)}</b></div>
+    <div class="col" style="gap:10px" id="opts">${r.opts.map(opt).join("")}</div>
+    ${rev?`<p class="big" style="font-size:22px;color:${myGain?"var(--green)":"var(--mut)"}">${!mine?"":myGain?"+"+myGain+" points!":my?"Not this one":"Too slow!"}</p>`
+      :`<p class="muted" style="margin:0;text-align:center">${!mine?"You're watching.":my?"Locked in. Waiting for the others…":"Faster = more points."} ${r.answered.length} of ${r.players.length} answered</p>`}
+    <div class="panel"><span class="lab">Points</span>${board(r.pts,9)}</div>
+    ${r.me.host?`<button class="go ghost sm" id="end">End the game now</button>`:""}${err?`<div class="err">${esc(err)}</div>`:""}</div>`;
+  const o=$("#opts");o.onclick=e=>{const b=e.target.closest("button");if(!b||b.disabled)return;send("room_move",{do:"answer",i:r.i,choice:+b.dataset.k})};
+  const e=$("#end");if(e)e.onclick=()=>{if(confirm("End the game now? Points so far count."))send("room_close")};
+}
+
+/* ---------- last one standing ---------- */
+function drawReaction(){
+  const r=room,alive=r.alive.includes(me.id),tapped=r.tapped.includes(me.id),last=r.last;
+  setTitle("Last One Standing",`Round ${r.round} · ${r.alive.length} still in`);
+  let pad;
+  if(r.phase==="wait"&&alive&&r.me.in)pad=tapped?`<div class="pad done"><b>Tapped!</b><small>Waiting for the others…</small></div>`
+    :`<button class="pad${L.serverNow()>=r.go_at?" green":""}" id="pad"><b>${L.serverNow()>=r.go_at?"TAP!":"Wait for green…"}</b><small>Tap the moment it turns green</small></button>`;
+  else if(r.phase==="result"&&last){const t=last.taps||{},f=x=>x==null?"no tap":x<0?"too early":Math.round(x*1000)+" ms";
+    pad=`<div class="pad done"><b>${last.out.length?esc(L.names(last.out,people))+" "+(last.out.length>1?"are":"is")+" out!":"Everyone slipped: again!"}</b><small>Next round in a moment</small></div>
+      <div class="col" style="gap:6px">${Object.keys(t).concat(r.alive.filter(i=>!(i in t))).filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>((t[a]??9)<0?9:(t[a]??9))-((t[b]??9)<0?9:(t[b]??9))).map(id=>`<div class="lb-row${last.out.includes(id)?" away":""}">${av(id,30)}<span class="n">${esc(nameOf(id))}</span><span class="chip">${f(t[id])}</span></div>`).join("")}</div>`}
+  else pad=`<div class="pad done"><b>${r.me.in?"You're out":"You're watching"}</b><small>Cheer the others on</small></div>`;
+  app.innerHTML=`<div class="col">${pad}
+    <div class="panel"><span class="lab">Still in</span><div class="avs">${r.alive.map(i=>av(i,34)).join("")}</div>${r.outs.length?`<span class="lab">Out</span><div class="avs" style="opacity:.5">${r.outs.flat().map(i=>av(i,28)).join("")}</div>`:""}</div>
+    ${r.me.host?`<button class="go ghost sm" id="end">End the game now</button>`:""}${err?`<div class="err">${esc(err)}</div>`:""}</div>`;
+  const p=$("#pad");if(p)p.addEventListener("pointerdown",ev=>{ev.preventDefault();const at=L.serverNow();p.dataset.done=1;
+    const early=at<r.go_at;p.classList.remove("green");p.classList.add(early?"early":"done");p.querySelector("b").textContent=early?"Too early!":Math.round((at-r.go_at)*1000)+" ms";
+    send("room_move",{do:"tap",round:r.round,at})},{once:true});
+  const e=$("#end");if(e)e.onclick=()=>{if(confirm("End the game now? Everyone still in shares 1st place."))send("room_close")};
+}
+
+/* ---------- most likely to ---------- */
+function drawLikely(){
+  const r=room,mine=r.me.in,rev=r.phase==="reveal";
+  setTitle("Most Likely To",`Question ${r.i+1} of ${r.n}`);
+  let h=`<div class="secret" style="gap:4px"><small>Question ${r.i+1} of ${r.n}</small><b style="font-size:clamp(22px,6vw,32px)">${esc(r.prompt)}</b></div>`;
+  if(!rev){const waitFor=r.players.filter(p=>!r.voted.includes(p.id)).map(p=>p.id);
+    h+=mine?`<div class="vote" id="vote">${r.players.map(p=>`<button data-v="${esc(p.id)}" class="${r.my_vote===p.id?"on":""}" ${busy?"disabled":""}>${av(p.id,48)}${esc(p.name)}${p.id===me.id?"<small>you</small>":""}</button>`).join("")}</div>
+      <p class="muted" style="margin:0;text-align:center">${r.my_vote?`You picked ${esc(nameOf(r.my_vote))}. You can still change it.`:"Pick someone. Votes are secret until everyone has voted."}</p>`:`<p class="muted" style="margin:0;text-align:center">You're watching.</p>`;
+    h+=`<p class="muted" style="margin:0;text-align:center">${waitFor.length?"Still voting: "+esc(L.names(waitFor,people)):""}</p>`}
+  else{const t=r.tally||{},max=Math.max(...Object.values(t));
+    h+=`<div class="panel"><span class="lab">The group says</span>${Object.entries(t).sort((a,b)=>b[1]-a[1]).map(([id,n])=>`<div class="lb-row">${av(id,34)}<span class="n">${esc(nameOf(id))}</span><span class="chip" style="${n===max?"background:var(--gold);color:var(--ink)":""}">${n} vote${n>1?"s":""}</span></div>`).join("")}
+      <p class="muted" style="margin:0;font-size:13.5px">Everyone who picked ${esc(L.names(Object.keys(t).filter(i=>t[i]===max),people))} gets a point.</p></div>
+      ${mine?`<button class="go wide" id="next" style="--x:${GAMES.likely.x}" ${busy?"disabled":""}>${r.i+1>=r.n?"See the final scores":"Next question"}</button>`:""}`}
+  h+=`<div class="panel"><span class="lab">Points</span>${board(r.pts,9)}</div>`;
+  app.innerHTML=`<div class="col">${h}${r.me.host?`<button class="go ghost sm" id="end">End the game now</button>`:""}${err?`<div class="err">${esc(err)}</div>`:""}</div>`;
+  const v=$("#vote");if(v)v.onclick=e=>{const b=e.target.closest("button");if(b)send("room_move",{do:"vote",target:b.dataset.v})};
+  const n=$("#next");if(n)n.onclick=()=>send("room_move",{do:"next"});
+  const e=$("#end");if(e)e.onclick=()=>{if(confirm("End the game now? Points so far count."))send("room_close")};
+}
+
 /* ---------- results ---------- */
 function drawDone(){
   stopRace();
@@ -346,7 +449,7 @@ function drawDone(){
   const res=r.results||{};
   app.innerHTML=`<div class="col">${head}
     <div class="res">${f.map(x=>{const c=x.place?coinsFor(x.place)+(x.bonus||0):0,rs=res[x.id];
-      const note=r.game==="race"?(rs?(rs.win?rs.left+" seconds left":"Scored "+rs.score+", time ran out"):"Didn't finish"):(r.game==="imposter"?(x.id===r.imposter?"The imposter":"Knew the word"):"");
+      const note=r.game==="race"?(rs?(rs.win?rs.left+" seconds left":"Scored "+rs.score+", time ran out"):"Didn't finish"):r.game==="imposter"?(x.id===r.imposter?"The imposter":"Knew the word"):r.game==="trivia"?x.score+" points (seconds left on right answers)":r.game==="likely"?x.score+" matching pick"+(x.score===1?"":"s"):r.game==="reaction"?(x.place===1?"Last one standing":"Out"):"";
       return `<div class="rr${x.place===1?" first":""}"><span class="pl">${x.place||"–"}</span>${av(x.id,40)}<span class="t"><b>${esc(nameOf(x.id))}</b><small>${note}</small></span>
         <span class="v">${r.score?"+"+c:""}<small>${r.score?(x.bonus?`coins (${x.bonus} for time)`:"coins"):""}</small></span></div>`}).join("")}</div>
     ${r.event_id?`<p class="saved">✓ Saved to the scoreboard</p>`:r.score?`<p class="muted" style="text-align:center;margin:0">Not saved: nobody won anything.</p>`:""}

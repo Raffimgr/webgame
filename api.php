@@ -225,8 +225,8 @@ function room_out(array $r, array $m): void { out(['room' => room_view_any($r, $
 /* ---------- the shared lobby (every online game) ----------
    state.lobby: invited [ids the host picked], ready {id: 1}, start_at (server time the countdown ends), score (record on the scoreboard),
    when (host's local time, for the scoreboard), event_id (once recorded), next (the room "Play again" made). */
-const GAME_LABEL = ['poker' => 'Poker', 'race' => 'Mind race', 'imposter' => 'Imposter'];
-const GAME_CAT = ['poker' => 'Cards', 'race' => 'Mind games', 'imposter' => 'Party'];
+const GAME_LABEL = ['poker' => 'Poker', 'race' => 'Mind race', 'imposter' => 'Imposter', 'trivia' => 'Trivia race', 'reaction' => 'Last One Standing', 'likely' => 'Most Likely To'];
+const GAME_CAT = ['poker' => 'Cards', 'race' => 'Mind games', 'imposter' => 'Party', 'trivia' => 'Trivia', 'reaction' => 'Arcade', 'likely' => 'Party'];
 const COUNTDOWN = 4; // seconds from "everyone is ready" to "go", the same moment on every phone
 function lobby_ids(array $r): array { return array_column($r['game'] === 'poker' ? $r['state']['seats'] : $r['state']['players'], 'id'); }
 function room_label(array $r): string { return $r['game'] === 'race' ? $r['state']['name'] . ' · level ' . $r['state']['level'] : GAME_LABEL[$r['game']] ?? $r['game']; }
@@ -237,7 +237,7 @@ function lobby_try_start(array &$r, bool $force = false): void {
   $r['state']['lobby'] ??= ['invited' => lobby_ids($r), 'ready' => [], 'start_at' => null, 'score' => false, 'when' => '', 'event_id' => null, 'next' => null]; // a table made before lobbies
   $l = &$r['state']['lobby']; $ids = lobby_ids($r);
   $ready = array_values(array_filter($ids, fn($i) => !empty($l['ready'][$i])));
-  $need = $r['game'] === 'imposter' ? 3 : 2;
+  $need = in_array($r['game'], ['imposter', 'likely'], true) ? 3 : 2;
   if (!$force) {
     if (count($ids) < $need || count($ready) !== count($ids) || array_diff($l['invited'], $ids)) return;
   } else {
@@ -259,7 +259,8 @@ function lobby_finish(array &$r): void {
   if (!$l || empty($l['score']) || !empty($l['event_id'])) return;
   $rows = array_values(array_filter($f, fn($x) => !empty($x['place'])));
   if (count($rows) < 2 || count(array_unique(array_column($rows, 'place'))) < 2) return; // nobody won anything (e.g. poker ended before a hand finished)
-  $note = $r['game'] === 'race' ? 'Played together on phones. Level ' . $r['state']['level'] . '; score = seconds left' . (bonus_per() ? ', plus 1 coin per ' . bonus_per() . ' seconds left' : '') . '.' : 'Played together on phones.';
+  $note = $r['game'] === 'trivia' ? 'Played together on phones. Score = seconds left on right answers.' : ($r['game'] === 'likely' ? 'Played together on phones. Score = times you picked the same person as most of the group.' : null);
+  $note = $note ?? ($r['game'] === 'race' ? 'Played together on phones. Level ' . $r['state']['level'] . '; score = seconds left' . (bonus_per() ? ', plus 1 coin per ' . bonus_per() . ' seconds left' : '') . '.' : 'Played together on phones.');
   db()->prepare('INSERT INTO events(game,category,mode,played_at,status,note,created_by,score_dir) VALUES(?,?,?,?,?,?,?,?)')
     ->execute([$r['game'] === 'race' ? $r['state']['name'] : GAME_LABEL[$r['game']], GAME_CAT[$r['game']], 'solo', $l['when'] ?: date('Y-m-d\TH:i'), 'done', $note, $r['host'], 'high']);
   $eid = (int)db()->lastInsertId();
@@ -541,7 +542,7 @@ case 'room_create':
       if (count($invite) > 9) fail('Poker seats 9 players at most.');
       $st = room_new_state($chips); room_sit($st, $m, false);
     } else {
-      if ($game === 'imposter' && count($invite) < 3) fail('Imposter needs at least 3 players.');
+      if (in_array($game, ['imposter', 'likely'], true) && count($invite) < 3) fail('This game needs at least 3 players.');
       $st = party_new($game, $b); party_join($st, $m);
     }
   } catch (RuntimeException $e) { fail($e->getMessage()); }
@@ -648,7 +649,7 @@ case 'room_close': // host ends the game: poker shows the final ranking; a race 
     room_need_host($r, $m);
     if ($r['status'] === 'done') throw new RuntimeException('This game is already over.');
     if ($r['game'] === 'poker') room_finish($r['state']);
-    elseif ($r['status'] === 'playing' && $r['game'] === 'race') party_rank('race', $r['state']);
+    elseif ($r['status'] === 'playing' && $r['game'] !== 'imposter') party_rank($r['game'], $r['state']); // rank what was played so far
     else $r['state']['final'] = [];
     lobby_finish($r);
   }), $m);
