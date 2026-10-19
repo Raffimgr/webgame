@@ -293,7 +293,7 @@ const photo=(p,w,extra="",art)=>p?`<div class="ph">${extra}<img loading="lazy" s
 
 const CAT={near:{c:"#ff9f43",e:"\u{1F3E1}",n:"Near the cabin"},view:{c:"#2ec4b6",e:"\u{1F304}",n:"Views"},hike:{c:"#6fc04a",e:"\u{1F97E}",n:"Hikes"},water:{c:"#5cc8ee",e:"\u{1F4A7}",n:"Water"},history:{c:"#ff7b6b",e:"\u{1F3DB}️",n:"History"},town:{c:"#b392f0",e:"\u{1F3D8}️",n:"Towns & food"},cave:{c:"#ffd23f",e:"\u{1F987}",n:"Underground"}};
 const PLACES=[
-  {id:"bryce",dr:5,n:"Bryce Resort",cat:"near",ll:[38.8165,-78.7700],p:"bryceResort",mile:"Basye, right by the cabin",time:"As long as you like",lvl:"Easy",
+  {id:"bryce",dr:5,n:"Bryce Resort",cat:"near",ll:[38.8165,-78.7700],p:"bryceGolf",mile:"Basye, right by the cabin",time:"As long as you like",lvl:"Easy",
    d:"The resort next door: Lake Laura for paddling and swimming, mini golf, lift-served mountain biking in the warm months, and skiing and snow tubing in winter.",
    f:"Bryce is one of the few ski areas in the Shenandoah Valley, and it is small enough that you can see the whole hill from the lodge."},
   {id:"orkney",dr:10,n:"Orkney Springs",cat:"near",ll:[38.7962,-78.8070],p:"orkneyAerial",mile:"10 min west of the cabin",time:"30 minutes",lvl:"Easy",
@@ -391,7 +391,7 @@ const fmtDr=m=>m<60?m+" min":Math.floor(m/60)+" h"+(m%60?" "+m%60+" min":"");
 /* Skyline Drive photo gallery */
 const GALLERY_GROUPS=[
   ["Inside Luray Caverns",["sakoPool","sakoReflect","sakoForm","wish"]],
-  ["Near our cabin",["bryceFall","bryceGolf","lakeLaura","shrineMont","r11Counter","r11Store"]],
+  ["Near our cabin",["bryceResort","bryceFall","lakeLaura","shrineMont","r11Counter","r11Store"]],
   ["Meems Bottom Covered Bridge",["meemsSide","meemsUnder","meemsInside","meemsPlaque"]],
   ["Skyline Drive",["stonySunset","skyCurve","sky0303","skyTrees","skyBend","skySummer"]],
   ["Sunrise, sunset and stars",["sunsetRocks","valleySunset","blueRidges","sunrise","blackrockSunset","stars","peaks","rockyOvl"]],
