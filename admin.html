@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ridge Admin</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: top bar, four tabs (Record, Games, Players, Settings), one column of raised panels. */
+:root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--dim:#6b7383;--ink:#15181e;--sheet:#2a2e35;--acc:#2ec4b6;
+  --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
+  --well:#202328;--well-sh:inset 4px 4px 10px rgba(0,0,0,.55),inset -3px -3px 8px rgba(255,255,255,.035);
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--play:"Fredoka","Inter",system-ui,sans-serif}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+[hidden]{display:none!important}
+.wrap{max-width:980px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(40px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.top h1{margin:0;flex:1;font:600 26px var(--play);min-width:150px}
+.top .pill{min-height:40px}
+.top h1 small{display:block;font:500 13px var(--font);color:var(--mut)}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:99px;font-weight:600;font-size:13px;color:var(--mut);background:var(--raise);box-shadow:var(--raise-sh);text-decoration:none}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:6px;border-radius:18px;background:var(--well);box-shadow:var(--well-sh)}
+.tabs button{padding:10px 4px;border-radius:13px;text-align:center;font-weight:700;color:var(--mut);font-size:14px}
+.tabs button.on{background:var(--acc);color:var(--ink)}
+.panel{background:var(--raise);box-shadow:var(--raise-sh);border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.panel h2{margin:0;font:600 20px var(--play)}
+.lab{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--dim)}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>label{flex:1;min-width:180px;display:flex;flex-direction:column;gap:6px}
+.in{width:100%;padding:12px 13px;border-radius:13px;border:0;background:var(--well);color:var(--fg);font:500 15px var(--font);box-shadow:var(--well-sh);min-width:0}
+select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,#9aa3b3 50%),linear-gradient(135deg,#9aa3b3 50%,transparent 50%);background-position:calc(100% - 18px) 52%,calc(100% - 13px) 52%;background-size:5px 5px;background-repeat:no-repeat;padding-right:32px}
+.seg{display:inline-grid;grid-auto-flow:column;gap:4px;padding:4px;border-radius:14px;background:var(--well);box-shadow:var(--well-sh)}
+.seg button{padding:8px 14px;border-radius:10px;font-weight:700;font-size:13.5px;color:var(--mut)}
+.seg button.on{background:#3a3f48;color:var(--fg)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:14px;font-weight:700;background:#3a3f48;color:var(--fg);text-decoration:none}
+.btn.main{background:var(--acc);color:var(--ink);box-shadow:0 0 16px rgba(46,196,182,.35)}
+.btn.warn{background:#4a2c30;color:#ffb3b3}
+.btn.sm{padding:8px 12px;font-size:13px;border-radius:11px}
+.btn:disabled{opacity:.45;cursor:default}
+.plist{display:flex;flex-direction:column;gap:8px}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) 0 auto auto auto;align-items:center;gap:10px;padding:8px 10px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh)}
+.prow.off{opacity:.42}
+.prow .nm{font-weight:650;display:flex;align-items:center;gap:10px;min-width:0;min-height:44px;text-align:left}
+.prow .nm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chk{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:#33383f;color:transparent;font-weight:900}
+.prow:not(.off) .chk{background:var(--acc);color:var(--ink)}
+.num{width:64px;text-align:center;padding:9px 6px}
+.coin{min-width:58px;text-align:right;font:700 16px var(--play);color:#ffd23f;font-variant-numeric:tabular-nums}
+.coin small{font:600 11px var(--font);color:var(--dim);display:block}
+.teamsel{width:96px;padding:9px 26px 9px 9px;font-size:13px}
+@media (max-width:560px){.prow{grid-template-columns:minmax(0,1fr) 0 auto auto;gap:8px}.prow .coin{display:none}.teamsel{width:84px}}
+.teams{display:flex;flex-wrap:wrap;gap:10px}
+.team{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:14px;background:var(--well);box-shadow:var(--well-sh)}
+.team input{width:110px}
+.photo{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.photo img{width:140px;height:100px;object-fit:cover;border-radius:14px;box-shadow:var(--raise-sh)}
+.photo .ph-none{width:140px;height:100px;border-radius:14px;display:grid;place-items:center;background:var(--well);box-shadow:var(--well-sh);color:var(--dim);font-size:13px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.ev{display:grid;grid-template-columns:1fr auto;gap:8px 12px;padding:12px 14px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh);align-items:center}
+.ev>div:first-child{min-width:0;overflow-wrap:anywhere}
+.ev b{font:600 17px var(--play)}
+.ev .meta{color:var(--mut);font-size:13px}
+.ev .tag{white-space:nowrap;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:99px;background:#4a3d1c;color:#ffd23f;margin-left:6px;vertical-align:middle}
+.ev .btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pp{display:grid;grid-template-columns:auto minmax(0,1fr) auto;overflow-wrap:anywhere;gap:10px;align-items:center;padding:10px 12px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh)}
+.pp .sub{color:var(--mut);font-size:12.5px}
+.coins-ed{display:flex;flex-wrap:wrap;gap:8px}
+.coins-ed label{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--mut);font-weight:700}
+.coins-ed input{width:62px;text-align:center}
+.sheet{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:rgba(15,17,21,.8)}
+.sheet .panel{width:min(520px,100%);max-height:92vh;overflow:auto;background:var(--sheet)}
+.colors{display:flex;flex-wrap:wrap;gap:8px}
+.colors button{width:34px;height:34px;border-radius:50%;background:var(--x)}
+.colors button.on{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--x)}
+.empty{color:var(--mut);text-align:center;padding:18px}
+.hint{color:var(--mut);font-size:13px;margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1>Admin <small>Record games, players, passwords and settings</small></h1><span class="pill" id="who"></span><a class="pill" href="scores.html">Dashboard</a><a class="pill" href="./">Home</a></div>
+  <div class="tabs" id="tabs"><button data-t="rec" class="on">Record</button><button data-t="ev">Games</button><button data-t="pl">Players</button><button data-t="set">Settings</button></div>
+  <section id="t-rec"></section>
+  <section id="t-ev" hidden></section>
+  <section id="t-pl" hidden></section>
+  <section id="t-set" hidden></section>
+</div>
+<script src="mind.js"></script>
+<script src="rg.js"></script>
+<script>
+(async function(){
+const {api,av,esc,toast}=RG;
+const COLORS=["#d4f09a","#f7b8d2","#aab7ff","#ffe08a","#ffbf99","#ff9fb8","#7ee8f0","#9df0c8","#d8c39a","#c9a7ff","#7be08a","#ff8f70"];
+let me,players=[],events=[],coins=[];
+try{({me}=await RG.login({admin:true}))}catch(e){document.querySelector(".wrap").innerHTML=`<div class="panel"><h2>Can't reach the server</h2><p class="hint">${esc(e.message)} The admin page only works on the website itself.</p><a class="btn" href="./">Home</a></div>`;return}
+document.getElementById("who").innerHTML=`${av(me,22)} ${esc(me.name)} · <button id="out" style="color:#9aa3b3;font-weight:600">Log out</button>`;
+document.getElementById("out").onclick=async()=>{try{await api("logout",{})}catch(x){}location.reload()};
+
+async function load(){const r=await api("events");events=r.events;players=r.players;coins=r.coins}
+try{await load()}catch(e){document.querySelector(".wrap").innerHTML=`<div class="panel"><h2>Couldn't load the games</h2><p class="hint">${esc(e.message)}</p><a class="btn" href="admin.html">Try again</a></div>`;return}
+const P=id=>players.find(p=>p.id===id)||{id,name:id,short:"?",color:"#9aa3b3"};
+const coinFor=pl=>pl>=1&&pl<=coins.length?coins[pl-1]:0;
+
+/* ---------- tabs ---------- */
+const tabs=document.getElementById("tabs");
+function show(t){tabs.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));["rec","ev","pl","set"].forEach(k=>document.getElementById("t-"+k).hidden=k!==t);({rec:drawRec,ev:drawEvents,pl:drawPlayers,set:drawSettings})[t]()}
+tabs.onclick=e=>{const b=e.target.closest("button");if(b)show(b.dataset.t)};
+
+/* ---------- record form ---------- */
+let F=null; // the form being edited
+function blank(){if(F&&F.photo)URL.revokeObjectURL(F.photo);return {id:0,game:"",category:"",mode:"solo",played_at:RG.nowLocal(),score_dir:"high",note:"",status:"open",teams:["Team 1","Team 2"],teamPlace:{},rows:{},photo:null,photoBlob:null,has_photo:0,photoV:Date.now()}}
+function fromEvent(e){
+  const f=blank();Object.assign(f,{id:e.id,game:e.game,category:e.category,mode:e.mode,played_at:e.played_at,score_dir:e.score_dir,note:e.note,status:e.status,has_photo:e.has_photo});
+  const tn=[...new Set(e.results.map(r=>r.team).filter(Boolean))];if(tn.length)f.teams=tn;
+  e.results.forEach(r=>{f.rows[r.player_id]={on:true,place:r.place??"",score:r.score??"",team:r.team||f.teams[0]};if(r.team&&r.place)f.teamPlace[r.team]=r.place});
+  return f;
+}
+const q=new URLSearchParams(location.search);
+F=blank();
+function knownGames(){const s=new Set();Object.values(RG.GAMES).flat().forEach(g=>s.add(g));events.forEach(e=>s.add(e.game));return [...s].sort()}
+function catOf(g){for(const[c,l]of Object.entries(RG.GAMES))if(l.includes(g))return c;return ""}
+// From a card or mind game: ?record=1&game=<name>&order=<ids best first>[&places=1,1,3 for ties]
+if(q.get("record")){F.game=(q.get("game")||"").slice(0,60);const order=(q.get("order")||"").split(",").filter(id=>players.some(p=>p.id===id&&p.active));const pls=(q.get("places")||"").split(",").map(Number);
+  order.forEach((id,i)=>{F.rows[id]={on:true,place:pls[i]>=1?Math.round(pls[i]):i+1,score:"",team:F.teams[0]}});
+  F.category=catOf(F.game)||(/poker|card|blackjack|higher/i.test(F.game)?"Cards":"");history.replaceState(null,"","admin.html")}
+
+function drawRec(){
+  const el=document.getElementById("t-rec");
+  const active=players.filter(p=>p.active||(F.rows[p.id]&&F.rows[p.id].on)); // hidden players stay visible in games they played
+  el.innerHTML=`<div class="panel">
+    <h2>${F.id?"Edit game":"Record a game"}</h2>
+    <div class="row">
+      <label><span class="lab">Game</span><input class="in" id="f-game" list="gl" value="${esc(F.game)}" placeholder="Pick or type a game"><datalist id="gl">${knownGames().map(g=>`<option value="${esc(g)}">`).join("")}</datalist></label>
+      <label><span class="lab">Category</span><select class="in" id="f-cat">${["","Party","Arcade","Mind games","Cards","Grand game","Puzzles","Elimination","Outdoor","Other"].map(c=>`<option ${c===F.category?"selected":""} value="${c}">${c||"Choose"}</option>`).join("")}</select></label>
+      <label><span class="lab">When</span><input class="in" type="datetime-local" id="f-when" value="${esc(F.played_at)}"></label>
+    </div>
+    <div class="row" style="align-items:center;gap:16px">
+      <div><div class="lab">Play as</div><div class="seg" id="f-mode"><button data-m="solo" class="${F.mode==="solo"?"on":""}">Everyone for themselves</button><button data-m="teams" class="${F.mode==="teams"?"on":""}">Teams</button></div></div>
+      <div><div class="lab">Best score is</div><div class="seg" id="f-dir"><button data-d="high" class="${F.score_dir==="high"?"on":""}">Highest</button><button data-d="low" class="${F.score_dir==="low"?"on":""}">Lowest</button></div></div>
+    </div>
+    ${F.mode==="teams"?`<div><div class="lab" style="margin-bottom:6px">Teams and their place</div><div class="teams">${F.teams.map((t,i)=>`<div class="team"><input class="in" data-ti="${i}" value="${esc(t)}" maxlength="40" aria-label="Team name"><input class="in num" type="number" min="1" inputmode="numeric" data-tp="${i}" value="${esc(F.teamPlace[t]??"")}" placeholder="Place"><span class="coin">${coinFor(+F.teamPlace[t])} <small>each</small></span></div>`).join("")}<button class="btn sm" id="addteam">＋ Team</button>${F.teams.length>2?`<button class="btn sm" id="delteam">− Team</button>`:""}</div></div>`:""}
+    <div>
+      <div class="lab" style="margin-bottom:6px">Players · tap a name to add or remove · ${F.mode==="teams"?"pick each player's team":"type the place, or type scores and press Places from scores"}</div>
+      <div class="plist">${active.map(p=>{const r=F.rows[p.id]||{};const on=!!r.on;const pl=F.mode==="teams"?F.teamPlace[r.team||F.teams[0]]:r.place;
+        return `<div class="prow ${on?"":"off"}" data-p="${esc(p.id)}"><button class="nm" data-tog="${esc(p.id)}"><span class="chk">✓</span>${av(p,32)}<span>${esc(p.name)}</span></button>
+        <span></span>
+        ${F.mode==="teams"?`<select class="in teamsel" data-team="${esc(p.id)}" aria-label="Team" ${on?"":"disabled"}>${F.teams.map(t=>`<option ${t===(r.team||F.teams[0])?"selected":""}>${esc(t)}</option>`).join("")}</select>`:`<input class="in num" type="number" min="1" inputmode="numeric" placeholder="Place" aria-label="Place" data-place="${esc(p.id)}" value="${esc(r.place??"")}" ${on?"":"disabled"}>`}
+        <input class="in num" type="number" inputmode="decimal" step="any" placeholder="Score" aria-label="Score" data-score="${esc(p.id)}" value="${esc(r.score??"")}" ${on?"":"disabled"}>
+        <span class="coin">${on&&pl?coinFor(+pl):"–"}<small>coins</small></span></div>`}).join("")}</div>
+      <div class="actions" style="justify-content:flex-start;margin-top:10px">
+        <button class="btn sm" id="allin">Everyone played</button>
+        ${F.mode==="solo"?`<button class="btn sm" id="auto">Places from scores</button>`:""}
+      </div>
+    </div>
+    <div>
+      <div class="lab" style="margin-bottom:6px">Photo of this game</div>
+      <div class="photo">
+        ${F.photo?`<img src="${F.photo}" alt="Photo for this game">`:F.has_photo&&F.id?`<img src="api.php?a=photo&id=${F.id}&t=${F.photoV}" alt="Photo for this game">`:`<span class="ph-none">No photo yet</span>`}
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label class="btn sm">Take photo<input type="file" accept="image/*" capture="environment" id="ph-cam" hidden></label>
+          <label class="btn sm">Choose from library<input type="file" accept="image/*" id="ph-lib" hidden></label>
+          ${F.photo||F.has_photo?`<button class="btn sm warn" id="ph-del">Remove photo</button>`:""}
+          <span class="hint" id="ph-info">${F.photoBlob?`Shrunk to ${(F.photoBlob.size/1024).toFixed(0)} KB`:"Photos are shrunk to under 1 MB."}</span>
+        </div>
+      </div>
+    </div>
+    <label style="display:flex;flex-direction:column;gap:6px"><span class="lab">Note</span><input class="in" id="f-note" value="${esc(F.note)}" placeholder="Optional, like who brought the snacks"></label>
+    <div class="actions">
+      ${F.id?`<button class="btn" id="cancel">Cancel</button>`:`<button class="btn" id="clear">Clear</button>`}
+      <button class="btn" id="saveopen">Save, still playing</button>
+      <button class="btn main" id="finish">Game over: record scores</button>
+    </div>
+  </div>`;
+  const $=s=>el.querySelector(s);
+  $("#f-game").oninput=e=>{F.game=e.target.value;const c=catOf(F.game);if(c){F.category=c;$("#f-cat").value=c}};
+  $("#f-cat").onchange=e=>F.category=e.target.value;
+  $("#f-when").onchange=e=>F.played_at=e.target.value;
+  $("#f-note").oninput=e=>F.note=e.target.value;
+  $("#f-mode").onclick=e=>{const b=e.target.closest("button");if(!b)return;F.mode=b.dataset.m;drawRec()};
+  $("#f-dir").onclick=e=>{const b=e.target.closest("button");if(!b)return;F.score_dir=b.dataset.d;drawRec()};
+  el.querySelectorAll("[data-tog]").forEach(b=>b.onclick=()=>{const id=b.dataset.tog;const r=F.rows[id]||(F.rows[id]={place:"",score:"",team:F.teams[0]});r.on=!r.on;drawRec()});
+  el.querySelectorAll("[data-place]").forEach(i=>i.onchange=()=>{F.rows[i.dataset.place].place=i.value;drawRec()});
+  el.querySelectorAll("[data-score]").forEach(i=>i.onchange=()=>{F.rows[i.dataset.score].score=i.value});
+  el.querySelectorAll("[data-team]").forEach(s=>s.onchange=()=>{F.rows[s.dataset.team].team=s.value;drawRec()});
+  el.querySelectorAll("[data-ti]").forEach(i=>i.onchange=()=>{const old=F.teams[+i.dataset.ti],nw=i.value.trim()||old;F.teams[+i.dataset.ti]=nw;Object.values(F.rows).forEach(r=>{if(r.team===old)r.team=nw});if(old in F.teamPlace){F.teamPlace[nw]=F.teamPlace[old];if(nw!==old)delete F.teamPlace[old]}drawRec()});
+  el.querySelectorAll("[data-tp]").forEach(i=>i.onchange=()=>{F.teamPlace[F.teams[+i.dataset.tp]]=i.value;drawRec()});
+  if($("#addteam"))$("#addteam").onclick=()=>{F.teams.push("Team "+(F.teams.length+1));drawRec()};
+  if($("#delteam"))$("#delteam").onclick=()=>{const gone=F.teams.pop();Object.values(F.rows).forEach(r=>{if(r.team===gone)r.team=F.teams[0]});drawRec()};
+  $("#allin").onclick=()=>{active.forEach(p=>{const r=F.rows[p.id]||(F.rows[p.id]={place:"",score:"",team:F.teams[0]});r.on=true});drawRec()};
+  if($("#auto"))$("#auto").onclick=()=>{
+    const list=Object.entries(F.rows).filter(([,r])=>r.on&&r.score!==""&&!isNaN(+r.score)).sort((a,b)=>F.score_dir==="low"?a[1].score-b[1].score:b[1].score-a[1].score);
+    if(!list.length)return toast("Type some scores first.");
+    let place=0,prev=null;list.forEach(([,r],i)=>{if(+r.score!==prev){place=i+1;prev=+r.score}r.place=place});drawRec();
+  };
+  const onPhoto=async ev=>{const f=ev.target.files[0];if(!f)return;$("#ph-info").textContent="Shrinking…";
+    try{const b=await RG.shrinkPhoto(f);if(F.photo)URL.revokeObjectURL(F.photo);F.photoBlob=b;F.photo=URL.createObjectURL(b);drawRec()}catch(x){$("#ph-info").textContent=x.message}};
+  $("#ph-cam").onchange=onPhoto;$("#ph-lib").onchange=onPhoto;
+  if($("#ph-del"))$("#ph-del").onclick=async()=>{if(F.photoBlob){URL.revokeObjectURL(F.photo);F.photoBlob=null;F.photo=null;drawRec();return}if(!confirm("Remove the photo from this game?"))return;try{await api("photo_delete",{id:F.id});F.has_photo=0;await load();drawRec()}catch(x){toast(x.message)}};
+  if($("#clear"))$("#clear").onclick=()=>{F=blank();drawRec()};
+  if($("#cancel"))$("#cancel").onclick=()=>{F=blank();show("ev")};
+  $("#saveopen").onclick=()=>save("open");
+  $("#finish").onclick=()=>save("done");
+}
+
+async function save(status){
+  if(!F.game.trim())return toast("Pick or type the game first.");
+  const rows=Object.entries(F.rows).filter(([,r])=>r.on);
+  if(!rows.length)return toast("Tap the players who played.");
+  const results=rows.map(([id,r])=>F.mode==="teams"?{player_id:id,team:r.team||F.teams[0],place:F.teamPlace[r.team||F.teams[0]]||null,score:r.score}:{player_id:id,place:r.place||null,score:r.score});
+  if(status==="done"&&results.some(r=>!r.place))return toast(F.mode==="teams"?"Give every team a place.":"Give every player a place (or use Places from scores).");
+  const btns=document.querySelectorAll("#t-rec .actions .btn");btns.forEach(b=>b.disabled=true);
+  try{
+    const r=await api("event_save",{id:F.id,game:F.game.trim(),category:F.category,mode:F.mode,played_at:F.played_at,status,note:F.note,score_dir:F.score_dir,results});
+    F.id=r.event.id;F.status=status; // saved: a retry now edits this game instead of making a second one
+    if(F.photoBlob){
+      try{await api("photo_upload",F.photoBlob,{q:"&event="+r.event.id})}
+      catch(x){await load().catch(()=>{});drawRec();toast("The game is saved, but the photo didn't upload ("+x.message+"). Press save again to retry.");return}
+    }
+    await load();
+    toast(status==="done"?"Recorded on the dashboard.":"Saved. Finish it from Games when it's over.");
+    F=blank();show(status==="done"?"ev":"rec");
+  }catch(x){toast(x.message);btns.forEach(b=>b.disabled=false)}
+}
+
+/* ---------- games list ---------- */
+function drawEvents(){
+  const el=document.getElementById("t-ev");
+  el.innerHTML=`<div class="panel"><h2>Games played</h2>${events.length?events.map(e=>{
+    const top=e.results.filter(r=>r.place===1).map(r=>P(r.player_id).name);
+    return `<div class="ev"><div><b>${esc(e.game)}</b>${e.status==="open"?`<span class="tag">Still playing</span>`:""}<div class="meta">${RG.fmtDate(e.played_at)} · ${e.results.length} players${top.length?" · Won by "+esc(top.join(", ")):""}${e.has_photo?" · photo":""}</div></div>
+    <div class="btns">${e.status==="open"?`<button class="btn sm main" data-fin="${e.id}">Finish</button>`:""}<button class="btn sm" data-ed="${e.id}">Edit</button><button class="btn sm warn" data-del="${e.id}">Delete</button></div></div>`}).join(""):`<p class="empty">No games yet. Record one from the Record tab.</p>`}</div>`;
+  el.querySelectorAll("[data-ed],[data-fin]").forEach(b=>b.onclick=()=>{F=fromEvent(events.find(e=>e.id===+(b.dataset.ed||b.dataset.fin)));show("rec");scrollTo(0,0)});
+  el.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{const e=events.find(x=>x.id===+b.dataset.del);if(!confirm(`Delete ${e.game} from ${RG.fmtDate(e.played_at)}? Its scores and photo go too.`))return;try{await api("event_delete",{id:e.id});if(F.id===e.id)F=blank();await load();drawEvents();toast("Deleted.")}catch(x){toast(x.message)}});
+}
+
+/* ---------- players ---------- */
+function drawPlayers(){
+  const el=document.getElementById("t-pl");
+  el.innerHTML=`<div class="panel"><h2>Players and passwords</h2><p class="hint">Each player logs in with their own password. Players without a password can't log in yet.</p>
+  ${players.map(p=>`<div class="pp" style="${p.active?"":"opacity:.5"}">${av(p,40)}<div><b>${esc(p.name)}</b> ${p.is_admin?`<span class="tag" style="font-size:11px;font-weight:800;padding:2px 7px;border-radius:99px;background:#1d3d3a;color:#7ee8f0">ADMIN</span>`:""}<div class="sub">${p.has_pass?"Has a password":"No password yet"}${p.active?"":" · hidden"}</div></div><button class="btn sm" data-pe="${p.id}">Edit</button></div>`).join("")}
+  <div class="actions"><button class="btn main" id="addp">＋ Add player</button></div></div>`;
+  el.querySelectorAll("[data-pe]").forEach(b=>b.onclick=()=>editPlayer(players.find(p=>p.id===b.dataset.pe)));
+  el.querySelector("#addp").onclick=()=>editPlayer(null);
+}
+function editPlayer(p){
+  const d=p?{...p}:{id:"",name:"",short:"",color:COLORS[players.length%COLORS.length],avatar:null,is_admin:0,active:1};
+  const s=document.createElement("div");s.className="sheet";
+  const draw=()=>{s.innerHTML=`<div class="panel"><h2>${p?"Edit "+esc(p.name):"New player"}</h2>
+    <div style="display:flex;gap:14px;align-items:center">${av(d,64)}<div style="display:flex;flex-direction:column;gap:6px"><label class="btn sm">Photo<input type="file" accept="image/*" id="pa" hidden></label>${d.avatar?`<button class="btn sm" id="pan">Use letters</button>`:""}</div></div>
+    <div class="row"><label><span class="lab">Name</span><input class="in" id="pn" value="${esc(d.name)}" maxlength="30"></label><label style="max-width:120px;min-width:90px"><span class="lab">Letters</span><input class="in" id="ps" value="${esc(d.short)}" maxlength="3"></label></div>
+    <div><div class="lab" style="margin-bottom:6px">Color</div><div class="colors">${COLORS.map(c=>`<button style="--x:${c}" data-c="${c}" class="${c===d.color?"on":""}" aria-label="${c}"></button>`).join("")}</div></div>
+    <label style="display:flex;flex-direction:column;gap:6px"><span class="lab">${p&&p.has_pass?"New password (leave empty to keep it)":"Password"}</span><input class="in" id="pw" type="text" autocomplete="off" placeholder="At least 4 letters" value="${esc(d.pw||"")}"></label>
+    ${p&&p.id===me.id?"":`<label style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="padm" ${d.is_admin?"checked":""}> Also an admin</label>
+    <label style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="pact" ${d.active?"checked":""}> Shows up in the game (untick to hide)</label>`}
+    <div class="actions"><button class="btn" id="pc">Cancel</button><button class="btn main" id="pok">Save</button></div></div>`;
+    const $=x=>s.querySelector(x);
+    $("#pn").oninput=e=>{d.name=e.target.value;if(!p&&!d._s){d.short=d.name.slice(0,2).toUpperCase();$("#ps").value=d.short}};
+    $("#ps").oninput=e=>{d.short=e.target.value;d._s=1};
+    s.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{d.color=b.dataset.c;keep();draw()});
+    $("#pa").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{d.avatar=await RG.shrinkAvatar(f);keep();draw()}catch(x){toast(x.message)}};
+    if($("#pan"))$("#pan").onclick=()=>{d.avatar=null;keep();draw()};
+    $("#pc").onclick=()=>s.remove();
+    $("#pok").onclick=async()=>{keep();try{const r=await api("player_save",{id:d.id,name:d.name,short:d.short,color:d.color,avatar:d.avatar,is_admin:d.is_admin,active:d.active,password:d.pw||""});players=r.players;s.remove();drawPlayers();toast("Saved.")}catch(x){toast(x.message)}};
+  };
+  const keep=()=>{const $=x=>s.querySelector(x);d.name=$("#pn").value;d.short=$("#ps").value;d.pw=$("#pw").value;if($("#padm"))d.is_admin=$("#padm").checked?1:0;if($("#pact"))d.active=$("#pact").checked?1:0};
+  draw();document.body.appendChild(s);
+}
+
+/* ---------- settings ---------- */
+function drawSettings(){
+  const el=document.getElementById("t-set");
+  el.innerHTML=`<div class="panel"><h2>Coins for each place</h2><p class="hint">Every game gives coins by place. Places past the last box get nothing. Changing this re-counts every game already recorded.</p>
+    <div class="coins-ed" id="ce">${coins.map((c,i)=>`<label>${RG.ordinal(i+1)}<input class="in" type="number" min="0" inputmode="numeric" value="${c}"></label>`).join("")}</div>
+    <div class="actions" style="justify-content:flex-start"><button class="btn sm" id="cadd">＋ Place</button><button class="btn sm" id="cdel">− Place</button><span style="flex:1"></span><button class="btn main" id="csave">Save coins</button></div></div>
+  <div class="panel"><h2>Backup</h2><p class="hint">Download every player, game and score as one file (photos stay on the server).</p><div class="actions" style="justify-content:flex-start"><a class="btn" href="api.php?a=export" download>Download backup</a></div></div>`;
+  const read=()=>[...el.querySelectorAll("#ce input")].map(i=>+i.value||0);
+  el.querySelector("#cadd").onclick=()=>{coins=[...read(),0];drawSettings()};
+  el.querySelector("#cdel").onclick=()=>{coins=read().slice(0,-1);if(!coins.length)coins=[10];drawSettings()};
+  el.querySelector("#csave").onclick=async()=>{try{const r=await api("settings_save",{coins:read()});coins=r.coins;await load();toast("Coins saved and every game re-counted.")}catch(x){toast(x.message)}};
+}
+
+show("rec");
+})();
+</script>
+</body>
+</html>

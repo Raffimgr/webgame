@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ridge Scoreboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: period tabs + game filter, then the podium rings, the average-coins table, the coins race chart and the game history.
+   Tap a game row: its photo and scores. Tap the photo icon: the photo alone. */
+:root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--dim:#6b7383;--ink:#15181e;--sheet:#2a2e35;--acc:#2ec4b6;--gold:#ffd23f;
+  --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
+  --well:#202328;--well-sh:inset 4px 4px 10px rgba(0,0,0,.55),inset -3px -3px 8px rgba(255,255,255,.035);
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--play:"Fredoka","Inter",system-ui,sans-serif}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0;text-align:inherit}
+button:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+[hidden]{display:none!important}
+.wrap{max-width:1000px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(40px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.top h1{margin:0;flex:1;font:600 26px var(--play);min-width:150px}
+.top h1 small{display:block;font:500 13px var(--font);color:var(--mut)}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:7px 13px 7px 8px;border-radius:99px;font-weight:600;font-size:13px;color:var(--mut);background:var(--raise);box-shadow:var(--raise-sh);text-decoration:none}
+.pill.t{padding:8px 14px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.per{display:flex;flex-wrap:wrap;gap:4px;padding:5px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh);max-width:100%}
+@media (max-width:480px){.per{width:100%}.per button{flex:1 1 30%;padding:9px 6px}}
+.per button{padding:9px 13px;border-radius:12px;font-weight:700;font-size:13.5px;color:var(--mut);white-space:nowrap;text-align:center}
+.per button.on{background:var(--acc);color:var(--ink)}
+.sel{padding:11px 34px 11px 13px;border-radius:14px;border:0;background:var(--well);box-shadow:var(--well-sh);color:var(--fg);font:600 14px var(--font);appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,#9aa3b3 50%),linear-gradient(135deg,#9aa3b3 50%,transparent 50%);background-position:calc(100% - 18px) 52%,calc(100% - 13px) 52%;background-size:5px 5px;background-repeat:no-repeat;max-width:100%}
+.panel{background:var(--raise);box-shadow:var(--raise-sh);border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel h2{margin:0;font:600 19px var(--play);display:flex;align-items:baseline;gap:10px}
+.panel h2 small{font:500 12.5px var(--font);color:var(--mut)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+.podium{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:end;text-align:center}
+.pod{display:flex;flex-direction:column;align-items:center;gap:6px}
+.ring{position:relative;display:grid;place-items:center}
+.ring svg.g{position:absolute;inset:0}
+.pod{min-width:0}
+.pod b{font:600 16px var(--play);max-width:100%;overflow-wrap:anywhere}
+.pod .big{font:700 26px var(--play);color:var(--gold);line-height:1}
+.pod .sub{font-size:12px;color:var(--mut)}
+.lb{display:flex;flex-direction:column;gap:6px}
+.lr{display:grid;grid-template-columns:26px auto 1fr auto auto;align-items:center;gap:10px;padding:8px 12px;border-radius:15px;background:var(--well);box-shadow:var(--well-sh)}
+.lr.me{box-shadow:var(--well-sh),0 0 0 2px var(--acc)}
+.lr .rk{font:700 15px var(--play);color:var(--dim);text-align:center}
+.lr .nm{font-weight:650;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lr .nm small{display:block;color:var(--mut);font-weight:500;font-size:12px}
+.lr .avg{font:700 20px var(--play);color:var(--gold);text-align:right;font-variant-numeric:tabular-nums;min-width:52px}
+.lr .avg small,.lr .tot small{display:block;font:600 10.5px var(--font);color:var(--dim);letter-spacing:.04em;text-transform:uppercase}
+.lr .tot{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;min-width:48px}
+.chart svg{display:block;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12.5px;color:var(--mut)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.hist{display:flex;flex-direction:column;gap:8px}
+.hr{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh);width:100%}
+.hr>button:first-child{min-width:0;overflow-wrap:anywhere}
+.hr b{font:600 16px var(--play)}
+.hr .meta{color:var(--mut);font-size:12.5px}
+.hr .wins{display:flex;padding-left:6px;min-height:44px;align-items:center}
+.hr .wins .rg-av{margin-left:-6px;box-shadow:0 0 0 2px var(--well)}
+.cam{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:#33383f;color:var(--acc)}
+.cam[disabled]{visibility:hidden}
+.tag{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:99px;background:#4a3d1c;color:var(--gold);margin-left:6px;vertical-align:middle}
+.empty{color:var(--mut);text-align:center;padding:16px}
+.sheet{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:rgba(12,13,16,.86)}
+.sheet .panel{width:min(620px,100%);max-height:92vh;overflow:auto;background:var(--sheet);overflow-wrap:anywhere}
+.sheet .x{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:16px;width:44px;height:44px;border-radius:50%;background:#33383f;color:var(--fg);font:700 20px var(--font);display:grid;place-items:center;z-index:2}
+.sheet.photo{padding:0}
+.sheet.photo img{max-width:100vw;max-height:100vh;object-fit:contain}
+.evimg{width:100%;max-height:52vh;object-fit:contain;border-radius:16px;background:#000}
+.res{display:flex;flex-direction:column;gap:6px}
+.rr{display:grid;grid-template-columns:34px auto minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:7px 10px;border-radius:13px;background:var(--well)}
+.rr .pl{font:700 15px var(--play);color:var(--mut);text-align:center}
+.rr .pl.p1{color:var(--gold)}
+.rr .sc{color:var(--mut);font-size:13px;font-variant-numeric:tabular-nums}
+.rr .cn{font:700 16px var(--play);color:var(--gold);min-width:42px;text-align:right}
+.teamsum{display:flex;gap:8px;flex-wrap:wrap}
+.teamsum span{padding:6px 12px;border-radius:99px;background:var(--well);font-weight:700;font-size:13px}
+.in{width:100%;padding:12px 13px;border-radius:13px;border:0;background:var(--well);color:var(--fg);font:500 15px var(--font);box-shadow:var(--well-sh)}
+.lab{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--dim)}
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:14px;font-weight:700;background:#3a3f48;color:var(--fg)}
+.btn.main{background:var(--acc);color:var(--ink)}
+.colors{display:flex;flex-wrap:wrap;gap:8px}
+.colors button{width:34px;height:34px;border-radius:50%;background:var(--x)}
+.colors button.on{box-shadow:0 0 0 3px var(--sheet),0 0 0 5px var(--x)}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="top"><h1>Scoreboard <small>Average coins per game. 1st place wins the most coins.</small></h1><span id="user"></span><a class="pill t" href="admin.html" id="adm" hidden>Admin</a><a class="pill t" href="./">Home</a></div>
+  <div class="bar"><div class="per" id="per"></div><select class="sel" id="gf" aria-label="Which game"></select></div>
+  <div class="grid2">
+    <div class="panel"><h2>Top players <small id="pod-sub"></small></h2><div class="podium" id="podium"></div></div>
+    <div class="panel"><h2>Coins race <small>Total coins, game by game</small></h2><div class="chart" id="chart"></div><div class="legend" id="legend"></div></div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h2>Average coins <small>per game played</small></h2><div class="lb" id="lb"></div></div>
+    <div class="panel"><h2>Games <small>Tap a game for its photo and scores</small></h2><div class="hist" id="hist"></div></div>
+  </div>
+</div>
+<script src="mind.js"></script>
+<script src="rg.js"></script>
+<script>
+(async function(){
+const {api,av,esc}=RG;
+const CAM=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
+let me,events=[],players=[],coins=[10],period="all",game="";
+const offline=e=>{document.getElementById("app").innerHTML=`<div class="panel"><h2>Can't reach the server</h2><p style="color:#9aa3b3;margin:0">${esc(e.message)} The scoreboard is saved online, so it only works on the Ridge Games website.</p><a class="btn" href="./">Home</a></div>`};
+try{({me}=await RG.login())}catch(e){offline(e);return}
+try{period=localStorage.getItem("rg_period")||"all"}catch(e){}
+if(!RG.PERIODS.some(p=>p[0]===period))period="all";
+async function load(){const r=await api("events");events=r.events.filter(e=>e.status==="done");players=r.players;coins=r.coins}
+try{await load()}catch(e){offline(e);return}
+const P=id=>players.find(p=>p.id===id)||{id,name:id,short:"?",color:"#9aa3b3"};
+
+function drawUser(){
+  document.getElementById("user").innerHTML=`<button class="pill" id="meb">${av(me,26)} ${esc(me.name)}</button>`;
+  document.getElementById("adm").hidden=!me.is_admin;
+  document.getElementById("meb").onclick=profile;
+}
+drawUser();
+
+const per=document.getElementById("per");
+function drawPer(){per.innerHTML=RG.PERIODS.map(([k,l])=>`<button data-k="${k}" class="${k===period?"on":""}">${l}</button>`).join("")}
+per.onclick=e=>{const b=e.target.closest("button");if(!b)return;period=b.dataset.k;try{localStorage.setItem("rg_period",period)}catch(x){}draw()};
+const gf=document.getElementById("gf");
+gf.onchange=()=>{game=gf.value;draw()};
+
+function stats(list){
+  const m={};
+  list.forEach(e=>e.results.forEach(r=>{const s=m[r.player_id]||(m[r.player_id]={id:r.player_id,coins:0,games:0,wins:0,best:99});s.coins+=r.coins;s.games++;if(r.place===1)s.wins++;if(r.place)s.best=Math.min(s.best,r.place)}));
+  return Object.values(m).map(s=>({...s,avg:s.games?s.coins/s.games:0})).sort((a,b)=>b.avg-a.avg||b.coins-a.coins||b.wins-a.wins);
+}
+const pl=(n,w)=>n+" "+w+(n===1?"":(w.endsWith("s")?"":"s"));
+const f1=n=>(Math.round(n*10)/10).toFixed(n%1?1:0);
+
+function ring(p,size,pct,color){
+  const r=size/2-5,c=2*Math.PI*r;
+  return `<div class="ring" style="width:${size}px;height:${size}px"><svg class="g" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="#202328" stroke-width="6"/><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${c*pct} ${c}" transform="rotate(-90 ${size/2} ${size/2})" style="filter:drop-shadow(0 0 5px ${color})"/></svg>${av(p,size-22)}</div>`;
+}
+
+function draw(){
+  drawPer();
+  const names=[...new Set(events.map(e=>e.game))].sort();
+  if(game&&!names.includes(game))game="";
+  gf.innerHTML=`<option value="">All games</option>`+names.map(n=>`<option ${n===game?"selected":""}>${esc(n)}</option>`).join("");
+  const list=events.filter(e=>RG.inPeriod(e.played_at,period)&&(!game||e.game===game));
+  const st=stats(list);const maxC=Math.max(...coins,...st.map(s=>s.avg),1);
+  document.getElementById("pod-sub").textContent=list.length?`${list.length} game${list.length>1?"s":""} · ${RG.PERIODS.find(p=>p[0]===period)[1].toLowerCase()}`:"";
+  // podium: 2nd, 1st, 3rd
+  const pod=document.getElementById("podium");
+  if(!st.length)pod.innerHTML=`<p class="empty" style="grid-column:1/-1">No games recorded ${period==="all"?"yet":"in this period"}.</p>`;
+  else pod.innerHTML=[1,0,2].map(i=>{const s=st[i];if(!s)return "<div></div>";const p=P(s.id);const sz=i===0?118:92;
+    return `<div class="pod">${i===0?`<svg width="34" height="22" viewBox="0 0 34 22"><path d="M3 20 L6 5 L12 12 L17 2 L22 12 L28 5 L31 20Z" fill="#ffd23f" stroke="#a37c00" stroke-width="1.5" stroke-linejoin="round"/></svg>`:""}${ring(p,sz,Math.min(1,s.avg/maxC),p.color)}<b>${esc(p.name)}</b><span class="big">${f1(s.avg)}</span><span class="sub">avg · ${s.coins} coins · ${pl(s.games,"game")}</span></div>`}).join("");
+  // table
+  document.getElementById("lb").innerHTML=st.length?st.map((s,i)=>{const p=P(s.id);return `<div class="lr ${s.id===me.id?"me":""}"><span class="rk">${i+1}</span>${av(p,34)}<span class="nm">${esc(p.name)}<small>${pl(s.games,"game")} · ${pl(s.wins,"win")}</small></span><span class="tot">${s.coins}<small>total</small></span><span class="avg">${f1(s.avg)}<small>avg</small></span></div>`}).join(""):`<p class="empty">Nothing here yet.</p>`;
+  drawChart(list);
+  // history
+  document.getElementById("hist").innerHTML=list.length?list.map(e=>{const w=e.results.filter(r=>r.place===1).map(r=>P(r.player_id));
+    return `<div class="hr"><button data-ev="${e.id}" style="min-width:0"><b>${esc(e.game)}</b>${e.mode==="teams"?`<span class="tag" style="background:#1d3d3a;color:#7ee8f0">Teams</span>`:""}<div class="meta">${RG.fmtDate(e.played_at)} · ${e.results.length} players${w.length?" · won by "+esc(w.map(p=>p.name).join(", ")):""}</div></button>
+    <button class="wins" data-ev="${e.id}" aria-label="Scores">${w.slice(0,4).map(p=>av(p,28)).join("")}</button>
+    <button class="cam" data-ph="${e.id}" ${e.has_photo?"":"disabled"} aria-label="Photo">${CAM}</button></div>`}).join(""):`<p class="empty">No games ${period==="all"?"yet":"in this period"}.</p>`;
+  document.querySelectorAll("[data-ev]").forEach(b=>b.onclick=()=>openEvent(+b.dataset.ev));
+  document.querySelectorAll("[data-ph]").forEach(b=>b.onclick=()=>openPhoto(+b.dataset.ph));
+}
+
+function drawChart(list){
+  const el=document.getElementById("chart"),lg=document.getElementById("legend");
+  const evs=[...list].sort((a,b)=>a.played_at<b.played_at?-1:1);
+  if(evs.length<1){el.innerHTML=`<p class="empty">The race starts after the first game.</p>`;lg.innerHTML="";return}
+  const ids=[...new Set(evs.flatMap(e=>e.results.map(r=>r.player_id)))];
+  const run={};ids.forEach(i=>run[i]=[0]);
+  evs.forEach(e=>{ids.forEach(i=>{const r=e.results.find(x=>x.player_id===i);run[i].push(run[i][run[i].length-1]+(r?r.coins:0))})});
+  const W=520,H=230,L=34,R=10,T=10,B=24,n=evs.length,max=Math.max(10,...ids.map(i=>run[i][n]));
+  const x=k=>L+(W-L-R)*k/n,y=v=>T+(H-T-B)*(1-v/max);
+  const ticks=[0,.25,.5,.75,1].map(t=>Math.round(max*t));
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Total coins after each game">`;
+  s+=ticks.map(t=>`<line x1="${L}" x2="${W-R}" y1="${y(t)}" y2="${y(t)}" stroke="#2c3037"/><text x="${L-6}" y="${y(t)+4}" fill="#6b7383" font-size="10" text-anchor="end" font-family="Inter">${t}</text>`).join("");
+  s+=`<text x="${L}" y="${H-6}" fill="#6b7383" font-size="10" font-family="Inter">start</text><text x="${W-R}" y="${H-6}" fill="#6b7383" font-size="10" text-anchor="end" font-family="Inter">game ${n}</text>`;
+  const order=ids.sort((a,b)=>run[a][n]-run[b][n]);
+  order.forEach(i=>{const p=P(i);const pts=run[i].map((v,k)=>`${x(k).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    s+=`<polyline points="${pts}" fill="none" stroke="${esc(p.color)}" stroke-width="${i===me.id?3.2:2}" stroke-linejoin="round" stroke-linecap="round" opacity="${i===me.id?1:.85}"/><circle cx="${x(n)}" cy="${y(run[i][n])}" r="3.5" fill="${esc(p.color)}"/>`});
+  el.innerHTML=s+"</svg>";
+  lg.innerHTML=[...order].reverse().map(i=>{const p=P(i);return `<span><i style="background:${esc(p.color)}"></i>${esc(p.name)} ${run[i][n]}</span>`}).join("");
+}
+
+function sheet(html,cls=""){
+  const s=document.createElement("div");s.className="sheet "+cls;s.innerHTML=`<button class="x" aria-label="Close">✕</button>`+html;
+  const close=()=>{s.remove();removeEventListener("keydown",k)};
+  const k=e=>{if(e.key==="Escape")close()};addEventListener("keydown",k);
+  s.onclick=e=>{if(e.target===s||e.target.closest(".x"))close()};
+  s.querySelectorAll("img").forEach(i=>i.onerror=()=>i.replaceWith(Object.assign(document.createElement("p"),{className:"empty",textContent:"The photo couldn't load."})));
+  document.body.appendChild(s);return s;
+}
+function openPhoto(id){sheet(`<img src="api.php?a=photo&id=${id}" alt="Game photo">`,"photo")}
+function openEvent(id){
+  const e=events.find(x=>x.id===id);if(!e)return;
+  const teams={};if(e.mode==="teams")e.results.forEach(r=>{const t=r.team||"Team";teams[t]=(teams[t]||0)+r.coins});
+  sheet(`<div class="panel">
+    <h2>${esc(e.game)} <small>${RG.fmtDate(e.played_at)}</small></h2>
+    ${e.has_photo?`<img class="evimg" src="api.php?a=photo&id=${e.id}" alt="Photo from this game">`:""}
+    ${e.mode==="teams"?`<div><div class="lab" style="margin-bottom:6px">Team coins</div><div class="teamsum">${Object.entries(teams).sort((a,b)=>b[1]-a[1]).map(([t,c])=>`<span>${esc(t)} · ${c}</span>`).join("")}</div></div>`:""}
+    <div class="res">${e.results.map(r=>{const p=P(r.player_id);return `<div class="rr"><span class="pl ${r.place===1?"p1":""}">${r.place?RG.ordinal(r.place):"–"}</span>${av(p,30)}<span>${esc(p.name)}${r.team?` <span style="color:#9aa3b3;font-size:12.5px">· ${esc(r.team)}</span>`:""}</span><span class="sc">${r.score!=null?"score "+r.score:""}</span><span class="cn">+${r.coins}</span></div>`}).join("")}</div>
+    ${e.note?`<p style="margin:0;color:#9aa3b3">${esc(e.note)}</p>`:""}
+  </div>`);
+}
+
+function profile(){
+  const COLORS=["#d4f09a","#f7b8d2","#aab7ff","#ffe08a","#ffbf99","#ff9fb8","#7ee8f0","#9df0c8","#d8c39a","#c9a7ff","#7be08a","#ff8f70"];
+  const d={...me};let pwOpen=false;
+  const s=sheet(`<div class="panel" id="pf"></div>`);const pf=s.querySelector("#pf");
+  const drawP=()=>{pf.innerHTML=`<h2>My profile</h2>
+    <div style="display:flex;gap:14px;align-items:center">${av(d,64)}<div style="display:flex;gap:8px;flex-wrap:wrap"><label class="btn">Photo<input type="file" accept="image/*" id="pa" hidden></label>${d.avatar?`<button class="btn" id="pan">Use letters</button>`:""}</div></div>
+    <label style="display:flex;flex-direction:column;gap:6px"><span class="lab">Name</span><input class="in" id="pn" value="${esc(d.name)}" maxlength="30"></label>
+    <label style="display:flex;flex-direction:column;gap:6px"><span class="lab">Letters</span><input class="in" id="ps" value="${esc(d.short)}" maxlength="3"></label>
+    <div><div class="lab" style="margin-bottom:6px">Color</div><div class="colors">${COLORS.map(c=>`<button style="--x:${c}" data-c="${c}" class="${c===d.color?"on":""}" aria-label="${c}"></button>`).join("")}</div></div>
+    ${pwOpen?`<div style="display:flex;flex-direction:column;gap:8px"><span class="lab">Change password</span><input class="in" type="password" id="pw0" placeholder="Current password" autocomplete="current-password"><input class="in" type="password" id="pw1" placeholder="New password (at least 4 letters)" autocomplete="new-password"><button class="btn" id="pwok">Change password</button></div>`:""}
+    <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">${pwOpen?"":`<button class="btn" id="pw">Change password</button>`}<button class="btn" id="lo">Log out</button><button class="btn main" id="ok">Save</button></div>`;
+    const $=x=>pf.querySelector(x);const keep=()=>{d.name=$("#pn").value;d.short=$("#ps").value};
+    pf.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{keep();d.color=b.dataset.c;drawP()});
+    $("#pa").onchange=async e=>{const f=e.target.files[0];if(!f)return;keep();try{d.avatar=await RG.shrinkAvatar(f);drawP()}catch(x){RG.toast(x.message)}};
+    if($("#pan"))$("#pan").onclick=()=>{keep();d.avatar=null;drawP()};
+    $("#lo").onclick=async()=>{try{await api("logout",{})}catch(x){}location.reload()};
+    if($("#pw"))$("#pw").onclick=()=>{keep();pwOpen=true;drawP();$("#pw0").focus()};
+    if($("#pwok"))$("#pwok").onclick=async()=>{const old=$("#pw0").value,nw=$("#pw1").value;if(nw.length<4)return RG.toast("Use at least 4 characters.");try{await api("me_update",{password:old,new_password:nw});keep();pwOpen=false;drawP();RG.toast("Password changed.")}catch(x){RG.toast(x.message)}};
+    $("#ok").onclick=async()=>{keep();try{const r=await api("me_update",{name:d.name,short:d.short,color:d.color,avatar:d.avatar});me=r.me;await load();s.remove();drawUser();draw();RG.toast("Saved.")}catch(x){RG.toast(x.message)}};
+  };drawP();
+}
+
+draw();
+})();
+</script>
+</body>
+</html>

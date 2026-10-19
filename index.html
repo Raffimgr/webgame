@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ridge Games</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a storybook banner with the castle on top, then three big doors into the site. */
+:root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--ink:#15181e;
+  --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--play:"Fredoka","Inter",system-ui,sans-serif}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:linear-gradient(170deg,#2c3037 0%,#22252b 55%,#1b1d22 100%) fixed;color:var(--fg);font:15px/1.5 var(--font);min-height:100vh;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(32px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:22px}
+.banner{border-radius:28px;overflow:hidden;position:relative;box-shadow:var(--raise-sh)}
+.banner svg{display:block;width:100%;height:auto}
+@media (max-width:640px){.banner svg{height:180px}.banner .t{left:20px;bottom:18px}}
+.banner .t{position:absolute;left:28px;bottom:22px;text-shadow:0 2px 0 rgba(0,0,0,.35)}
+.banner h1{margin:0;font:700 clamp(34px,6vw,56px)/1 var(--play);color:#fff}
+.banner p{margin:6px 0 0;font-weight:600;color:#fff}
+.doors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:640px){.doors{grid-template-columns:1fr}}
+.adm{align-self:center;color:var(--mut);font-size:13px;font-weight:600;text-decoration:none;padding:8px 14px;border-radius:99px;background:var(--raise);box-shadow:var(--raise-sh)}
+a.door{display:flex;flex-direction:column;gap:8px;padding:20px;border-radius:24px;background:var(--raise);box-shadow:var(--raise-sh);color:inherit;text-decoration:none;transition:transform .15s}
+a.door:hover,a.door:focus-visible{transform:translateY(-3px);outline:none}
+a.door:focus-visible{box-shadow:var(--raise-sh),0 0 0 3px var(--x)}
+.door .ic{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;background:var(--x);color:var(--ink);box-shadow:0 0 18px color-mix(in srgb,var(--x) 40%,transparent)}
+.door b{font:600 22px var(--play)}
+.door span{color:var(--mut);font-size:14px}
+.door em{font-style:normal;font-weight:700;font-size:13px;color:var(--x);margin-top:auto}
+.who{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12px;color:var(--ink);background:var(--x)}
+.note{text-align:center;color:var(--mut);font-size:13px;margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="banner">
+    <svg viewBox="0 0 1000 300" preserveAspectRatio="xMaxYMax slice" aria-hidden="true">
+      <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5cc8ee"/><stop offset="1" stop-color="#bfeaff"/></linearGradient></defs>
+      <rect width="1000" height="300" fill="url(#sk)"/>
+      <circle cx="90" cy="70" r="38" fill="#ffd23f"/>
+      <g fill="#fff"><ellipse cx="300" cy="60" rx="40" ry="15"/><circle cx="285" cy="50" r="16"/><circle cx="310" cy="45" r="19"/><ellipse cx="620" cy="80" rx="34" ry="12"/><circle cx="610" cy="70" r="14"/></g>
+      <path d="M0 210 L120 130 L230 190 L360 110 L480 180 L600 120 L720 170 L860 100 L1000 160 L1000 300 L0 300Z" fill="#8f979f"/>
+      <path d="M360 110 L340 140 L352 136 L360 146 L370 136 L382 140Z M860 100 L842 128 L853 124 L860 134 L868 124 L878 128Z" fill="#fff"/>
+      <path d="M0 240 C 150 200, 300 250, 450 225 S 750 200, 1000 230 L1000 300 L0 300Z" fill="#6fc04a"/>
+      <path d="M0 270 C 200 250, 400 285, 600 265 S 850 255, 1000 270 L1000 300 L0 300Z" fill="#5fae3e"/>
+      <g transform="translate(830 238)">
+        <rect x="-60" y="-70" width="28" height="70" fill="#d9d4cc" stroke="#8b8478" stroke-width="2"/><rect x="32" y="-70" width="28" height="70" fill="#d9d4cc" stroke="#8b8478" stroke-width="2"/>
+        <rect x="-34" y="-52" width="68" height="52" fill="#e4dfd6" stroke="#8b8478" stroke-width="2"/><rect x="-16" y="-96" width="32" height="96" fill="#d9d4cc" stroke="#8b8478" stroke-width="2"/>
+        <path d="M-64 -70 L-46 -102 L-28 -70Z M28 -70 L46 -102 L64 -70Z M-20 -96 L0 -132 L20 -96Z" fill="#d94a3d" stroke="#8c2a20" stroke-width="2"/>
+        <path d="M-11 0 L-11 -20 A11 11 0 0 1 11 -20 L11 0Z" fill="#6b4226"/><path d="M0 -132 L0 -148 L14 -144 L0 -140" fill="#f5b300" stroke="#5a4a3a" stroke-width="2"/>
+      </g>
+      <g fill="#2e8b57"><path d="M560 250 l14 -40 l14 40z"/><path d="M590 255 l12 -34 l12 34z"/><path d="M180 250 l14 -40 l14 40z"/><path d="M210 258 l12 -34 l12 34z"/></g>
+    </svg>
+    <div class="t"><h1>Ridge Games</h1><p>Shenandoah trip · game night</p></div>
+  </div>
+  <div class="doors">
+    <a class="door" href="map.html" style="--x:#ffd23f"><span class="ic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18l2-11 5 5 2-8 2 8 5-5 2 11z"/></svg></span><b>The Road to the Crown</b><span>The grand game. Race your team across the kingdom map to the castle, where one of you is crowned.</span><em>Play on the iPad ›</em></a>
+    <a class="door" href="mind.html" style="--x:#2ec4b6"><span class="ic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V5a3 3 0 0 0-3-1zM15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1"/></svg></span><b>Mind Games</b><span>Eighteen quick brain games: math, focus, memory, logic, words and the liquid sort puzzle. Practice any level from 1 to 5.</span><em>Practice ›</em></a>
+    <a class="door" href="cards.html" style="--x:#aab7ff"><span class="ic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="11" height="15" rx="2"/><path d="M14 7.5l4.5 1.2a2 2 0 0 1 1.4 2.4l-2.6 9.7a2 2 0 0 1-2.4 1.4L12 21.4"/><path d="M8.5 10.5c-1-1.2-3 .2-1.8 1.8l1.8 2 1.8-2c1.2-1.6-.8-3-1.8-1.8z"/></svg></span><b>Card Games</b><span>One hand of Texas Hold'em poker, pass the iPad around. Plus quick card games.</span><em>Deal ›</em></a>
+    <a class="door" href="scores.html" style="--x:#f7b8d2"><span class="ic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM17 6h3a3 3 0 0 1-3 4M7 6H4a3 3 0 0 0 3 4"/></svg></span><b>Scoreboard</b><span>Coins and average scores by day, week, month, year or all time, with a photo of every game.</span><em>See scores ›</em></a>
+  </div>
+  <div class="who">
+    <span class="av" style="--x:#d4f09a">RF</span><span class="av" style="--x:#f7b8d2">RS</span><span class="av" style="--x:#aab7ff">RM</span><span class="av" style="--x:#ffe08a">YR</span><span class="av" style="--x:#ffbf99">YZ</span><span class="av" style="--x:#ff9fb8">Ro</span><span class="av" style="--x:#7ee8f0">SK</span><span class="av" style="--x:#9df0c8">SF</span><span class="av" style="--x:#d8c39a">Ja</span>
+  </div>
+  <p class="note">Best on an iPad held sideways. Every game gives coins: 1st 10, 2nd 7, 3rd 5, then one less each place.</p>
+  <a class="adm" href="admin.html">Admin</a>
+</div>
+</body>
+</html>

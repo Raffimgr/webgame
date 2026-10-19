@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ridge Mind Games</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: pick a game card and a level, then the game takes over the page. */
+:root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--dim:#6b7383;--ink:#15181e;--sheet:#2a2e35;
+  --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
+  --well:#202328;--well-sh:inset 4px 4px 10px rgba(0,0,0,.55),inset -3px -3px 8px rgba(255,255,255,.035);
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--play:"Fredoka","Inter",system-ui,sans-serif}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:#1b1d22;color:var(--fg);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0;text-align:inherit}
+button:focus-visible,a:focus-visible{outline:2px solid #2ec4b6;outline-offset:3px}
+[hidden]{display:none!important}
+.wrap{max-width:1000px;min-height:100%;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:18px}
+.top{display:flex;align-items:center;gap:12px}
+.top h1{margin:0;flex:1;font:600 26px var(--play)}
+.top h1 small{display:block;font:500 13px var(--font);color:var(--mut)}
+.pill{padding:9px 14px;border-radius:99px;font-weight:600;font-size:13px;color:var(--mut);background:var(--raise);box-shadow:var(--raise-sh);text-decoration:none}
+.lab{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:650;color:var(--dim)}
+.levels{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:6px;border-radius:18px;background:var(--well);box-shadow:var(--well-sh);max-width:460px}
+.levels button{padding:10px 0;border-radius:13px;text-align:center;font-weight:700;color:var(--mut)}
+.levels button.on{background:#2ec4b6;color:var(--ink);box-shadow:0 0 12px rgba(46,196,182,.4)}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:460px){.cards{grid-template-columns:1fr}}
+.card{display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:22px;background:var(--raise);box-shadow:var(--raise-sh);text-align:left;transition:transform .15s}
+.card:hover{transform:translateY(-2px)}
+.card .ic{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;font:700 20px var(--play);background:var(--well);box-shadow:inset 3px 3px 8px rgba(0,0,0,.55);color:var(--x)}
+.card b{font:600 19px var(--play)}
+.card small{color:var(--x);font-weight:700;font-size:12px}
+.card span{color:var(--mut);font-size:13.5px}
+.skills{display:flex;flex-wrap:wrap;gap:8px}
+.skills button{padding:8px 13px;border-radius:99px;font-weight:600;font-size:13px;color:var(--mut);background:var(--raise);box-shadow:var(--raise-sh)}
+.skills button.on{background:#2ec4b6;color:var(--ink);box-shadow:0 0 12px rgba(46,196,182,.4)}
+.card span:last-child{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+#stage{flex:1;display:flex;flex-direction:column;min-height:70vh}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1>Mind Games <small>18 quick brain games. On the grand game map they get harder the closer you are to the castle.</small></h1><a class="pill" href="./" id="home">Home</a></div>
+  <div id="menu" style="display:flex;flex-direction:column;gap:14px">
+    <span class="lab">Pick a level</span>
+    <div class="levels" id="lv"></div>
+    <span class="lab">Pick a game</span>
+    <div class="skills" id="sk" role="group" aria-label="Filter by skill"></div>
+    <div class="cards" id="cards"></div>
+  </div>
+  <div id="stage" hidden></div>
+</div>
+<script src="mind.js"></script>
+<script>
+(function(){
+  const COL={quickmath:"#ffd23f",colorclash:"#f7b8d2",numbermemory:"#aab7ff",wordscramble:"#d4f09a",biggerorsmaller:"#ffbf99",gridrecall:"#7ee8f0",
+    liquidsort:"#7ee8f0",echotiles:"#c9a7ff",oddone:"#ff9fb8",flashcount:"#ffbf99",numberhunt:"#ffe08a",turntwin:"#9df0c8",pairup:"#aab7ff",slidepuzzle:"#d8c39a",arrowstorm:"#f7b8d2",truefalse:"#7be08a",nextnumber:"#ffd23f",wordsort:"#d4f09a"};
+  const ICON={quickmath:"+",colorclash:"Aa",numbermemory:"123",wordscramble:"W",biggerorsmaller:"><",gridrecall:"▦",
+    liquidsort:"⧗",echotiles:"◉",oddone:"◆",flashcount:"▲▲",numberhunt:"1→",turntwin:"↻",pairup:"▣▣",slidepuzzle:"⇄",arrowstorm:"→",truefalse:"=?",nextnumber:"2,4",wordsort:"Ab"};
+  let level=1;try{level=Math.min(5,Math.max(1,+localStorage.getItem("rg_mind_level")||1))}catch(e){}
+  const lv=document.getElementById("lv"),cards=document.getElementById("cards"),menu=document.getElementById("menu"),stage=document.getElementById("stage");
+  function drawLv(){lv.innerHTML=[1,2,3,4,5].map(i=>`<button class="${i===level?"on":""}" data-l="${i}">${i}</button>`).join("")}
+  drawLv();
+  lv.onclick=e=>{const b=e.target.closest("button");if(!b)return;level=+b.dataset.l;try{localStorage.setItem("rg_mind_level",level)}catch(e){}drawLv()};
+  // skill filter: All + each skill (remembered on this device)
+  const sk=document.getElementById("sk"),skills=[...new Set(MindGames.list.map(g=>g.skill))];let skill="All";try{skill=localStorage.getItem("rg_mind_skill")||"All"}catch(e){}if(skill!=="All"&&!skills.includes(skill))skill="All";
+  function drawSk(){sk.innerHTML=["All",...skills].map(x=>`<button class="${x===skill?"on":""}" data-s="${x}" aria-pressed="${x===skill}">${x}</button>`).join("")}
+  function drawCards(){cards.innerHTML=MindGames.list.filter(g=>skill==="All"||g.skill===skill).map(g=>`<button class="card" data-g="${g.id}" style="--x:${COL[g.id]||"#7ee8f0"}"><span class="ic">${ICON[g.id]||"?"}</span><small>${g.skill}</small><b>${g.name}</b><span>${g.how}</span></button>`).join("")}
+  drawSk();drawCards();
+  sk.onclick=e=>{const b=e.target.closest("button");if(!b)return;skill=b.dataset.s;try{localStorage.setItem("rg_mind_skill",skill)}catch(e){}drawSk();drawCards()};
+  let cur=null;
+  cards.onclick=e=>{const b=e.target.closest(".card");if(!b)return;menu.hidden=true;stage.hidden=false;
+    cur=MindGames.play(stage,{game:b.dataset.g,level,color:COL[b.dataset.g],doneLabel:"Back to the games",onDone:back})};
+  function back(){if(cur)cur.stop();cur=null;stage.hidden=true;stage.innerHTML="";menu.hidden=false}
+  document.getElementById("home").addEventListener("click",e=>{if(cur){e.preventDefault();back()}});
+})();
+</script>
+</body>
+</html>
