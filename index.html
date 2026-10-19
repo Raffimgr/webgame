@@ -191,6 +191,9 @@ const img=(p,w=900)=>p.u?p.u.replace(/([?&](?:width|maxWidth|maxwidth)=)\d+/,"$1
 const page=p=>p.src||"https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(p.f.replace(/ /g,"_"));
 const P={
   sakoPool:{u:"img/luray-mirror-pool.jpg",by:"Sako",cap:"The mirror pool in Luray Caverns",src:"img/luray-mirror-pool.jpg"},
+  lurayOrgan:{u:"img/luray-organ.jpg",by:"Sako",cap:"The Great Stalacpipe Organ",src:"img/luray-organ.jpg"},
+  lurayEntrance2:{u:"img/luray-entrance.jpg",by:"Sako",cap:"Heading into Luray Caverns",src:"img/luray-entrance.jpg"},
+  lurayWalk:{u:"img/luray-walk.jpg",by:"Sako",cap:"Walking under the stalactites",src:"img/luray-walk.jpg"},
   lurayWish:{u:"img/luray-wishing-well.jpg",by:"Shared by Sako",cap:"The Wishing Well, full of coins and bills",src:"img/luray-wishing-well.jpg"},
   sakoForm:{u:"img/luray-formations.jpg",by:"Sako",cap:"Looking down on the formations",src:"img/luray-formations.jpg"},
   orkneyFall:{u:"img/orkney-fall.jpg",by:"Shared by Sako",cap:"Fall color in the hills around Orkney Springs",src:"img/orkney-fall.jpg"},
@@ -357,7 +360,7 @@ const PLACES=[
   {id:"blackrock",dr:120,n:"Blackrock Summit",cat:"hike",ll:[38.2210,-78.7360],p:"blackrock",mile:"Mile 84.4",time:"About 1 hour",lvl:"Easy",
    d:"An easy 1-mile loop to a giant pile of dark boulders with huge views west. One of the best sunset spots in the south of the park.",
    f:"The jumbled boulders are called talus: rock that broke off the cliffs over thousands of years of freezing and thawing."},
-  {id:"luray",dr:55,n:"Luray Caverns",cat:"cave",ll:[38.6643,-78.4836],p:"luray",more:["sakoForm","sakoPool","lurayWish"],mile:"Luray, 15 min from Thornton Gap",time:"About 1.5 hours",lvl:"Easy",
+  {id:"luray",dr:55,n:"Luray Caverns",cat:"cave",ll:[38.6643,-78.4836],p:"luray",more:["lurayOrgan","lurayEntrance2","sakoForm","lurayWalk","sakoPool","lurayWish"],mile:"Luray, 15 min from Thornton Gap",time:"About 1.5 hours",lvl:"Easy",
    d:"The largest cave system in the eastern US. A paved walking tour takes you past giant stalactites, Dream Lake and the Great Stalacpipe Organ.",
    f:"The cave stays about 54°F all year, so bring a light jacket even in summer."},
   {id:"dickey",dr:75,n:"Dickey Ridge Visitor Center",cat:"history",ll:[38.8707,-78.2034],p:"gimlet",mile:"Mile 4.6",time:"30 minutes",lvl:"Easy",
