@@ -213,7 +213,7 @@ const C=window.Cards;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const menu=$("#menu"),stage=$("#stage");
-const FALLBACK=[["raffael","Raffael","RF","#d4f09a"],["rasha","Rasha","RS","#f7b8d2"],["rami","Rami","RM","#aab7ff"],["yara","Yara","YR","#ffe08a"],["yazan","Yazan","YZ","#ffbf99"],["rose","Rose","Ro","#ff9fb8"],["sako","Sako","SK","#7ee8f0"],["sofia","Sofia","SF","#9df0c8"],["jakob","Jakob","Ja","#d8c39a"]].map(([id,name,short,color])=>({id,name,short,color,avatar:null}));
+const FALLBACK=[["raffael","Raffael","RF","#d4f09a"],["rasha","Rasha","RS","#f7b8d2"],["rami","Rami","RM","#aab7ff"],["yara","Yara","YR","#ffe08a"],["yazan","Yazan","YZ","#ffbf99"],["rose","Rose","Ro","#ff9fb8"],["sako","Sako","SK","#7ee8f0"],["sofia","Sofia","SF","#9df0c8"],["jakob","Jacob","Ja","#d8c39a"]].map(([id,name,short,color])=>({id,name,short,color,avatar:null}));
 let roster=FALLBACK;
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 

@@ -20,7 +20,7 @@ const ROSTER = [
   ['rose', 'Rose', 'Ro', '#ff9fb8', 0],
   ['sako', 'Sako', 'SK', '#7ee8f0', 0],
   ['sofia', 'Sofia', 'SF', '#9df0c8', 0],
-  ['jakob', 'Jakob', 'Ja', '#d8c39a', 0],
+  ['jakob', 'Jacob', 'Ja', '#d8c39a', 0],
 ];
 
 function data_dir(): string {
@@ -62,6 +62,7 @@ function db(): PDO {
     $ins = $pdo->prepare('INSERT INTO players(id,name,short,color,is_admin,sort) VALUES(?,?,?,?,?,?)');
     foreach (ROSTER as $i => $p) $ins->execute([$p[0], $p[1], $p[2], $p[3], $p[4], $i]);
   }
+  $pdo->exec("UPDATE players SET name='Jacob' WHERE id='jakob' AND name='Jakob'"); // spelling fix asked by the owner
   return $pdo;
 }
 
