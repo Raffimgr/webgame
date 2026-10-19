@@ -191,7 +191,7 @@ const img=(p,w=900)=>p.u?p.u.replace(/([?&](?:width|maxWidth|maxwidth)=)\d+/,"$1
 const page=p=>p.src||"https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(p.f.replace(/ /g,"_"));
 const P={
   sakoPool:{u:"img/luray-mirror-pool.jpg",by:"Sako",cap:"The mirror pool in Luray Caverns",src:"img/luray-mirror-pool.jpg"},
-  sakoReflect:{u:"img/luray-reflections.jpg",by:"Sako",cap:"Stalactites reflected in still water",src:"img/luray-reflections.jpg"},
+  lurayWish:{u:"img/luray-wishing-well.jpg",by:"Shared by Sako",cap:"The Wishing Well, full of coins and bills",src:"img/luray-wishing-well.jpg"},
   sakoForm:{u:"img/luray-formations.jpg",by:"Sako",cap:"Looking down on the formations",src:"img/luray-formations.jpg"},
   orkneyFall:{u:"img/orkney-fall.jpg",by:"Shared by Sako",cap:"Fall color in the hills around Orkney Springs",src:"img/orkney-fall.jpg"},
   bryceResort:{u:"img/bryce-resort.jpg",by:"Shared by Sako",cap:"Bryce Resort from the air: slopes, lodge and the little airport",src:"img/bryce-resort.jpg"},
@@ -354,7 +354,7 @@ const PLACES=[
   {id:"blackrock",dr:120,n:"Blackrock Summit",cat:"hike",ll:[38.2210,-78.7360],p:"blackrock",mile:"Mile 84.4",time:"About 1 hour",lvl:"Easy",
    d:"An easy 1-mile loop to a giant pile of dark boulders with huge views west. One of the best sunset spots in the south of the park.",
    f:"The jumbled boulders are called talus: rock that broke off the cliffs over thousands of years of freezing and thawing."},
-  {id:"luray",dr:55,n:"Luray Caverns",cat:"cave",ll:[38.6643,-78.4836],p:"luray",mile:"Luray, 15 min from Thornton Gap",time:"About 1.5 hours",lvl:"Easy",
+  {id:"luray",dr:55,n:"Luray Caverns",cat:"cave",ll:[38.6643,-78.4836],p:"luray",more:["sakoForm","sakoPool","lurayWish"],mile:"Luray, 15 min from Thornton Gap",time:"About 1.5 hours",lvl:"Easy",
    d:"The largest cave system in the eastern US. A paved walking tour takes you past giant stalactites, Dream Lake and the Great Stalacpipe Organ.",
    f:"The cave stays about 54°F all year, so bring a light jacket even in summer."},
   {id:"dickey",dr:75,n:"Dickey Ridge Visitor Center",cat:"history",ll:[38.8707,-78.2034],p:"gimlet",mile:"Mile 4.6",time:"30 minutes",lvl:"Easy",
@@ -397,7 +397,6 @@ const fmtDr=m=>m<60?m+" min":Math.floor(m/60)+" h"+(m%60?" "+m%60+" min":"");
 
 /* Skyline Drive photo gallery */
 const GALLERY_GROUPS=[
-  ["Inside Luray Caverns",["sakoPool","sakoReflect","sakoForm","wish"]],
   ["Near our cabin",["bryceResort","lakeLaura"]],
   ["Skyline Drive",["stonySunset","skyCurve","sky0303","skyTrees","skyBend","skySummer"]],
   ["Sunrise, sunset and stars",["sunsetRocks","valleySunset","blueRidges","sunrise","blackrockSunset","stars","peaks","rockyOvl"]],
@@ -582,7 +581,7 @@ function go(k){tab=k;store.set("tab",k);drawTabs();stopTimer();VIEWS[k]();const 
 
 /* ---------- places ---------- */
 let placeFilter="all",placeSort=store.get("sort","near");
-/* A place with more photos (more:[keys]) cycles through them on its card; tap the photo or a dot to change it. */
+/* A place with more photos (more:[keys], plus any trip-album photos of it) cycles through them on its card; tap the photo or a dot to change it. */
 function slides(ks,extra){
   return `<div class="ph slides" data-k="${ks.join(",")}" data-i="0">${extra}${ks.map((k,i)=>`<img class="${i?"":"on"}" loading="lazy" src="${img(P[k],700)}" alt="${esc(P[k].cap)}">`).join("")}${credit(P[ks[0]])}<div class="dots">${ks.map((k,i)=>`<button class="${i?"":"on"}" data-i="${i}" aria-label="Photo ${i+1} of ${ks.length}"></button>`).join("")}</div></div>`}
 function slideTo(el,i){const ims=el.querySelectorAll("img"),ks=el.dataset.k.split(",");i=(i+ims.length)%ims.length;el.dataset.i=i;
@@ -591,8 +590,9 @@ function slideTo(el,i){const ims=el.querySelectorAll("img"),ks=el.dataset.k.spli
 setInterval(()=>document.querySelectorAll(".ph.slides").forEach(el=>{if(Date.now()-(+el.dataset.t||0)>8000)slideTo(el,+el.dataset.i+1)}),4500);
 document.addEventListener("click",e=>{const el=e.target.closest(".ph.slides");if(!el)return;const d=e.target.closest(".dots button");el.dataset.t=Date.now();
   if(d)slideTo(el,+d.dataset.i);else if(e.target.tagName==="IMG")slideTo(el,+el.dataset.i+1)});
-function placeCard(pl){const c=CAT[pl.cat],p=P[pl.p],tag=`<span class="tag" style="--x:${c.c}">${c.e} ${c.n}</span>`;
-  return `<article class="card" id="pl-${pl.id}">${pl.more?slides([pl.p,...pl.more],tag):photo(p,700,tag,c)}
+function placeCard(pl){const c=CAT[pl.cat],tag=`<span class="tag" style="--x:${c.c}">${c.e} ${c.n}</span>`,
+    ours=album?album.items.filter(it=>it.place===pl.id).map(it=>"al"+it.id):[],ks=[pl.p,...(pl.more||[]),...ours].filter(Boolean);
+  return `<article class="card" id="pl-${pl.id}">${ks.length>1?slides(ks,tag):photo(ks.length?P[ks[0]]:null,700,tag,c)}
   <div class="b"><h3>${esc(pl.n)}</h3>
   <div class="meta"><span class="dr">\u{1F697} ${fmtDr(pl.dr)} from the cabin</span><span>${esc(pl.mile)}</span><span>⏱ ${esc(pl.time)}</span><span>${pl.lvl==="Hard"?"\u{1F525}":pl.lvl==="Moderate"?"\u{1F4AA}":"\u{1F642}"} ${esc(pl.lvl)}</span></div>
   <p>${esc(pl.d)}</p><p class="fact">\u{1F4A1} ${esc(pl.f)}</p>
@@ -650,7 +650,9 @@ VIEWS.map=()=>{
 /* ---------- Skyline Drive gallery ---------- */
 /* ---------- our own trip album (album.php, behind the login; never in this public repo) ---------- */
 let album=null;
-async function loadAlbum(){try{const r=await fetch("album.php",{credentials:"same-origin"});if(r.ok)album=await r.json()}catch(e){}}
+async function loadAlbum(){try{const r=await fetch("album.php",{credentials:"same-origin"});if(r.ok){album=await r.json();
+  /* each album photo also gets a P entry, so it joins its place's card photos */
+  album.items.forEach(it=>P["al"+it.id]={u:"album.php?id="+it.id,by:(rosterById[it.by]||{}).name||"Our trip",cap:it.cap||placeName(it.place),src:"album.php?id="+it.id})}}catch(e){}}
 const placeName=id=>{const pl=PLACES.find(p=>p.id===id);return pl?pl.n:"Around the trip"};
 function albumHTML(){
   if(!online)return "";
