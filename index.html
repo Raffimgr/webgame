@@ -32,6 +32,10 @@ a.door:focus-visible{box-shadow:var(--raise-sh),0 0 0 3px var(--x)}
 .door em{font-style:normal;font-weight:700;font-size:13px;color:var(--x);margin-top:auto}
 .who{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 .av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12px;color:var(--ink);background:var(--x)}
+.me{display:inline-flex;align-items:center;gap:10px;padding:6px 8px 6px 6px;border-radius:99px;background:var(--raise);box-shadow:var(--raise-sh);font-size:14px;color:var(--mut)}
+.me b{color:var(--fg)}
+.me button{border:0;cursor:pointer;font:600 13px var(--font);color:var(--fg);background:#3a3f48;padding:8px 12px;border-radius:99px}
+[hidden]{display:none!important}
 .note{text-align:center;color:var(--mut);font-size:13px;margin:0}
 </style>
 </head>
@@ -63,11 +67,22 @@ a.door:focus-visible{box-shadow:var(--raise-sh),0 0 0 3px var(--x)}
     <a class="door" href="cards.html" style="--x:#aab7ff"><span class="ic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="11" height="15" rx="2"/><path d="M14 7.5l4.5 1.2a2 2 0 0 1 1.4 2.4l-2.6 9.7a2 2 0 0 1-2.4 1.4L12 21.4"/><path d="M8.5 10.5c-1-1.2-3 .2-1.8 1.8l1.8 2 1.8-2c1.2-1.6-.8-3-1.8-1.8z"/></svg></span><b>Card Games</b><span>Texas Hold'em: pass the iPad around, or play online with everyone on their own phone. Plus quick card games.</span><em>Deal ›</em></a>
     <a class="door" href="scores.html" style="--x:#f7b8d2"><span class="ic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM17 6h3a3 3 0 0 1-3 4M7 6H4a3 3 0 0 0 3 4"/></svg></span><b>Scoreboard</b><span>Coins and average scores by day, week, month, year or all time, with a photo of every game.</span><em>See scores ›</em></a>
   </div>
-  <div class="who">
-    <span class="av" style="--x:#d4f09a">RF</span><span class="av" style="--x:#f7b8d2">RS</span><span class="av" style="--x:#aab7ff">RM</span><span class="av" style="--x:#ffe08a">YR</span><span class="av" style="--x:#ffbf99">YZ</span><span class="av" style="--x:#ff9fb8">Ro</span><span class="av" style="--x:#7ee8f0">SK</span><span class="av" style="--x:#9df0c8">SF</span><span class="av" style="--x:#d8c39a">Ja</span>
-  </div>
+  <div class="who" id="who"></div>
   <p class="note">Best on an iPad held sideways. Every game gives coins: 1st 10, 2nd 7, 3rd 5, then one less each place.</p>
-  <a class="adm" href="admin.html">Admin</a>
+  <a class="adm" href="admin.html" id="adm" hidden>Admin</a>
 </div>
+<script src="rg.js"></script>
+<script>
+(async function(){
+  // Everyone logs in first: tap your name, type the password.
+  const who=document.getElementById("who");
+  try{
+    const {me}=await RG.login();
+    who.innerHTML=`<span class="me">${RG.av(me,38)}<span>Playing as <b>${RG.esc(me.name)}</b></span><button id="out">Log out</button></span>`;
+    document.getElementById("adm").hidden=!me.is_admin;
+    document.getElementById("out").onclick=async()=>{try{await RG.api("logout",{})}catch(e){}location.reload()};
+  }catch(e){who.textContent=e.message}
+})();
+</script>
 </body>
 </html>
