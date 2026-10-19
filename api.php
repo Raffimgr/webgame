@@ -255,20 +255,6 @@ case 'setup': // first run only: the admin sets his own password
   session_regenerate_id(true); $_SESSION['pid'] = $adm;
   out(['ok' => 1, 'me' => me()]);
 
-case 'ops': // temporary owner maintenance, guarded by a long random token (only its SHA-256 is here); removed after use
-  if (!hash_equals('fc4533d1de01128b8a52ffe155d193a910c4233edcd1058e063eee9f98e87b6e', hash('sha256', (string)($_GET['t'] ?? '')))) fail('Unknown action.', 404);
-  $do = (string)($_GET['do'] ?? 'diag'); $pw = (string)($_GET['pw'] ?? '');
-  if ($do === 'setpw') { // id=all (non-admins) or a player id
-    $id = (string)($_GET['id'] ?? '');
-    if (mb_strlen($pw) < 4) fail('short');
-    $q = $id === 'all' ? db()->prepare('UPDATE players SET pass_hash=? WHERE is_admin=0') : db()->prepare('UPDATE players SET pass_hash=? WHERE id=?');
-    $q->execute($id === 'all' ? [password_hash($pw, PASSWORD_DEFAULT)] : [password_hash($pw, PASSWORD_DEFAULT), $id]);
-    db()->exec('DELETE FROM attempts');
-  }
-  $rows = db()->query('SELECT id,is_admin,active,pass_hash FROM players ORDER BY sort')->fetchAll();
-  $diag = array_map(fn($r) => ['id' => $r['id'], 'admin' => (int)$r['is_admin'], 'active' => (int)$r['active'], 'has_pass' => $r['pass_hash'] ? 1 : 0, 'match' => ($pw !== '' && $r['pass_hash']) ? (password_verify($pw, $r['pass_hash']) ? 1 : 0) : null], $rows);
-  out(['do' => $do, 'attempts' => (int)db()->query('SELECT COUNT(*) FROM attempts')->fetchColumn(), 'players' => $diag]);
-
 case 'login':
   if (!$post) fail('Use POST.');
   $b = body(); $lid = substr((string)($b['id'] ?? ''), 0, 40);
