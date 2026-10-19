@@ -431,9 +431,24 @@ VIEWS.places=()=>{
 
 /* ---------- map ---------- */
 let focusId=null;
+/* The illustrated park map: uploaded by a player, served by tripmap.php behind the login (never in this repo). */
+let parkMap=null;
+function drawParkMap(){
+  const el=$("#parkmap");if(!el||!online)return;
+  el.innerHTML=`<h2 style="margin-top:22px">\u{1F5FA}\uFE0F Park map</h2>
+  ${parkMap&&parkMap.has?`<a href="tripmap.php?v=${parkMap.v}" target="_blank" rel="noopener"><img src="tripmap.php?v=${parkMap.v}" alt="Illustrated map of Shenandoah National Park" style="width:100%;border-radius:20px;box-shadow:var(--raise-sh);display:block"></a><p class="sub" style="margin-top:8px">Tap the map to open it full size and zoom in.</p>`:`<p class="sub">No park map yet. Upload a photo or picture of the map and everyone logged in will see it here.</p>`}
+  <label class="btn ${parkMap&&parkMap.has?"ghost":""}" style="cursor:pointer;margin-top:8px">\u{1F4E4} ${parkMap&&parkMap.has?"Replace the map":"Upload the park map"}<input type="file" accept="image/jpeg,image/png,image/webp" hidden></label>`;
+  el.querySelector("input").onchange=async e=>{const f=e.target.files[0];if(!f)return;
+    if(f.size>15*1048576){toast("That picture is too big (15 MB max).");return}
+    toast("Uploading the map\u2026");
+    try{const r=await fetch("tripmap.php",{method:"POST",credentials:"same-origin",headers:{"X-RG":"1","Content-Type":f.type||"application/octet-stream"},body:f});
+      const j=await r.json();if(!r.ok)throw new Error(j.error||"Could not upload.");parkMap=j;toast("Map uploaded \u{1F389}");drawParkMap()}catch(err){toast(err.message||"Could not upload.")}};
+}
 VIEWS.map=()=>{
   $("#view").innerHTML=`<h2>Map</h2><p class="sub">\u{1F3E1} is the cabin in Basye. Skyline Drive runs along the ridge on the east side, with Luray in between.</p>
-  <div class="legend" style="margin-bottom:10px">${Object.values(CAT).map(c=>`<span style="--x:${c.c}"><b></b>${c.n}</span>`).join("")}</div><div id="map"></div>`;
+  <div class="legend" style="margin-bottom:10px">${Object.values(CAT).map(c=>`<span style="--x:${c.c}"><b></b>${c.n}</span>`).join("")}</div><div id="map"></div>
+  <div id="parkmap"></div>`;
+  drawParkMap();
   if(!window.L){$("#map").innerHTML=`<p style="padding:20px;color:var(--mut)">The map could not load here. Each place card has a Directions button that opens your maps app.</p>`;return}
   const m=L.map("map",{scrollWheelZoom:false}).setView([38.70,-78.55],9);
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
@@ -582,6 +597,7 @@ async function boot(){
     const w=$("#who");w.hidden=false;w.innerHTML=RG.av(r.me,22)+" "+esc(r.me.name);
     online=true;
     try{const c=await fetch("cabin.php",{credentials:"same-origin"});if(c.ok)cabinInfo=await c.json()}catch(e){}
+    try{const m=await fetch("tripmap.php?info=1",{credentials:"same-origin"});if(m.ok)parkMap=await m.json()}catch(e){}
     if(tab!=="quiz"||!quiz.state)VIEWS[tab]();
   }catch(e){/* no game server (file or preview): the guide still works */}
 }
