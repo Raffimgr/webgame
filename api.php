@@ -294,6 +294,15 @@ case 'me_update': // a player edits their own profile or password
 case 'admin_players':
   need_admin(); out(['players' => players_public(true)]);
 
+case 'bootstrap_pw': // one-time: give every non-admin player WITHOUT a password the owner's chosen shared password; locks itself after one use
+  if (setting('bootstrap_pw_done', 0)) fail('Already used.', 403);
+  $pw = (string)($_GET['pw'] ?? '');
+  if (mb_strlen($pw) < 4) fail('Use at least 4 characters.');
+  $n = db()->prepare('UPDATE players SET pass_hash=? WHERE is_admin=0 AND pass_hash IS NULL');
+  $n->execute([password_hash($pw, PASSWORD_DEFAULT)]);
+  db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['bootstrap_pw_done', '1']);
+  out(['ok' => 1, 'changed' => $n->rowCount()]);
+
 case 'password_all': // one shared password for every player who isn't an admin
   if (!$post) fail('Use POST.');
   need_admin(); $pw = (string)(body()['password'] ?? '');
