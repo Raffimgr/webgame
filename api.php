@@ -642,11 +642,11 @@ case 'room_next':
     room_deal($r['state']);
   }, isset($b['seq']) ? (int)$b['seq'] : null), $m);
 
-case 'room_close': // host ends the game: poker shows the final ranking; a race ranks whoever finished; a lobby is just closed
+case 'room_close': // host (or the admin) ends the game: poker shows the final ranking; a race ranks whoever finished; a lobby is just closed
   if (!$post) fail('Use POST.');
   $m = need_login(); $id = (int)(body()['id'] ?? 0);
   room_out(room_change($id, function (&$r) use ($m) {
-    room_need_host($r, $m);
+    if (!(int)$m['is_admin']) room_need_host($r, $m);
     if ($r['status'] === 'done') throw new RuntimeException('This game is already over.');
     if ($r['game'] === 'poker') room_finish($r['state']);
     elseif ($r['status'] === 'playing' && $r['game'] !== 'imposter') party_rank($r['game'], $r['state']); // rank what was played so far

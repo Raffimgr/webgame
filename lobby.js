@@ -1,5 +1,6 @@
 /* Ridge Games: the shared lobby for every play-together game (poker, mind races, Imposter).
-   RGLobby.waiting(room, me, people, busy) draws "who's playing" with Ready checks; RGLobby.wire(send) hooks up its buttons;
+   RGLobby.waiting(room, me, people, busy) draws "who's playing" with Ready checks and, for the host or the admin, a Close lobby button;
+   RGLobby.wire(send) hooks up its buttons;
    RGLobby.clock(room) keeps the phone in step with the server; RGLobby.countdown(room, onGo) shows 3, 2, 1, Go at the same moment on every phone. */
 (function(){
 const CSS=`
@@ -13,6 +14,8 @@ const CSS=`
 .lb-tag{font:800 10px "Inter",system-ui;letter-spacing:.05em;padding:3px 7px;border-radius:99px;background:#33383f;color:#9aa3b3;flex:none}
 .lb-tag.you{background:#7ee8f0;color:#15181e}
 .lb-ready{width:100%;border-radius:20px;padding:18px;font:700 20px "Inter",system-ui;color:#15181e;background:#7be08a;box-shadow:0 0 22px rgba(123,224,138,.45);text-align:center}
+.lb-close{width:100%;border:2px solid rgba(255,123,107,.45);border-radius:18px;padding:13px;background:#3a2a2d;color:#ffb3b3;font:700 16px "Inter",system-ui;cursor:pointer}
+.lb-close:disabled{opacity:.5}
 .lb-ready.undo{background:#33383f;color:#eef1f6;box-shadow:none;font-size:16px;padding:14px}
 .lb-cd{position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:rgba(15,17,21,.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);text-align:center;color:#eef1f6;font-family:"Inter",system-ui}
 .lb-cd b{display:block;font:700 min(42vw,190px)/1 "Fredoka","Inter",system-ui;color:#ffd23f;text-shadow:0 0 40px rgba(255,210,63,.45)}
@@ -59,13 +62,14 @@ function waiting(room,me,people,busy){
       :`<button class="lb-ready" id="lbJoin" ${busy?"disabled":""}>${invited?"You're invited: join the game":"Join the game"}</button><p class="muted" style="margin:0;text-align:center;font-size:13.5px">Or just watch from here.</p>`}
     <div class="row" style="justify-content:center">${mine&&!room.me.host?`<button class="go ghost sm" id="lbLeave" ${busy?"disabled":""}>Leave</button>`:""}
       ${canForce?`<button class="go sm" id="lbForce" style="--x:#ffd23f" ${busy?"disabled":""}>Start now with the ${ready.size} ready</button>`:""}
-      ${room.me.host?`<button class="go ghost sm" id="lbCancel" ${busy?"disabled":""}>Cancel game</button>`:""}</div>`;
+</div>
+    ${room.me.host||+me.is_admin===1?`<button class="lb-close" id="lbCancel" data-host="${esc(room.me.host?"":people[room.host]?people[room.host].name:"the host")}" ${busy?"disabled":""}>\u2715 Close lobby</button>`:""}`;
 }
 function wire(send){
   const on=(id,f)=>{const b=document.getElementById(id);if(b)b.onclick=f};
   on("lbReady",()=>send("room_ready",{ready:!document.getElementById("lbReady").classList.contains("undo")}));
   on("lbJoin",()=>send("room_join"));on("lbLeave",()=>send("room_leave"));on("lbForce",()=>send("room_start"));
-  on("lbCancel",()=>{if(confirm("Cancel this game for everyone?"))send("room_close")});
+  on("lbCancel",()=>{const h=document.getElementById("lbCancel").dataset.host;if(confirm(h?`Close ${h}'s lobby for everyone?`:"Close this lobby for everyone?"))send("room_close")});
 }
 
 /* 3, 2, 1, Go: shown until the server's start moment, then onGo() runs (once per room). */
