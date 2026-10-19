@@ -176,11 +176,13 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--teal);outline-offse
 </div>
 <script src="cards.js"></script>
 <script src="rg.js"></script>
+<script src="lobby.js"></script>
 <script>
 (function(){
 "use strict";
 const C=window.Cards,esc=RG.esc,$=s=>document.querySelector(s),app=$("#app");
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const autoJoined={};
 let me=null,people={},roomId=null,room=null,list=null,timer=null,fails=0,busy=false,err="",raise=null,lastTurn="",prevBoard={k:"",n:0},recvAt=0;
 let hide=store.get("rg_online_hide",false),newChips=store.get("rg_poker_chips",100);
 
@@ -210,7 +212,7 @@ async function tick(){
   clearTimeout(timer);if(document.hidden)return;
   try{
     if(roomId){const j=await RG.api("room_state",undefined,{q:"&id="+roomId+(room&&room.id===roomId?"&v="+room.v:"")});if(!j.same)setRoom(j.room)}
-    else{const j=await RG.api("room_list");list=j.rooms;draw()}
+    else{const j=await RG.api("room_list");list=j.rooms.filter(r=>r.game==="poker");draw()}
     fails=0;
   }catch(e){
     fails++;
@@ -222,16 +224,20 @@ async function tick(){
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)tick()});
 async function send(action,extra){
   if(busy)return;busy=true;err="";draw();
-  try{const j=await RG.api(action,Object.assign({id:roomId},extra||{}));if(j.room)setRoom(j.room,true)}
+  try{const j=await RG.api(action,Object.assign({id:roomId},extra||{}));if(j.room){if(j.room.id!==roomId){busy=false;openRoom(j.room.id)}setRoom(j.room,true)}}
   catch(e){err=e.message;if(e.status===409)tick()}
   finally{busy=false;draw()}
 }
 function setRoom(r,mine){
+  RGLobby.clock(r);
+  if(r.game&&r.game!=="poker"){location.replace("play.html?room="+r.id);return}
+  if(r.next&&r.status==="done"&&!r.me.host&&!(room&&room.next)){RG.toast("New game! Opening the lobby.");openRoom(r.next);return}
   const h=r.hand,turn=h&&!h.done&&r.me.seat>=0&&h.options?r.hand_no+":"+r.seq:"";
   if(turn&&turn!==lastTurn&&!mine){try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}}
   if(!turn)raise=null;
   if(turn!==lastTurn)raise=null;
   lastTurn=turn;room=r;recvAt=Date.now();draw();
+  if(r.status==="lobby"&&r.me.seat<0&&(r.invited||[]).includes(me.id)&&!autoJoined[r.id]){autoJoined[r.id]=1;setTimeout(()=>send("room_join"),0)} // opening an invite = joining it
 }
 function openRoom(id){
   roomId=id;room=null;raise=null;err="";lastTurn="";
@@ -246,7 +252,7 @@ function draw(){
   $("#badge").innerHTML=room&&roomId&&room.me.seat<0&&room.status!=="done"?'<span class="badge">Watching</span>':"";
   const bk=$("#back");
   if(roomId){bk.textContent="Tables";bk.href="online.html";bk.onclick=e=>{e.preventDefault();openRoom(null)}}else{bk.textContent="Card games";bk.href="cards.html";bk.onclick=null}
-  if(!roomId)drawLobby();else if(!room)app.innerHTML='<div class="empty">Opening the table…</div>';else if(room.status==="lobby")drawWaiting();else if(room.status==="done")drawFinal();else drawTable();
+  if(!roomId)drawLobby();else if(!room)app.innerHTML='<div class="empty">Opening the table…</div>';else if(room.status==="lobby")drawWaiting();else if(room.status==="done")drawFinal();else{RGLobby.countdown(room,()=>{});drawTable()}
   if(keep){const r=$("#rzr");if(r)r.focus()}
 }
 function setTitle(t,sub){$("#ttl").innerHTML=esc(t)+`<small>${esc(sub)}</small>`}
@@ -257,31 +263,20 @@ function drawLobby(){
   const rooms=list||[];
   app.innerHTML=`<div style="display:flex;flex-direction:column;gap:14px">
     <div class="panel"><div class="me">${av(me.id,36)}<b>Playing as ${esc(me.name)}</b><button id="out">Not you?</button></div></div>
-    <div class="panel"><span class="lab">New table</span><div class="row"><div class="seg" id="chips">${[100,200,500].map(c=>`<button class="${c===newChips?"on":""}" data-c="${c}">${c}</button>`).join("")}</div><span class="muted">chips each · blinds ${newChips/20} / ${newChips/10}</span></div>
-      <button class="go" id="create" ${busy?"disabled":""}>Create table</button>${err?`<div class="err">${esc(err)}</div>`:""}</div>
+    <a class="go wide" href="play.html?new=poker" style="--x:var(--gold)">New table: pick the players</a>
     <span class="lab">Tables</span>
     <div class="rooms" id="rooms">${list===null?'<div class="empty">Loading…</div>':rooms.length?rooms.map(r=>`<button class="room" data-id="${r.id}">
       <span class="t"><b>${esc(tableName(r.host))}</b><small>${r.status==="lobby"?"Waiting to start":"Playing · hand "+r.hand_no} · ${r.chips} chips · ${r.seats.length} of 9 seats</small><span class="avs">${r.seats.map(id=>av(id,26)).join("")}</span></span>
       <em>${r.seats.includes(me.id)?"Back to it ›":r.status==="lobby"?"Open ›":"Watch ›"}</em></button>`).join(""):'<div class="empty">No tables yet. Create one and tell the others to open this page.</div>'}</div></div>`;
   $("#out").onclick=async()=>{try{await RG.api("logout",{})}catch(e){}location.reload()};
-  $("#chips").onclick=e=>{const b=e.target.closest("button");if(!b)return;newChips=+b.dataset.c;store.set("rg_poker_chips",newChips);draw()};
-  $("#create").onclick=async()=>{if(busy)return;busy=true;err="";draw();
-    try{const j=await RG.api("room_create",{chips:newChips});busy=false;openRoom(j.room.id);setRoom(j.room,true)}catch(e){err=e.message;busy=false;draw()}};
   $("#rooms").onclick=e=>{const b=e.target.closest(".room");if(b)openRoom(+b.dataset.id)};
 }
 
 function drawWaiting(){
-  const r=room,seated=r.me.seat>=0;
+  const r=room;
   setTitle(tableName(r.host),`${r.chips} chips each · blinds ${r.sb} / ${r.bb}`);
-  app.innerHTML=`<div style="display:flex;flex-direction:column;gap:14px">
-    <div class="panel"><div class="row" style="justify-content:space-between"><span class="lab">At the table</span><span class="chip">${r.seats.length} of 9 seats</span></div>
-      <div class="wl">${r.seats.length?r.seats.map(s=>`<div class="wr">${av(s.id,34)}<span class="n">${esc(nameOf(s.id,s.name))}</span>${s.id===r.host?'<span class="tag d">HOST</span>':""}${s.id===me.id?'<span class="tag you">YOU</span>':""}</div>`).join(""):'<div class="empty">Nobody has a seat yet.</div>'}</div>
-      <p class="muted" style="margin:0">${r.me.host?"When everyone is here, press Start.":"Waiting for "+esc(nameOf(r.host))+" to start the game."}</p></div>
-    <div class="btns">${seated?`<button class="go ghost" id="leave" ${busy?"disabled":""}>Leave my seat</button>`:`<button class="go" id="join" ${busy||r.seats.length>=9?"disabled":""}>${r.seats.length>=9?"Table is full":"Take a seat"}</button>`}
-      ${r.me.host?`<button class="go" id="start" style="--x:var(--gold)" ${busy||r.seats.length<2?"disabled":""}>Start game</button>`:""}</div>
-    ${r.me.host?`<button class="go ghost sm" id="close" ${busy?"disabled":""}>Close this table</button>`:""}
-    ${err?`<div class="err">${esc(err)}</div>`:""}</div>`;
-  wireCommon();
+  app.innerHTML=`<div style="display:flex;flex-direction:column;gap:14px;max-width:720px;width:100%;margin:0 auto">${RGLobby.waiting(r,me,people,busy)}${err?`<div class="err">${esc(err)}</div>`:""}</div>`;
+  RGLobby.wire(send);
 }
 
 function wireCommon(){
@@ -410,11 +405,13 @@ function drawFinal(){
   if(!f.length){app.innerHTML=`<div class="panel"><p class="big">This table was closed</p><button class="go" id="tables">Back to the tables</button></div>`;$("#tables").onclick=()=>openRoom(null);return}
   const w=f.filter(x=>x.place===1).map(x=>esc(nameOf(x.id)));
   const href="admin.html?record=1&game=Poker&order="+f.map(x=>encodeURIComponent(x.id)).join(",")+"&places="+f.map(x=>x.place).join(",");
+  const saved=r.event_id?`<p style="text-align:center;font-weight:700;color:var(--green);margin:0">✓ Saved to the scoreboard</p>`:"";
   app.innerHTML=`<div style="display:flex;flex-direction:column;gap:16px">
     <p class="big">${w.length>1?w.join(" & ")+" share the win":w[0]+" wins!"}</p>
     <div class="res">${f.map(x=>{const d=x.chips-r.chips;return `<div class="rr${x.place===1?" first":""}"><span class="pl">${x.place}</span>${av(x.id,40)}<span class="t"><b>${esc(nameOf(x.id))}</b><small>Started with ${r.chips}</small></span><span class="v">${x.chips}<small class="${d>0?"up":d<0?"dn":"muted"}">${d>0?"+":""}${d}</small></span></div>`}).join("")}</div>
-    <div class="btns" style="max-width:720px;width:100%;margin:0 auto">${me.is_admin?`<a class="go" id="record" style="--x:var(--gold)" href="${esc(href)}">Record results</a>`:""}<button class="go ghost" id="tables">All tables</button></div></div>`;
+    <div class="btns" style="max-width:720px;width:100%;margin:0 auto">${r.me.host?`<button class="go" id="again" style="--x:var(--gold)" ${busy?"disabled":""}>Play again, same players</button>`:""}${me.is_admin&&!r.event_id?`<a class="go ghost" id="record" href="${esc(href)}">Record results</a>`:""}<button class="go ghost" id="tables">All tables</button></div>${saved}${err?`<div class="err">${esc(err)}</div>`:""}</div>`;
   $("#tables").onclick=()=>openRoom(null);
+  const ag=$("#again");if(ag)ag.onclick=()=>send("room_again",{when:RG.nowLocal()});
 }
 
 /* ---------- start ---------- */

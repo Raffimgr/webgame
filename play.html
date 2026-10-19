@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Play Together</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: the hub (invites, start a game, open games), then one game: lobby with Ready checks, a shared countdown, the game, the results.
+   Everyone plays on their own phone. Same dark look as Poker on phones. */
+:root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--dim:#6b7383;--ink:#15181e;--sheet:#2a2e35;
+  --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
+  --well:#202328;--well-sh:inset 4px 4px 10px rgba(0,0,0,.55),inset -3px -3px 8px rgba(255,255,255,.035);
+  --teal:#2ec4b6;--gold:#ffd23f;--green:#7be08a;--red:#ff8f8f;--pink:#e0459b;
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--play:"Fredoka","Inter",system-ui,sans-serif}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:#1b1d22;color:var(--fg);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+button,input{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer;padding:0;text-align:inherit;touch-action:manipulation}
+button:disabled{cursor:default}
+button:focus-visible,a:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
+[hidden]{display:none!important}
+.wrap{max-width:900px;min-height:100vh;margin:0 auto;padding:calc(14px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px}
+.top{display:flex;align-items:center;gap:10px}
+.top h1{margin:0;flex:1;min-width:0;font:600 24px/1.2 var(--play)}
+.top h1 small{display:block;font:500 13px var(--font);color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{flex:none;min-height:44px;display:inline-flex;align-items:center;padding:9px 16px;border-radius:99px;font-weight:600;font-size:13px;color:var(--mut);background:var(--raise);box-shadow:var(--raise-sh);text-decoration:none}
+.lab{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:650;color:var(--dim)}
+.muted{color:var(--mut)}
+.col{display:flex;flex-direction:column;gap:14px}
+.panel{background:var(--raise);box-shadow:var(--raise-sh);border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.seg{display:flex;flex-wrap:wrap;gap:6px;padding:6px;border-radius:18px;background:var(--well);box-shadow:var(--well-sh)}
+.seg button{padding:10px 14px;border-radius:13px;font-weight:700;color:var(--mut);min-width:48px;text-align:center;font-size:14px}
+.seg button.on{background:var(--teal);color:var(--ink);box-shadow:0 0 12px rgba(46,196,182,.4)}
+.go{border-radius:18px;padding:15px 22px;font:700 17px var(--font);color:var(--ink);background:var(--x,var(--teal));box-shadow:0 0 16px color-mix(in srgb,var(--x,var(--teal)) 40%,transparent);text-align:center;text-decoration:none;display:inline-block;transition:transform .08s}
+.go:active{transform:translateY(2px)}
+.go:disabled{opacity:.35;box-shadow:none}
+.go.ghost{background:var(--raise);color:var(--fg);box-shadow:var(--raise-sh)}
+.go.sm{padding:11px 16px;font-size:14.5px;border-radius:15px}
+.go.wide{width:100%}
+.chip{font-weight:700;font-size:13px;padding:6px 11px;border-radius:99px;background:var(--well);box-shadow:var(--well-sh);font-variant-numeric:tabular-nums;white-space:nowrap}
+.av{width:var(--s,38px);height:var(--s,38px);border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:calc(var(--s,38px)*.32);color:var(--ink);background:var(--x);flex:none;overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover;display:block}
+.avs{display:flex;flex-wrap:wrap;gap:4px}
+.me{display:flex;align-items:center;gap:10px}
+.me b{flex:1;min-width:0;font-weight:700}
+.me button{color:var(--mut);font-size:13px;font-weight:600;padding:8px}
+.empty{color:var(--mut);text-align:center;padding:18px 8px}
+.err{color:#ff9c9c;font-weight:600;font-size:13.5px;text-align:center}
+.big{font:700 28px/1.15 var(--play);margin:0;text-align:center;color:var(--gold)}
+/* hub */
+.games{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.games{grid-template-columns:1fr}}
+.gcard{display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:22px;background:var(--raise);box-shadow:var(--raise-sh);text-align:left;text-decoration:none;color:inherit}
+.gcard .ic{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;font:700 22px var(--play);background:var(--well);box-shadow:inset 3px 3px 8px rgba(0,0,0,.55);color:var(--x)}
+.gcard b{font:600 19px var(--play)}
+.gcard span{color:var(--mut);font-size:13.5px}
+.room{display:flex;align-items:center;gap:12px;padding:14px;border-radius:20px;background:var(--raise);box-shadow:var(--raise-sh);text-align:left;width:100%}
+.room.inv{box-shadow:0 0 0 2px var(--green),0 0 22px rgba(123,224,138,.3)}
+.room .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.room .t b{font:600 18px/1.2 var(--play)}
+.room .t small{color:var(--mut);font-size:13px}
+.room em{font-style:normal;font-weight:700;font-size:13px;color:var(--teal);flex:none}
+.room.inv em{color:var(--green)}
+/* new game */
+.who{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px}
+.who button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh);font-weight:600;font-size:13px;position:relative}
+.who button.on{background:#33383f;box-shadow:0 0 0 2px var(--x),0 0 14px color-mix(in srgb,var(--x) 40%,transparent)}
+.who button.on::after{content:"✓";position:absolute;top:6px;right:8px;width:20px;height:20px;border-radius:50%;background:var(--green);color:var(--ink);font:800 12px/20px var(--font);text-align:center}
+.who button:disabled{cursor:default}
+.minds{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.minds button{padding:10px 12px;border-radius:14px;background:var(--well);box-shadow:var(--well-sh);font-weight:650;font-size:14px;text-align:left}
+.minds button small{display:block;color:var(--mut);font-weight:500;font-size:12px}
+.minds button.on{background:var(--teal);color:var(--ink);box-shadow:0 0 12px rgba(46,196,182,.4)}
+.minds button.on small{color:#15403b}
+.tog{display:flex;align-items:center;gap:12px;font-weight:600}
+.tog input{width:22px;height:22px;accent-color:var(--teal)}
+/* during a race */
+#stage{flex:1;display:flex;flex-direction:column;min-height:72vh}
+.strip{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--mut)}
+.strip .av{opacity:.4}
+.strip .av.done{opacity:1;box-shadow:0 0 0 2px var(--green)}
+/* imposter */
+.secret{border-radius:28px;padding:26px 20px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center;background:#fff;color:#15181e;box-shadow:0 8px 0 #c9cfd8,0 18px 36px rgba(0,0,0,.35);width:100%}
+.secret u{text-decoration:none;font-weight:800}
+.secret small{font:700 12px var(--font);letter-spacing:.12em;text-transform:uppercase;color:#6b7383}
+.secret b{font:700 clamp(34px,10vw,54px)/1.05 var(--play)}
+.secret.imp{background:var(--pink);color:#fff;box-shadow:0 8px 0 #9c2a68,0 18px 36px rgba(0,0,0,.35)}
+.secret.imp small{color:#ffd6ea}
+.secret.hid{background:#33383f;color:var(--fg);box-shadow:0 8px 0 #1f2227}
+.secret.hid small{color:var(--mut)}
+.vote{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.vote button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border-radius:18px;background:var(--raise);box-shadow:var(--raise-sh);font-weight:650;font-size:14px}
+.vote button.on{box-shadow:0 0 0 3px var(--pink),0 0 18px rgba(224,69,155,.5)}
+.vote button small{color:var(--mut);font-size:12px;font-weight:600}
+.in{width:100%;padding:14px;border-radius:14px;border:0;background:var(--well);box-shadow:var(--well-sh);font-size:17px}
+.in:focus{outline:2px solid var(--teal)}
+/* results */
+.res{display:flex;flex-direction:column;gap:10px}
+.rr{display:flex;align-items:center;gap:12px;padding:12px;border-radius:18px;background:var(--raise);box-shadow:var(--raise-sh)}
+.rr .pl{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font:700 18px var(--play);background:var(--well);box-shadow:var(--well-sh);flex:none;color:var(--mut)}
+.rr.first .pl{background:var(--gold);color:var(--ink);box-shadow:0 0 14px rgba(255,210,63,.45)}
+.rr .t{flex:1;min-width:0}
+.rr .t b{display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rr .t small{display:block;color:var(--mut);font-size:13px}
+.rr .v{text-align:right;font:700 20px var(--play);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--gold)}
+.rr .v small{display:block;font:700 12px var(--font);color:var(--mut)}
+.saved{text-align:center;font-weight:700;color:var(--green)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1 id="ttl">Play together <small>Everyone plays on their own phone</small></h1><a class="pill" id="back" href="./">Home</a></div>
+  <div id="app"><div class="empty">Loading…</div></div>
+  <div id="stage" hidden></div>
+</div>
+<script src="mind.js"></script>
+<script src="rg.js"></script>
+<script src="lobby.js"></script>
+<script>
+(function(){
+"use strict";
+const esc=RG.esc,$=s=>document.querySelector(s),app=$("#app"),stage=$("#stage"),L=RGLobby;
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const autoJoined={};
+let me=null,people={},coins=[10,7,5,4,3,2,1],roomId=null,room=null,rooms=null,invites=[],timer=null,fails=0,busy=false,err="",mode="hub",form=null,race=null,peek=false,draft="";
+
+const GAMES={
+  imposter:{name:"Imposter",ic:"?",x:"#e0459b",how:"Everyone gets the secret word on their phone, except one imposter. Take turns saying one word about it, then vote out the faker.",min:3},
+  race:{name:"Mind race",ic:"⚡",x:"#2ec4b6",how:"Everyone plays the same mind game at the same moment. Finish first with the most seconds left to win.",min:2},
+  poker:{name:"Poker",ic:"♠",x:"#ffd23f",how:"Texas Hold'em. Each phone shows only its own cards. Others can watch.",min:2}};
+const CATS=["any","Camping","Animals","Food","Places","Jobs","Sports","At home","Nature"];
+const MINDCOL={quickmath:"#ffd23f",colorclash:"#f7b8d2",numbermemory:"#aab7ff",wordscramble:"#d4f09a",biggerorsmaller:"#ffbf99",gridrecall:"#7ee8f0"};
+const who=id=>people[id]||{id,name:id,short:String(id).slice(0,2),color:"#9aa3b3"};
+const nameOf=id=>who(id).name;
+const av=(id,s)=>{const p=who(id);return `<span class="av" style="--x:${esc(p.color)};--s:${s||38}px">${p.avatar?`<img src="${esc(p.avatar)}" alt="">`:esc(p.short)}</span>`};
+const coinsFor=p=>p>=1&&p<=coins.length?coins[p-1]:0;
+function setTitle(t,sub){$("#ttl").innerHTML=esc(t)+`<small>${esc(sub)}</small>`}
+
+/* ---------- talking to the server ---------- */
+function schedule(ms){clearTimeout(timer);timer=setTimeout(tick,ms)}
+async function tick(){
+  clearTimeout(timer);if(document.hidden)return;
+  try{
+    if(roomId){const j=await RG.api("room_state",undefined,{q:"&id="+roomId+(room&&room.id===roomId?"&v="+room.v:"")});if(j.same){if(j.now)L.clock({now:j.now})}else setRoom(j.room)}
+    else if(mode==="hub"){const [a,b]=await Promise.all([RG.api("room_list"),RG.api("invites")]);rooms=a.rooms;invites=b.invites;draw()}
+    fails=0;
+  }catch(e){
+    fails++;
+    if(e.status===401){location.reload();return}
+    if(e.status===404&&roomId){RG.toast("That game is gone.");openRoom(null);return}
+  }
+  if(roomId||mode==="hub")schedule(fails?Math.min(15000,1200*2**fails):(roomId?1200:3000));
+}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)tick()});
+async function send(action,extra){
+  if(busy)return;busy=true;err="";draw();
+  try{const j=await RG.api(action,Object.assign({id:roomId},extra||{}));if(j.room){if(j.room.id!==roomId){busy=false;openRoom(j.room.id)}setRoom(j.room)}}
+  catch(e){err=e.message}
+  finally{busy=false;draw()}
+}
+function setRoom(r){
+  L.clock(r);
+  if(r.game==="poker"){location.replace("online.html?room="+r.id);return}
+  const prev=room;room=r;
+  if(r.status==="lobby"&&!r.me.in&&(r.invited||[]).includes(me.id)&&!autoJoined[r.id]){autoJoined[r.id]=1;setTimeout(()=>send("room_join"),0)} // opening an invite = joining it
+  if(r.next&&r.status==="done"&&!r.me.host&&!(prev&&prev.next)){RG.toast("New game! Opening the lobby.");openRoom(r.next);return}
+  draw();
+}
+function openRoom(id){
+  roomId=id;room=null;err="";peek=false;draft="";stopRace();mode=id?"room":"hub";
+  const u=new URL(location.href);u.searchParams.delete("new");if(id)u.searchParams.set("room",id);else u.searchParams.delete("room");history.replaceState(null,"",u);
+  draw();window.scrollTo(0,0);tick();
+}
+
+/* ---------- screens ---------- */
+function draw(){
+  if(!me)return;
+  const bk=$("#back");
+  if(mode==="hub"){bk.textContent="Home";bk.href="./";bk.onclick=null}
+  else{bk.textContent="All games";bk.href="play.html";bk.onclick=e=>{e.preventDefault();if(race&&race.live&&!confirm("Leave the race? You'll get no place."))return;openRoom(null)}}
+  if(mode==="hub")return drawHub();
+  if(mode==="new")return drawNew();
+  if(!room){app.innerHTML='<div class="empty">Opening the game…</div>';return}
+  if(room.status==="lobby")return drawLobby();
+  if(room.status==="done")return drawDone();
+  if(L.countdown(room,()=>draw()))return; // the countdown covers the screen; the game draws when it ends
+  if(room.game==="race")return drawRace();
+  if(room.game==="imposter")return drawImposter();
+}
+
+function roomRow(r,inv){
+  const g=GAMES[r.game]||{name:r.game},ids=r.members;
+  const sub=r.status==="lobby"?`Waiting in the lobby · ${r.ready.length} of ${r.invited.length} ready`:"Playing now";
+  return `<button class="room${inv?" inv":""}" data-id="${r.id}" data-g="${r.game}"><span class="t"><b>${esc(r.label)}</b><small>${inv?esc(nameOf(r.host))+" invited you · ":"Host "+esc(nameOf(r.host))+" · "}${sub}</small><span class="avs">${(r.status==="lobby"?r.invited:ids).map(i=>av(i,26)).join("")}</span></span>
+    <em>${inv?"Join ›":ids.includes(me.id)?"Back to it ›":r.status==="lobby"?"Open ›":"Watch ›"}</em></button>`;
+}
+function drawHub(){
+  setTitle("Play together","Everyone plays on their own phone");
+  const open=(rooms||[]).filter(r=>!invites.some(i=>i.id===r.id));
+  app.innerHTML=`<div class="col">
+    <div class="panel"><div class="me">${av(me.id,36)}<b>Playing as ${esc(me.name)}</b><button id="out">Not you?</button></div></div>
+    ${invites.length?`<span class="lab">You're invited</span><div class="col" id="inv">${invites.map(r=>roomRow(r,1)).join("")}</div>`:""}
+    <span class="lab">Start a game</span>
+    <div class="games">${Object.entries(GAMES).map(([k,g])=>`<button class="gcard" data-new="${k}" style="--x:${g.x}"><span class="ic">${g.ic}</span><b>${g.name}</b><span>${g.how}</span></button>`).join("")}</div>
+    <span class="lab">Games right now</span>
+    <div class="col" id="rooms">${rooms===null?'<div class="empty">Loading…</div>':open.length?open.map(r=>roomRow(r)).join(""):'<div class="empty">No games right now. Start one above: the players you pick get an invite on their phone.</div>'}</div></div>`;
+  $("#out").onclick=async()=>{try{await RG.api("logout",{})}catch(e){}location.reload()};
+  app.querySelectorAll("[data-new]").forEach(b=>b.onclick=()=>newGame(b.dataset.new));
+  app.querySelectorAll(".room").forEach(b=>b.onclick=()=>{if(b.dataset.g==="poker")location.href="online.html?room="+b.dataset.id;else openRoom(+b.dataset.id)});
+}
+
+function newGame(game,keep){
+  const last=store.get("rg_play_last",{});
+  form=Object.assign({game,players:(last.players||[]).filter(i=>people[i]&&i!==me.id),score:true,chips:last.chips||100,cat:"any",mind:last.mind||"quickmath",level:last.level||2},keep||{});
+  mode="new";err="";const u=new URL(location.href);u.searchParams.set("new",game);u.searchParams.delete("room");history.replaceState(null,"",u);clearTimeout(timer);draw();window.scrollTo(0,0);
+}
+function drawNew(){
+  const f=form,g=GAMES[f.game];
+  setTitle("New "+g.name,"Pick the players. They get an invite on their phone.");
+  const all=Object.values(people).filter(p=>p.active!==0),n=f.players.length+1;
+  let opts="";
+  if(f.game==="poker")opts=`<div class="panel"><span class="lab">Chips each</span><div class="seg" id="chips">${[100,200,500].map(c=>`<button class="${c===f.chips?"on":""}" data-c="${c}">${c}</button>`).join("")}</div></div>`;
+  if(f.game==="imposter")opts=`<div class="panel"><span class="lab">Word category</span><div class="seg" id="cat">${CATS.map(c=>`<button class="${c===f.cat?"on":""}" data-c="${esc(c)}">${c==="any"?"Surprise me":esc(c)}</button>`).join("")}</div></div>`;
+  if(f.game==="race")opts=`<div class="panel"><span class="lab">Mind game</span><div class="minds" id="minds">${MindGames.list.map(m=>`<button class="${m.id===f.mind?"on":""}" data-m="${m.id}">${esc(m.name)}<small>${esc(m.skill)}</small></button>`).join("")}</div>
+    <span class="lab">Level</span><div class="seg" id="lvl">${[1,2,3,4,5].map(l=>`<button class="${l===f.level?"on":""}" data-l="${l}">${l}</button>`).join("")}</div>
+    <p class="muted" style="margin:0;font-size:13.5px">${esc((MindGames.list.find(m=>m.id===f.mind)||{}).how||"")} Fastest finisher wins; ${window.bonusPer?`every ${window.bonusPer} seconds left is 1 extra coin.`:"seconds left decide the order."}</p></div>`;
+  app.innerHTML=`<div class="col">${opts}
+    <div class="panel"><div class="row" style="justify-content:space-between"><span class="lab">Who's playing</span><button class="chip" id="allp">${f.players.length===all.length-1?"Clear":"Everyone"}</button></div>
+      <div class="who" id="who">${all.map(p=>`<button data-p="${esc(p.id)}" class="${p.id===me.id||f.players.includes(p.id)?"on":""}" style="--x:${esc(p.color)}" ${p.id===me.id?"disabled":""}>${av(p.id,44)}${esc(p.name)}${p.id===me.id?"<small class='muted' style='font-size:11px'>you</small>":""}</button>`).join("")}</div>
+      <label class="tog"><input type="checkbox" id="score" ${f.score?"checked":""}> Count for the scoreboard</label></div>
+    ${err?`<div class="err">${esc(err)}</div>`:""}
+    <button class="go wide" id="create" style="--x:${g.x}" ${busy||n<g.min?"disabled":""}>${n<g.min?`Pick at least ${g.min-1} other player${g.min>2?"s":""}`:`Open the lobby for ${n} players`}</button>
+    <button class="go ghost sm" id="cancel">Back</button></div>`;
+  const seg=(id,key,conv)=>{const el=$("#"+id);if(el)el.onclick=e=>{const b=e.target.closest("button");if(!b)return;f[key]=conv(b.dataset[Object.keys(b.dataset)[0]]);draw()}};
+  seg("chips","chips",Number);seg("cat","cat",String);seg("minds","mind",String);seg("lvl","level",Number);
+  $("#who").onclick=e=>{const b=e.target.closest("button");if(!b||b.disabled)return;const id=b.dataset.p,i=f.players.indexOf(id);if(i>=0)f.players.splice(i,1);else f.players.push(id);draw()};
+  $("#allp").onclick=()=>{f.players=f.players.length===all.length-1?[]:all.map(p=>p.id).filter(i=>i!==me.id);draw()};
+  $("#score").onchange=e=>{f.score=e.target.checked};
+  $("#cancel").onclick=()=>openRoom(null);
+  $("#create").onclick=async()=>{if(busy)return;busy=true;err="";draw();
+    store.set("rg_play_last",{players:f.players,chips:f.chips,mind:f.mind,level:f.level});
+    const m=MindGames.list.find(x=>x.id===f.mind)||{};
+    try{const j=await RG.api("room_create",{game:f.game,invite:f.players,score:f.score,when:RG.nowLocal(),chips:f.chips,cat:f.cat,mind:f.mind,name:m.name,level:f.level});busy=false;
+      if(f.game==="poker"){location.href="online.html?room="+j.room.id;return}openRoom(j.room.id);setRoom(j.room)}
+    catch(e){err=e.message;busy=false;draw()}};
+}
+
+function sub(){return room.game==="race"?"Mind race · host "+nameOf(room.host):"Host "+nameOf(room.host)}
+function drawLobby(){
+  setTitle(room.label,sub());
+  const g=GAMES[room.game];
+  app.innerHTML=`<div class="col"><div class="panel" style="flex-direction:row;align-items:center;gap:14px"><span class="gcard" style="padding:0;box-shadow:none;background:none;--x:${g.x}"><span class="ic">${g.ic}</span></span><span class="muted" style="font-size:14px">${room.game==="race"?esc((MindGames.list.find(m=>m.id===room.mind)||{}).how||g.how):g.how}</span></div>
+    ${L.waiting(room,me,people,busy)}${err?`<div class="err">${esc(err)}</div>`:""}</div>`;
+  L.wire(send);
+}
+
+/* ---------- mind race ---------- */
+function rng(seed){let a=seed>>>0;return function(){a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
+const realRandom=Math.random;
+function stopRace(){if(race){if(race.game)race.game.stop();Math.random=realRandom;race=null}stage.hidden=true;stage.innerHTML="";app.hidden=false}
+function drawRace(){
+  const r=room,mine=r.me.in,doneIds=r.done_ids||[],myRes=r.results&&r.results[me.id];
+  setTitle(r.label,sub());
+  // my own game: started once, never redrawn by polling
+  if(mine&&!myRes&&!(race&&race.sent)){
+    if(!race||race.room!==r.id){
+      const elapsed=Math.max(0,L.serverNow()-r.start_at);
+      race={room:r.id,live:true,sent:false};
+      Math.random=rng(r.seed); // same puzzles on every phone
+      app.hidden=true;stage.hidden=false;
+      stage.innerHTML='<div class="strip" id="strip"></div><div id="mg" style="flex:1;display:flex;flex-direction:column"></div>';
+      race.game=MindGames.play(stage.querySelector("#mg"),{game:r.mind,level:r.level,color:MINDCOL[r.mind]||"#2ec4b6",autostart:true,elapsed,doneLabel:"See who's winning",
+        onFinish(res){Math.random=realRandom;race.live=false;race.sent=true;send("room_move",{do:"finish",win:res.win,score:res.score,left:res.left})},
+        onDone(){stopRace();draw()}});
+    }
+    strip();return;
+  }
+  if(race&&race.live)return strip();
+  if(race&&race.sent&&!stage.hidden)return strip(); // the "you did it" box is still up; its button brings the board
+  app.hidden=false;stage.hidden=true;
+  const left=r.players.filter(p=>!doneIds.includes(p.id)).map(p=>p.id);
+  app.innerHTML=`<div class="col">${mine?"":`<p class="muted" style="margin:0;text-align:center">You're watching this race.</p>`}
+    ${myRes?`<div class="panel" style="text-align:center"><p class="big">${myRes.win?myRes.left+" seconds left!":"You scored "+myRes.score}</p><p class="muted" style="margin:0">${myRes.win?"You finished the game.":"The timer ran out."} Waiting for ${esc(L.names(left,people))||"the others"} to finish.</p></div>`:""}
+    <div class="panel"><span class="lab">Finished</span><div class="col" style="gap:8px">${r.players.map(p=>`<div class="lb-row">${av(p.id,32)}<span class="n">${esc(p.name)}</span><span class="lb-st">${doneIds.includes(p.id)?'Done <span class="lb-ok">✓</span>':'Playing… <span class="lb-wait"></span>'}</span></div>`).join("")}</div></div>
+    ${r.me.host?`<button class="go ghost sm" id="end">End the race now (unfinished players get no place)</button>`:""}${err?`<div class="err">${esc(err)}</div>`:""}</div>`;
+  const e=$("#end");if(e)e.onclick=()=>{if(confirm("End the race for everyone now?"))send("room_close")};
+}
+function strip(){const s=$("#strip");if(!s||!room)return;const d=room.done_ids||[];
+  s.innerHTML=`<span>Finished:</span>${room.players.map(p=>`<span class="av${d.includes(p.id)?" done":""}" style="--x:${esc(who(p.id).color)};--s:26px" title="${esc(p.name)}">${esc(who(p.id).short)}</span>`).join("")}`}
+
+/* ---------- imposter ---------- */
+function drawImposter(){
+  const r=room,mine=r.me.in,imp=r.role==="imposter";
+  setTitle("Imposter",sub());
+  let h="";
+  if(r.phase==="clue"){
+    const card=!mine?`<div class="secret hid"><small>You're watching</small><b>Shh…</b><span>Only the players see the word.</span></div>`
+      :peek?(imp?`<div class="secret imp"><small>You are the</small><b>IMPOSTER</b><span>Hint: the word is in <u>${esc(r.cat)}</u>. Blend in!</span></div>`
+        :`<div class="secret"><small>The secret word (${esc(r.cat)})</small><b>${esc(r.word)}</b><span>One of you doesn't know it.</span></div>`)
+      :`<div class="secret hid"><small>Your secret card</small><b>Tap to look</b><span>Keep your screen away from the others.</span></div>`;
+    h=`<button id="peek" style="width:100%">${card}</button>
+      <div class="panel"><span class="lab">How to play</span><p style="margin:0">Go around the circle, starting with <b>${esc(nameOf(r.first))}</b>. Everyone says <b>one word</b> about the secret word. Not too obvious, or the imposter learns it! The imposter has to bluff. Do 1 or 2 rounds, then vote.</p></div>
+      ${r.me.host?`<button class="go wide" id="votenow" style="--x:var(--pink)" ${busy?"disabled":""}>Time to vote</button>`:`<p class="muted" style="margin:0;text-align:center">${esc(nameOf(r.host))} starts the vote when you're ready.</p>`}`;
+  }else if(r.phase==="vote"){
+    const voted=r.voted||[],waitFor=r.players.filter(p=>!voted.includes(p.id)).map(p=>p.id);
+    h=`<div class="panel"><span class="lab">Vote: who is the imposter?</span>
+      ${mine?`<div class="vote" id="vote">${r.players.filter(p=>p.id!==me.id).map(p=>`<button data-v="${esc(p.id)}" class="${r.my_vote===p.id?"on":""}" ${busy?"disabled":""}>${av(p.id,48)}${esc(p.name)}</button>`).join("")}</div>
+      <p class="muted" style="margin:0;font-size:13.5px">${r.my_vote?`You voted for ${esc(nameOf(r.my_vote))}. You can still change it.`:"Tap a name. Your vote is secret."}</p>`:`<p class="muted" style="margin:0">You're watching. The players are voting.</p>`}</div>
+      <p class="muted" style="margin:0;text-align:center">${waitFor.length?`Still voting: ${esc(L.names(waitFor,people))}`:"Counting the votes…"}</p>`;
+  }else if(r.phase==="guess"){
+    h=`<div class="panel" style="text-align:center"><p class="big" style="color:var(--pink)">${esc(nameOf(r.caught_id))} was caught!</p>
+      ${imp?`<p style="margin:0">One last chance: guess the secret word to steal the win.</p><input class="in" id="guess" placeholder="Your guess" autocomplete="off" value="${esc(draft)}"><button class="go wide" id="sendGuess" style="--x:var(--pink)" ${busy?"disabled":""}>Guess</button>`
+        :`<p class="muted" style="margin:0">${esc(nameOf(r.caught_id))} gets one guess at the word. If they get it, the imposter still wins.</p>`}</div>`;
+  }
+  app.innerHTML=`<div class="col">${h}${err?`<div class="err">${esc(err)}</div>`:""}${r.me.host?`<button class="go ghost sm" id="end">End this round</button>`:""}</div>`;
+  const on=(id,f)=>{const b=$("#"+id);if(b)b.onclick=f};
+  on("peek",()=>{if(mine){peek=!peek;draw()}});
+  on("votenow",()=>send("room_move",{do:"vote_now"}));
+  const v=$("#vote");if(v)v.onclick=e=>{const b=e.target.closest("button");if(b)send("room_move",{do:"vote",target:b.dataset.v})};
+  const g=$("#guess");if(g){g.oninput=()=>{draft=g.value};g.focus()}
+  on("sendGuess",()=>send("room_move",{do:"guess",guess:($("#guess")||{}).value||""}));
+  on("end",()=>{if(confirm("End this round without a winner?"))send("room_close")});
+}
+
+/* ---------- results ---------- */
+function drawDone(){
+  stopRace();
+  const r=room,f=r.final||[];
+  setTitle(r.label,"Game over");
+  if(!f.length){app.innerHTML=`<div class="panel"><p class="big">This game was closed</p><button class="go" id="hub">All games</button></div>`;$("#hub").onclick=()=>openRoom(null);return}
+  let head="";
+  if(r.game==="imposter"){
+    const caught=r.caught,iw=r.winner==="imposter";
+    head=`<div class="panel" style="text-align:center;gap:8px"><span class="lab">The imposter was</span><div class="row" style="justify-content:center">${av(r.imposter,52)}<b style="font:700 26px var(--play)">${esc(nameOf(r.imposter))}</b></div>
+      <p style="margin:0">The word was <b>${esc(r.word)}</b> (${esc(r.cat)}).</p>
+      <p class="big" style="color:${iw?"var(--pink)":"var(--green)"}">${iw?(caught?"Caught, but guessed the word!":"The imposter got away!"):"Caught! The others win."}</p>
+      ${caught&&r.guess!==null?`<p class="muted" style="margin:0">Their guess: "${esc(r.guess)}"</p>`:""}
+      <p class="muted" style="margin:0;font-size:13.5px">Votes: ${Object.entries(r.tally||{}).sort((a,b)=>b[1]-a[1]).map(([id,n])=>esc(nameOf(id))+" "+n).join(" · ")}</p></div>`;
+  }else{
+    const w=f.filter(x=>x.place===1).map(x=>esc(nameOf(x.id)));
+    head=`<p class="big">${w.length>1?w.join(" & ")+" tie!":w[0]+" wins!"}</p>`;
+  }
+  const res=r.results||{};
+  app.innerHTML=`<div class="col">${head}
+    <div class="res">${f.map(x=>{const c=x.place?coinsFor(x.place)+(x.bonus||0):0,rs=res[x.id];
+      const note=r.game==="race"?(rs?(rs.win?rs.left+" seconds left":"Scored "+rs.score+", time ran out"):"Didn't finish"):(r.game==="imposter"?(x.id===r.imposter?"The imposter":"Knew the word"):"");
+      return `<div class="rr${x.place===1?" first":""}"><span class="pl">${x.place||"–"}</span>${av(x.id,40)}<span class="t"><b>${esc(nameOf(x.id))}</b><small>${note}</small></span>
+        <span class="v">${r.score?"+"+c:""}<small>${r.score?(x.bonus?`coins (${x.bonus} for time)`:"coins"):""}</small></span></div>`}).join("")}</div>
+    ${r.event_id?`<p class="saved">✓ Saved to the scoreboard</p>`:r.score?`<p class="muted" style="text-align:center;margin:0">Not saved: nobody won anything.</p>`:""}
+    <div class="row" style="justify-content:center">${r.me.host?`<button class="go" id="again" style="--x:${GAMES[r.game].x}" ${busy?"disabled":""}>Play again, same players</button>`:`<p class="muted" style="margin:0">If ${esc(nameOf(r.host))} starts another round, your phone follows.</p>`}
+      <button class="go ghost" id="hub">All games</button></div>${err?`<div class="err">${esc(err)}</div>`:""}</div>`;
+  $("#hub").onclick=()=>openRoom(null);
+  const a=$("#again");if(a)a.onclick=()=>send("room_again",{when:RG.nowLocal()});
+}
+
+/* ---------- start ---------- */
+(async function(){
+  try{
+    const r=await RG.login();me=r.me;(r.state.players||[]).forEach(p=>people[p.id]=p);people[me.id]=Object.assign({},people[me.id]||{},me);
+    if(r.state.coins)coins=r.state.coins;window.bonusPer=r.state.bonus_per;
+  }catch(e){app.innerHTML=`<div class="empty">${esc(e.message)}</div>`;return}
+  const q=new URLSearchParams(location.search),id=+q.get("room"),nw=q.get("new");
+  if(id>0)openRoom(id);else if(nw&&GAMES[nw])newGame(nw);else openRoom(null);
+})();
+})();
+</script>
+</body>
+</html>

@@ -63,11 +63,14 @@ function db(): PDO {
     foreach (ROSTER as $i => $p) $ins->execute([$p[0], $p[1], $p[2], $p[3], $p[4], $i]);
   }
   $pdo->exec("UPDATE players SET name='Jacob' WHERE id='jakob' AND name='Jakob'"); // spelling fix asked by the owner
+  $cols = array_column($pdo->query('PRAGMA table_info(results)')->fetchAll(), 'name');
+  if (!in_array('bonus', $cols, true)) $pdo->exec('ALTER TABLE results ADD COLUMN bonus INTEGER NOT NULL DEFAULT 0'); // extra coins for seconds left
   return $pdo;
 }
 
 define('RG_API', 1);
 require __DIR__ . '/poker.php';
+require __DIR__ . '/party.php';
 const ROOM_IDLE = 43200; // rooms quiet for 12 hours drop off the list
 const SKIP_AFTER = 60;   // the host may skip a player whose turn has lasted this many seconds
 
@@ -113,6 +116,8 @@ function front_auto(): void { // first run: switch the redirect on once, as Sako
 
 function coins_table(): array { return setting('coins', DEFAULT_COINS); }
 function coins_for(int $place): int { $t = coins_table(); return $place >= 1 && $place <= count($t) ? (int)$t[$place - 1] : 0; }
+const DEFAULT_BONUS_PER = 10; // timed games: 1 extra coin for every this many seconds left (0 = off)
+function bonus_per(): int { return max(0, (int)setting('bonus_per', DEFAULT_BONUS_PER)); }
 
 function me(): ?array {
   if (empty($_SESSION['pid'])) return null;
@@ -142,7 +147,7 @@ function players_public(bool $all = false): array {
 function event_full(int $id): ?array {
   $s = db()->prepare('SELECT * FROM events WHERE id=?'); $s->execute([$id]);
   $e = $s->fetch(); if (!$e) return null;
-  $r = db()->prepare('SELECT player_id,team,place,coins,score FROM results WHERE event_id=? ORDER BY place IS NULL, place, player_id'); $r->execute([$id]);
+  $r = db()->prepare('SELECT player_id,team,place,coins,score,bonus FROM results WHERE event_id=? ORDER BY place IS NULL, place, player_id'); $r->execute([$id]);
   $e['results'] = $r->fetchAll();
   foreach ($e['results'] as &$x) { $x['place'] = $x['place'] === null ? null : (int)$x['place']; $x['coins'] = (int)$x['coins']; $x['score'] = $x['score'] === null ? null : (float)$x['score']; }
   $e['id'] = (int)$e['id']; $e['has_photo'] = $e['photo'] ? 1 : 0; unset($e['photo']);
@@ -152,8 +157,10 @@ function event_full(int $id): ?array {
 /* Places from the admin's list. Solo: one row per player. Teams: the team gets the place and every member gets its coins. */
 function save_results(int $eid, string $mode, array $rows): void {
   $ok = array_column(players_public(true), 'id');
+  $old = db()->prepare('SELECT player_id,bonus FROM results WHERE event_id=?'); $old->execute([$eid]);
+  $kept = array_column($old->fetchAll(), 'bonus', 'player_id'); // an edit in the admin page keeps the seconds-left bonus
   db()->prepare('DELETE FROM results WHERE event_id=?')->execute([$eid]);
-  $ins = db()->prepare('INSERT INTO results(event_id,player_id,team,place,coins,score) VALUES(?,?,?,?,?,?)');
+  $ins = db()->prepare('INSERT INTO results(event_id,player_id,team,place,coins,score,bonus) VALUES(?,?,?,?,?,?,?)');
   $seen = [];
   foreach ($rows as $r) {
     $pid = (string)($r['player_id'] ?? '');
@@ -162,7 +169,8 @@ function save_results(int $eid, string $mode, array $rows): void {
     $place = isset($r['place']) && $r['place'] !== '' && $r['place'] !== null ? max(1, (int)$r['place']) : null;
     $score = isset($r['score']) && $r['score'] !== '' && $r['score'] !== null && is_numeric($r['score']) ? (float)$r['score'] : null;
     $team = $mode === 'teams' ? clean_text($r['team'] ?? '', 40) : null;
-    $ins->execute([$eid, $pid, $team ?: null, $place, $place ? coins_for($place) : 0, $score]);
+    $bonus = isset($r['bonus']) ? max(0, min(1000, (int)$r['bonus'])) : (int)($kept[$pid] ?? 0);
+    $ins->execute([$eid, $pid, $team ?: null, $place, ($place ? coins_for($place) : 0) + $bonus, $score, $bonus]);
   }
 }
 
@@ -189,7 +197,7 @@ function clean_when($w): string { // local "YYYY-MM-DDTHH:MM", nothing else
    so a stale or double tap can never act twice, while someone sitting down meanwhile does not get in the way. */
 function room_load(int $id): array {
   $s = db()->prepare('SELECT * FROM rooms WHERE id=?'); $s->execute([$id]);
-  $r = $s->fetch(); if (!$r) fail('That table was not found.', 404);
+  $r = $s->fetch(); if (!$r) fail('That game was not found.', 404);
   $r['state'] = json_decode($r['state'], true); $r['version'] = (int)$r['version'];
   return $r;
 }
@@ -212,7 +220,70 @@ function room_change(int $id, callable $fn, ?int $expect = null): array {
   return $r;
 }
 function room_need_host(array $r, array $m): void { if ($r['host'] !== $m['id']) throw new RuntimeException('Only the host can do that.'); }
-function room_out(array $r, array $m): void { out(['room' => room_view($r, $m['id'], time())]); }
+function room_out(array $r, array $m): void { out(['room' => room_view_any($r, $m['id'])]); }
+
+/* ---------- the shared lobby (every online game) ----------
+   state.lobby: invited [ids the host picked], ready {id: 1}, start_at (server time the countdown ends), score (record on the scoreboard),
+   when (host's local time, for the scoreboard), event_id (once recorded), next (the room "Play again" made). */
+const GAME_LABEL = ['poker' => 'Poker', 'race' => 'Mind race', 'imposter' => 'Imposter'];
+const GAME_CAT = ['poker' => 'Cards', 'race' => 'Mind games', 'imposter' => 'Party'];
+const COUNTDOWN = 4; // seconds from "everyone is ready" to "go", the same moment on every phone
+function lobby_ids(array $r): array { return array_column($r['game'] === 'poker' ? $r['state']['seats'] : $r['state']['players'], 'id'); }
+function room_label(array $r): string { return $r['game'] === 'race' ? $r['state']['name'] . ' · level ' . $r['state']['level'] : GAME_LABEL[$r['game']] ?? $r['game']; }
+
+/* Start when everyone invited has joined and everyone in is ready. $force (host's Start now): the ready ones play, the rest watch. */
+function lobby_try_start(array &$r, bool $force = false): void {
+  if ($r['status'] !== 'lobby') return;
+  $r['state']['lobby'] ??= ['invited' => lobby_ids($r), 'ready' => [], 'start_at' => null, 'score' => false, 'when' => '', 'event_id' => null, 'next' => null]; // a table made before lobbies
+  $l = &$r['state']['lobby']; $ids = lobby_ids($r);
+  $ready = array_values(array_filter($ids, fn($i) => !empty($l['ready'][$i])));
+  $need = $r['game'] === 'imposter' ? 3 : 2;
+  if (!$force) {
+    if (count($ids) < $need || count($ready) !== count($ids) || array_diff($l['invited'], $ids)) return;
+  } else {
+    if (count($ready) < $need) throw new RuntimeException("At least $need players need to be ready.");
+    foreach (array_diff($ids, $ready) as $x) { if ($r['game'] === 'poker') room_stand($r['state'], $x, false); else party_leave($r['state'], $x); }
+  }
+  unset($l);
+  if ($r['game'] === 'poker') { foreach ($r['state']['seats'] as $s) $r['state']['stacks'][$s['id']] = $r['state']['chips']; room_deal($r['state']); }
+  else party_begin($r['game'], $r['state']);
+  $r['state']['lobby']['start_at'] = microtime(true) + COUNTDOWN;
+  $r['status'] = 'playing';
+}
+
+/* The game is over: put it on the scoreboard (once), if the host left "Count for the scoreboard" on. */
+function lobby_finish(array &$r): void {
+  $r['status'] = 'done';
+  $l = $r['state']['lobby'] ?? null;
+  $f = $r['state']['final'] ?? [];
+  if (!$l || empty($l['score']) || !empty($l['event_id'])) return;
+  $rows = array_values(array_filter($f, fn($x) => !empty($x['place'])));
+  if (count($rows) < 2 || count(array_unique(array_column($rows, 'place'))) < 2) return; // nobody won anything (e.g. poker ended before a hand finished)
+  $note = $r['game'] === 'race' ? 'Played together on phones. Level ' . $r['state']['level'] . '; score = seconds left' . (bonus_per() ? ', plus 1 coin per ' . bonus_per() . ' seconds left' : '') . '.' : 'Played together on phones.';
+  db()->prepare('INSERT INTO events(game,category,mode,played_at,status,note,created_by,score_dir) VALUES(?,?,?,?,?,?,?,?)')
+    ->execute([$r['game'] === 'race' ? $r['state']['name'] : GAME_LABEL[$r['game']], GAME_CAT[$r['game']], 'solo', $l['when'] ?: date('Y-m-d\TH:i'), 'done', $note, $r['host'], 'high']);
+  $eid = (int)db()->lastInsertId();
+  save_results($eid, 'solo', array_map(fn($x) => ['player_id' => $x['id'], 'place' => $x['place'], 'score' => $x['score'] ?? ($x['chips'] ?? null), 'bonus' => $x['bonus'] ?? 0], $rows));
+  $r['state']['lobby']['event_id'] = $eid;
+}
+
+/* One row for the lists (open games, invites). */
+function room_card(array $r): array {
+  $st = $r['state']; $l = $st['lobby'] ?? ['invited' => [], 'ready' => []];
+  $c = ['id' => (int)$r['id'], 'game' => $r['game'], 'label' => room_label($r), 'host' => $r['host'], 'status' => $r['status'], 'members' => lobby_ids($r), 'invited' => $l['invited'], 'ready' => array_keys($l['ready'])];
+  if ($r['game'] === 'poker') $c += ['chips' => $st['chips'], 'hand_no' => $st['hand_no'], 'seats' => array_column($st['seats'], 'id')];
+  return $c;
+}
+
+/* What one phone sees: the lobby part, plus the game's own view. */
+function room_view_any(array $r, ?string $me): array {
+  $st = $r['state']; $l = $st['lobby'] ?? ['invited' => [], 'ready' => [], 'start_at' => null, 'score' => false, 'event_id' => null, 'next' => null];
+  $base = ['game' => $r['game'], 'label' => room_label($r), 'now' => microtime(true), 'start_at' => $l['start_at'], 'invited' => $l['invited'], 'ready' => array_keys($l['ready']),
+    'score' => !empty($l['score']), 'event_id' => $l['event_id'], 'next' => $l['next'], 'bonus_per' => bonus_per()];
+  if ($r['game'] === 'poker') return room_view($r, $me, time()) + $base;
+  return $base + ['id' => (int)$r['id'], 'v' => (int)$r['version'], 'status' => $r['status'], 'host' => $r['host'],
+    'me' => ['id' => $me, 'in' => in_array($me, lobby_ids($r), true), 'host' => $me === $r['host']]] + party_view($r['game'], $st, $me, $r['status'] !== 'lobby');
+}
 
 /* ---------- start ---------- */
 $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? '') == 443)
@@ -239,7 +310,7 @@ switch ($a) {
 case 'state': // who am I, who can log in, is the admin password set yet
   front_auto();
   $adminSet = (int)db()->query('SELECT COUNT(*) FROM players WHERE is_admin=1 AND pass_hash IS NOT NULL')->fetchColumn() > 0;
-  out(['me' => me(), 'players' => players_public(), 'admin_ready' => $adminSet, 'coins' => coins_table()]);
+  out(['me' => me(), 'players' => players_public(), 'admin_ready' => $adminSet, 'coins' => coins_table(), 'bonus_per' => bonus_per()]);
 
 case 'players':
   front_auto();
@@ -335,7 +406,7 @@ case 'events': // everything the dashboard needs
   need_login();
   $ids = db()->query("SELECT id FROM events ORDER BY played_at DESC, id DESC")->fetchAll(PDO::FETCH_COLUMN);
   $list = array_map(fn($i) => event_full((int)$i), $ids);
-  out(['events' => $list, 'players' => players_public(true), 'coins' => coins_table()]);
+  out(['events' => $list, 'players' => players_public(true), 'coins' => coins_table(), 'bonus_per' => bonus_per()]);
 
 case 'event_save': // create or edit; status 'done' records it on the dashboard
   if (!$post) fail('Use POST.');
@@ -415,13 +486,14 @@ case 'settings_save':
     db()->beginTransaction();
     db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['coins', json_encode($c)]);
     // Coins follow the table: re-count every recorded result.
-    $rows = db()->query('SELECT event_id,player_id,place FROM results WHERE place IS NOT NULL')->fetchAll();
+    $rows = db()->query('SELECT event_id,player_id,place,bonus FROM results WHERE place IS NOT NULL')->fetchAll();
     $up = db()->prepare('UPDATE results SET coins=? WHERE event_id=? AND player_id=?');
-    foreach ($rows as $r) $up->execute([coins_for((int)$r['place']), $r['event_id'], $r['player_id']]);
+    foreach ($rows as $r) $up->execute([coins_for((int)$r['place']) + (int)$r['bonus'], $r['event_id'], $r['player_id']]);
     db()->commit();
   }
+  if (isset($b['bonus_per'])) db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['bonus_per', json_encode(max(0, min(600, (int)$b['bonus_per'])))]);
   if (array_key_exists('front', $b)) front_set(!empty($b['front']));
-  out(['ok' => 1, 'coins' => coins_table(), 'front' => front_on()]);
+  out(['ok' => 1, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'front' => front_on()]);
 
 case 'front':
   need_admin(); out(['front' => front_on(), 'possible' => front_file() !== null]);
@@ -435,27 +507,54 @@ case 'export':
 /* ---------- online poker ---------- */
 case 'room_list':
   need_login();
-  $rows = db()->prepare("SELECT id,host,status,state,updated_at FROM rooms WHERE status IN ('lobby','playing') AND updated_at>? ORDER BY id DESC LIMIT 30");
+  $rows = db()->prepare("SELECT * FROM rooms WHERE status IN ('lobby','playing') AND updated_at>? ORDER BY id DESC LIMIT 30");
   $rows->execute([time() - ROOM_IDLE]);
-  out(['rooms' => array_map(function ($r) {
-    $st = json_decode($r['state'], true);
-    return ['id' => (int)$r['id'], 'host' => $r['host'], 'status' => $r['status'], 'chips' => $st['chips'], 'hand_no' => $st['hand_no'], 'seats' => array_column($st['seats'], 'id')];
-  }, $rows->fetchAll())]);
+  out(['rooms' => array_map('room_card', array_map(function ($r) { $r['state'] = json_decode($r['state'], true); return $r; }, $rows->fetchAll()))]);
+
+case 'invites': // games someone asked me to join (the home page shows them)
+  $m = need_login();
+  $rows = db()->prepare("SELECT * FROM rooms WHERE status IN ('lobby','playing') AND updated_at>? ORDER BY id DESC LIMIT 30");
+  $rows->execute([time() - 3600]);
+  $list = [];
+  foreach ($rows->fetchAll() as $r) {
+    $r['state'] = json_decode($r['state'], true);
+    $l = $r['state']['lobby'] ?? null;
+    if (!$l || !in_array($m['id'], $l['invited'], true) || in_array($m['id'], lobby_ids($r), true)) continue;
+    if ($r['status'] === 'playing' && $r['game'] !== 'poker') continue; // too late to join
+    $list[] = room_card($r);
+  }
+  out(['invites' => $list]);
 
 case 'room_create':
   if (!$post) fail('Use POST.');
-  $m = need_login(); $chips = (int)(body()['chips'] ?? 0);
-  if (!in_array($chips, [100, 200, 500], true)) fail('Pick 100, 200 or 500 chips.');
-  $st = room_new_state($chips); room_sit($st, $m, false);
+  $m = need_login(); $b = body();
+  $game = (string)($b['game'] ?? 'poker');
+  if ($game !== 'poker' && !in_array($game, PARTY_GAMES, true)) fail('Unknown game.');
+  $known = array_column(players_public(), 'id');
+  $invite = array_values(array_unique(array_filter(is_array($b['invite'] ?? null) ? $b['invite'] : [], fn($x) => is_string($x) && in_array($x, $known, true))));
+  if (!in_array($m['id'], $invite, true)) array_unshift($invite, $m['id']);
+  if (count($invite) < 2) fail('Pick at least one other player.');
+  try {
+    if ($game === 'poker') {
+      $chips = (int)($b['chips'] ?? 0);
+      if (!in_array($chips, [100, 200, 500], true)) fail('Pick 100, 200 or 500 chips.');
+      if (count($invite) > 9) fail('Poker seats 9 players at most.');
+      $st = room_new_state($chips); room_sit($st, $m, false);
+    } else {
+      if ($game === 'imposter' && count($invite) < 3) fail('Imposter needs at least 3 players.');
+      $st = party_new($game, $b); party_join($st, $m);
+    }
+  } catch (RuntimeException $e) { fail($e->getMessage()); }
+  $st['lobby'] = ['invited' => $invite, 'ready' => [], 'start_at' => null, 'score' => ($b['score'] ?? true) !== false, 'when' => clean_when($b['when'] ?? ''), 'event_id' => null, 'next' => null];
   $t = time();
-  db()->prepare('INSERT INTO rooms(game,host,status,state,created_at,updated_at) VALUES(?,?,?,?,?,?)')->execute(['poker', $m['id'], 'lobby', json_encode($st), $t, $t]);
+  db()->prepare('INSERT INTO rooms(game,host,status,state,created_at,updated_at) VALUES(?,?,?,?,?,?)')->execute([$game, $m['id'], 'lobby', json_encode($st), $t, $t]);
   room_out(room_load((int)db()->lastInsertId()), $m);
 
 case 'room_state': // cheap when nothing changed: {same:1}
   $m = need_login(); $id = (int)($_GET['id'] ?? 0);
   $s = db()->prepare('SELECT version FROM rooms WHERE id=?'); $s->execute([$id]); $ver = $s->fetchColumn();
-  if ($ver === false) fail('That table was not found.', 404);
-  if (isset($_GET['v']) && (int)$_GET['v'] === (int)$ver) out(['same' => 1, 'v' => (int)$ver]);
+  if ($ver === false) fail('That game was not found.', 404);
+  if (isset($_GET['v']) && (int)$_GET['v'] === (int)$ver) out(['same' => 1, 'v' => (int)$ver, 'now' => microtime(true)]);
   room_out(room_load($id), $m);
 
 case 'room_join':
@@ -465,18 +564,41 @@ case 'room_leave':
   room_out(room_change($id, function (&$r) use ($m, $a) {
     if (!in_array($r['status'], ['lobby', 'playing'], true)) throw new RuntimeException('This game is over.');
     $playing = $r['status'] === 'playing';
-    if ($a === 'room_join') room_sit($r['state'], $m, $playing); else room_stand($r['state'], $m['id'], $playing);
+    if ($r['game'] === 'poker') { if ($a === 'room_join') room_sit($r['state'], $m, $playing); else room_stand($r['state'], $m['id'], $playing); }
+    else {
+      if ($playing) throw new RuntimeException($a === 'room_join' ? 'This game has started. You can watch, and join the next one.' : 'The game is running. Finish it first.');
+      if ($a === 'room_join') party_join($r['state'], $m); else party_leave($r['state'], $m['id']);
+    }
+    unset($r['state']['lobby']['ready'][$m['id']]);
+    if ($a === 'room_leave' && $r['status'] === 'lobby') lobby_try_start($r); // the last one not ready left
   }), $m);
 
-case 'room_start':
+case 'room_ready': // in the lobby: tap Ready (or undo it). When everyone invited is in and ready, the game starts by itself.
+  if (!$post) fail('Use POST.');
+  $m = need_login(); $b = body(); $id = (int)($b['id'] ?? 0);
+  room_out(room_change($id, function (&$r) use ($m, $b) {
+    if ($r['status'] !== 'lobby') throw new RuntimeException('This game has already started.');
+    if (!in_array($m['id'], lobby_ids($r), true)) throw new RuntimeException('Join the game first.');
+    if (!empty($b['ready'])) $r['state']['lobby']['ready'][$m['id']] = 1; else unset($r['state']['lobby']['ready'][$m['id']]);
+    lobby_try_start($r);
+  }), $m);
+
+case 'room_start': // host: start now with the players who are ready (the others watch)
   if (!$post) fail('Use POST.');
   $m = need_login(); $id = (int)(body()['id'] ?? 0);
   room_out(room_change($id, function (&$r) use ($m) {
     room_need_host($r, $m);
     if ($r['status'] !== 'lobby') throw new RuntimeException('This game has already started.');
-    if (count($r['state']['seats']) < 2) throw new RuntimeException('At least 2 players need a seat.');
-    foreach ($r['state']['seats'] as $s) $r['state']['stacks'][$s['id']] = $r['state']['chips'];
-    room_deal($r['state']); $r['status'] = 'playing';
+    lobby_try_start($r, true);
+    if ($r['status'] !== 'playing') throw new RuntimeException('At least 2 players need to be ready.');
+  }), $m);
+
+case 'room_move': // a move in a play-together game (not poker)
+  if (!$post) fail('Use POST.');
+  $m = need_login(); $b = body(); $id = (int)($b['id'] ?? 0);
+  room_out(room_change($id, function (&$r) use ($m, $b) {
+    if ($r['game'] === 'poker' || $r['status'] !== 'playing') throw new RuntimeException('This game is not running.');
+    if (party_move($r['game'], $r['state'], $m, $r['host'] === $m['id'], $b)) lobby_finish($r);
   }), $m);
 
 case 'room_act':
@@ -491,7 +613,7 @@ case 'room_act':
   }
   room_out(room_change($id, function (&$r) use ($m, $act, $amt) {
     $h = &$r['state']['hand'];
-    if ($r['status'] !== 'playing' || !$h || $h['done']) throw new RuntimeException('No hand is being played.');
+    if ($r['game'] !== 'poker' || $r['status'] !== 'playing' || !$h || $h['done']) throw new RuntimeException('No hand is being played.');
     if ($h['players'][$h['cur']]['id'] !== $m['id']) throw new RuntimeException("It's not your turn.");
     if ($amt !== null && $amt > $h['players'][$h['cur']]['bet'] + $h['players'][$h['cur']]['stack']) throw new RuntimeException("You don't have that many chips.");
     pk_act($h, $act, $amt); unset($h); room_after($r['state']);
@@ -503,7 +625,7 @@ case 'room_skip': // host: the player to act has been away too long. Check if fr
   room_out(room_change($id, function (&$r) use ($m) {
     room_need_host($r, $m);
     $h = &$r['state']['hand'];
-    if ($r['status'] !== 'playing' || !$h || $h['done']) throw new RuntimeException('No hand is being played.');
+    if ($r['game'] !== 'poker' || $r['status'] !== 'playing' || !$h || $h['done']) throw new RuntimeException('No hand is being played.');
     if (time() - (int)$h['turn_at'] < SKIP_AFTER) throw new RuntimeException('Give them a minute first.');
     $o = pk_options($h);
     pk_act($h, $o['canCheck'] ? 'check' : 'fold'); $h['log'][count($h['log']) - 1] .= ' (skipped by the host)';
@@ -515,18 +637,39 @@ case 'room_next':
   $m = need_login(); $b = body(); $id = (int)($b['id'] ?? 0);
   room_out(room_change($id, function (&$r) use ($m) {
     room_need_host($r, $m);
-    if ($r['status'] !== 'playing' || !$r['state']['hand']['done']) throw new RuntimeException('Finish this hand first.');
+    if ($r['game'] !== 'poker' || $r['status'] !== 'playing' || !$r['state']['hand']['done']) throw new RuntimeException('Finish this hand first.');
     room_deal($r['state']);
   }, isset($b['seq']) ? (int)$b['seq'] : null), $m);
 
-case 'room_close': // host ends the game (a hand still running is called off) and the final ranking is shown
+case 'room_close': // host ends the game: poker shows the final ranking; a race ranks whoever finished; a lobby is just closed
   if (!$post) fail('Use POST.');
   $m = need_login(); $id = (int)(body()['id'] ?? 0);
   room_out(room_change($id, function (&$r) use ($m) {
     room_need_host($r, $m);
     if ($r['status'] === 'done') throw new RuntimeException('This game is already over.');
-    room_finish($r['state']); $r['status'] = 'done';
+    if ($r['game'] === 'poker') room_finish($r['state']);
+    elseif ($r['status'] === 'playing' && $r['game'] === 'race') party_rank('race', $r['state']);
+    else $r['state']['final'] = [];
+    lobby_finish($r);
   }), $m);
+
+case 'room_again': // host: the same game again with the same players; everyone's phone follows to the new lobby
+  if (!$post) fail('Use POST.');
+  $m = need_login(); $id = (int)(body()['id'] ?? 0);
+  $old = room_load($id);
+  if ($old['host'] !== $m['id']) fail('Only the host can do that.');
+  if ($old['status'] !== 'done') fail('Finish this game first.');
+  if (!empty($old['state']['lobby']['next'])) room_out(room_load((int)$old['state']['lobby']['next']), $m);
+  $st0 = $old['state']; $l = $st0['lobby'];
+  $invite = array_values(array_unique(array_merge([$m['id']], lobby_ids($old))));
+  if ($old['game'] === 'poker') { $st = room_new_state((int)$st0['chips']); room_sit($st, $m, false); }
+  else { $st = party_new($old['game'], $old['game'] === 'imposter' ? ['cat' => $st0['pick']] : $st0); party_join($st, $m); }
+  $st['lobby'] = ['invited' => $invite, 'ready' => [], 'start_at' => null, 'score' => $l['score'] ?? true, 'when' => clean_when(body()['when'] ?? ''), 'event_id' => null, 'next' => null];
+  $t = time();
+  db()->prepare('INSERT INTO rooms(game,host,status,state,created_at,updated_at) VALUES(?,?,?,?,?,?)')->execute([$old['game'], $m['id'], 'lobby', json_encode($st), $t, $t]);
+  $nid = (int)db()->lastInsertId();
+  room_change($id, function (&$r) use ($nid) { $r['state']['lobby']['next'] = $nid; });
+  room_out(room_load($nid), $m);
 
 default:
   fail('Unknown action.', 404);

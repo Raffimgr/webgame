@@ -1,5 +1,5 @@
 /* Ridge Games: mind games. Eighteen quick brain games with levels 1 to 5.
-   MindGames.play(el, {game, level, team, color, onDone(win, score)}) draws a game inside el. */
+   MindGames.play(el, {game, level, team, color, onDone(win, score), onFinish({win, score, left}), autostart}) draws a game inside el. */
 (function(){
 const CSS=`
 .mg{position:relative;flex:1;display:flex;flex-direction:column;gap:14px;min-height:0;color:var(--fg,#eef1f6);font-family:var(--font,"Inter",system-ui,sans-serif)}
@@ -386,6 +386,7 @@ wordsort:{name:"Word Sort",skill:"Words",how:"A word appears. Tap the group it b
 
 function play(el,o){css();const G=GAMES[o.game],L=Math.max(1,Math.min(5,o.level||1)),target=G.target(L),color=o.color||"#7ee8f0";
   let score=0,left=typeof G.time==="function"?G.time(L):G.time,lives=G.lives||0,timer=null,over=false;
+  if(o.elapsed>0)left=Math.max(5,Math.round(left-o.elapsed)); // came back to a race already running: only the time that's left
   const lv=`<span class="mg-lv">${[1,2,3,4,5].map(i=>`<i class="${i<=L?"on":""}"></i>`).join("")}</span>`;
   el.innerHTML=`<div class="mg" style="--x:${color}"><div class="mg-top"><div class="ttl">${G.name}${lv}<small>${esc(o.team?o.team+" · ":"")}Level ${L} of 5 · ${G.skill}</small></div>
     <span class="mg-chip" id="mgS">0 / ${target}</span>${lives?`<span class="mg-chip mg-lives" id="mgL">${"♥".repeat(lives)}</span>`:""}<span class="mg-clock" id="mgT">${left}</span></div><div class="mg-body" id="mgB"></div></div>`;
@@ -399,11 +400,14 @@ function play(el,o){css();const G=GAMES[o.game],L=Math.max(1,Math.min(5,o.level|
     flash(ok,ans){if(!ok){const p=document.createElement("p");p.className="mg-hint";p.style.color="#ff8f8f";p.textContent=ans?`It was ${ans}`:"Not quite";body.appendChild(p);api.shake()}},
     loseLife(){lives--;$("#mgL").textContent="♥".repeat(Math.max(0,lives))||"–";if(lives<=0){finish();return false}return true}};
   function finish(){if(over)return;over=true;clearInterval(timer);const win=score>=target;
+    if(o.onFinish)o.onFinish({win,score,left:win?left:0,target});
     const d=document.createElement("div");d.className="mg-end";d.innerHTML=`<div class="box"><div class="big" style="color:${win?"#7be08a":"#ff8f8f"}">${win?"You did it!":"Not this time"}</div><p class="mg-hint" style="margin:0 auto">${o.team?esc(o.team)+" scored":"You scored"} ${score} of ${target} on ${G.name}, level ${L}.</p><button class="mg-start" style="--x:${win?"#7be08a":"#ff8f8f"}">${o.doneLabel||"Continue"}</button></div>`;
     root.appendChild(d);d.querySelector("button").onclick=()=>o.onDone&&o.onDone(win,score)}
+  const go=()=>{G.setup(api);timer=setInterval(()=>{left--;$("#mgT").textContent=left;if(left<=0)finish()},1000)};
+  if(o.autostart){go();return {stop(){over=true;clearInterval(timer)}}} // playing together: the shared countdown already ran
   // intro, countdown, play
   body.innerHTML=`<div class="mg-q" style="font-size:clamp(24px,4vw,34px)"><small>How to play</small>${G.name}</div><p class="mg-hint">${G.how} ${G.goal?G.goal(L,target):`Reach <b>${target}</b>${lives?"":" before the timer runs out"} to win.`}</p><button class="mg-start" id="mgGo">Start level ${L}</button>`;
-  $("#mgGo").onclick=()=>{let c=3;const cd=()=>{if(over)return;if(c===0){G.setup(api);timer=setInterval(()=>{left--;$("#mgT").textContent=left;if(left<=0)finish()},1000);return}body.innerHTML=`<div class="mg-cd">${c--}</div>`;setTimeout(cd,650)};cd()};
+  $("#mgGo").onclick=()=>{let c=3;const cd=()=>{if(over)return;if(c===0){go();return}body.innerHTML=`<div class="mg-cd">${c--}</div>`;setTimeout(cd,650)};cd()};
   return {stop(){over=true;clearInterval(timer)}}}
 
 window.MindGames={list:Object.keys(GAMES).map(id=>({id,name:GAMES[id].name,skill:GAMES[id].skill,how:GAMES[id].how})),play,
