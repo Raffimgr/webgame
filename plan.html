@@ -46,22 +46,28 @@ textarea.in{resize:vertical;min-height:64px;line-height:1.4}
 .seg{display:flex;gap:6px}
 .seg button{flex:1;border:0;cursor:pointer;padding:10px 6px;border-radius:12px;font:600 13.5px var(--font);color:var(--mut);background:#2b2f37;box-shadow:var(--in-sh)}
 .seg button.on{color:var(--ink);background:var(--x)}
-/* items */
-.items{display:flex;flex-direction:column;gap:10px}
-.it{border-radius:20px;background:var(--raise);box-shadow:var(--raise-sh);padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
-.it .ck{flex:none;width:32px;height:32px;border-radius:50%;border:2px solid #4a505b;background:#1d2025;cursor:pointer;display:grid;place-items:center;font-size:17px;color:var(--ink);margin-top:2px}
-.it.done .ck{background:var(--green);border-color:var(--green)}
-.it .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
-.it h3{margin:0;font:600 17px/1.3 var(--play);overflow-wrap:anywhere}
-.it.done h3{text-decoration:line-through;color:var(--mut)}
-.it .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px}
-.it .meta span{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;background:#2b2f37;color:#c9cfda}
-.it .meta .k{color:var(--ink);background:var(--x)}
-.it .meta .late{background:#4a2b2e;color:#ffb3b3}
-.it .notes{margin:0;color:#c9cfda;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
-.it .acts{display:flex;gap:6px;flex-wrap:wrap}
-.it .acts .btn{padding:7px 11px;font-size:12.5px;border-radius:11px}
-.it .edit{flex:none;border:0;background:none;color:var(--mut);cursor:pointer;font-size:16px;padding:4px}
+/* items: one quiet row each (item, who in their color, where from), grouped in one card per section */
+.items{border-radius:20px;background:var(--raise);box-shadow:var(--raise-sh);overflow:hidden}
+.it+.it{border-top:1px solid rgba(255,255,255,.06)}
+.it .rw{display:grid;grid-template-columns:auto minmax(0,1fr) auto 80px;gap:4px 10px;align-items:center;padding:9px 14px 9px 10px}
+.it .tt{border:0;background:none;color:var(--fg);font:500 15px/1.3 var(--font);text-align:left;cursor:pointer;padding:3px 0;overflow-wrap:anywhere}
+.it .nm{border:0;background:none;cursor:pointer;color:var(--x,var(--mut));font:600 13px var(--font);padding:4px 0;white-space:nowrap}
+.it .nm.no{color:var(--mut);font-weight:500;opacity:.75}
+.it .st{color:var(--mut);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.it .st.late{color:#ff9c9c}
+.it.done .tt{color:var(--mut);text-decoration:line-through;text-decoration-color:rgba(154,163,179,.6)}
+.it.done .nm,.it.done .st{opacity:.45}
+/* the round check: an empty ring, filled green with a drawn tick when done */
+.ck{flex:none;width:26px;height:26px;border-radius:50%;border:0;padding:0;cursor:pointer;display:grid;place-items:center;background:transparent;
+  box-shadow:inset 0 0 0 2px #59606c;transition:box-shadow .2s,background .2s,transform .15s}
+.ck:hover{box-shadow:inset 0 0 0 2px var(--teal)}
+.ck:active{transform:scale(.88)}
+.ck svg{width:15px;height:15px;fill:none;stroke:#15181e;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:20;stroke-dashoffset:20;transition:stroke-dashoffset .25s .05s}
+.it.done .ck{background:var(--green);box-shadow:0 0 0 3px rgba(111,192,74,.18)}
+.it.done .ck svg{stroke-dashoffset:0}
+.it.pop .ck{animation:pop .35s ease}
+@keyframes pop{40%{transform:scale(1.22)}}
+.it.ed{padding:14px}
 .lbl{font:600 13px var(--font);color:var(--mut);text-transform:uppercase;letter-spacing:.6px;margin:8px 0 0}
 .empty{text-align:center;color:var(--mut);padding:24px 10px}
 .sug{display:flex;flex-direction:column;gap:8px;margin-top:10px}
@@ -78,10 +84,8 @@ textarea.in{resize:vertical;min-height:64px;line-height:1.4}
 .sortr button.on{color:var(--ink);background:var(--fg)}
 .ghd{display:flex;align-items:center;gap:8px;font:600 17px var(--play);margin:18px 2px 8px}
 .ghd small{font:600 12.5px var(--font);color:var(--mut)}
-.it .meta button.who{border:0;cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;background:#2b2f37;color:#c9cfda;font:inherit}
-.it .meta button.who::after{content:"\25BE";font-size:10px;opacity:.7}
-.it .rp{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
-.it .rp button{border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:6px 10px 6px 6px;border-radius:99px;background:#2b2f37;color:var(--fg);font:600 12.5px var(--font)}
+.it .rp{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 12px 46px}
+.it .rp button{border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:5px 10px 5px 5px;border-radius:99px;background:#2b2f37;color:var(--fg);font:600 12.5px var(--font)}
 .it .rp button.on{background:var(--teal);color:var(--ink)}
 .imp{border:2px solid rgba(46,196,182,.5)}
 .ihd{width:100%;display:flex;justify-content:space-between;align-items:center;border:0;background:none;color:var(--fg);font:600 16px var(--play);cursor:pointer;padding:0}
@@ -142,21 +146,22 @@ function formHTML(it){it=it||{kind:"buy",title:"",grp:"",notes:"",who:person&&pe
     <div class="row"><label>Who's on it<select class="in" name="who"><option value="">Anyone</option>${roster.map(p=>`<option value="${esc(p.id)}" ${it.who===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select></label>
       <label>By when (optional)<input class="in" type="date" name="due" value="${esc(it.due)}"></label></div>
     <label>Section (optional)<input class="in" name="grp" maxlength="40" list="grps-${it.id||0}" placeholder="Like Breakfast or From home" value="${esc(it.grp||"")}"><datalist id="grps-${it.id||0}">${groups.map(g=>`<option value="${esc(g)}">`).join("")}</datalist></label>
-    <label>Notes<textarea class="in" name="notes" maxlength="1000" placeholder="Details, links, how many, who to call…">${esc(it.notes)}</textarea></label>
+    <label>Where to get it, or notes<textarea class="in" name="notes" maxlength="1000" placeholder="Wegmans, or details, links, how many…">${esc(it.notes)}</textarea></label>
     <div class="row" style="align-items:center"><button class="btn big">${it.id?"Save":"Add to the list"}</button><button type="button" class="btn big ghost" data-cancel>Cancel</button>
       ${it.id&&(me.id===it.by||me.is_admin)?`<button type="button" class="btn big red" data-del="${it.id}">Delete</button>`:""}</div></form>`}
 
+/* the third column: short notes are where to get it ("Wegmans"); otherwise the due date, or a mark that there are notes */
+function where(it){const n=(it.notes||"").trim();
+  if(n&&n.length<=40&&!n.includes("\n"))return [n,""];if(it.due)return [fmtDue(it.due),!it.done&&it.due<today()?"late":""];return [n?"\u{1F4DD}":"",""]}
 function itemHTML(it){
-  if(editing===it.id)return `<div class="panel" id="it-${it.id}">${formHTML(it)}</div>`;
-  const k=KINDS[it.kind]||KINDS.do,late=!it.done&&it.due&&it.due<today();
-  return `<div class="it ${it.done?"done":""}" id="it-${it.id}"><button class="ck" data-done="${it.id}" aria-label="${it.done?"Mark not done":"Mark done"}">${it.done?"✔":""}</button>
-    <div class="bd"><h3>${esc(it.title)}</h3>
-      <div class="meta"><span class="k" style="--x:${k.c}">${k.e} ${k.n}</span><button class="who" data-whopick="${it.id}" aria-label="Change who's on it">${it.who?`${people[it.who]?RG.av(people[it.who],18):""}${esc(name(it.who))}`:"\u{1F64B} Anyone"}</button>
-        ${it.grp&&sortBy!=="grp"?`<span>\u{1F5C2}\uFE0F ${esc(it.grp)}</span>`:""}${it.due?`<span class="${late?"late":""}">\u{1F4C6} ${fmtDue(it.due)}</span>`:""}</div>
-      ${picking===it.id?`<div class="rp">${roster.map(p=>`<button data-setwho="${esc(p.id)}" data-item="${it.id}" class="${it.who===p.id?"on":""}">${RG.av(p,22)}${esc(p.name)}</button>`).join("")}<button data-setwho="" data-item="${it.id}" class="${it.who?"":"on"}">\u{1F64B} Anyone</button></div>`:""}
-      ${it.notes?`<p class="notes">${esc(it.notes)}</p>`:""}
-      ${it.done?`<div class="meta"><span>✔ Done by ${esc(name(it.done_by))}</span></div>`:!it.who?`<div class="acts"><button class="btn" data-take="${it.id}">\u{1F64B} I'll do it</button></div>`:""}</div>
-    <button class="edit" data-edit="${it.id}" aria-label="Edit">✏️</button></div>`}
+  if(editing===it.id)return `<div class="it ed" id="it-${it.id}">${formHTML(it)}</div>`;
+  const p=people[it.who],[w,wc]=where(it);
+  return `<div class="it${it.done?" done":""}" id="it-${it.id}"><div class="rw">
+    <button class="ck" data-done="${it.id}" aria-label="${it.done?"Mark not done":"Mark done"}"><svg viewBox="0 0 24 24"><path d="M5.5 12.5l4.2 4.2 8.8-9.4"/></svg></button>
+    <button class="tt" data-edit="${it.id}" title="Edit">${esc(it.title)}</button>
+    <button class="nm${it.who?"":" no"}" data-whopick="${it.id}" style="${p?`--x:${esc(p.color)}`:""}" aria-label="Change who's on it">${it.who?esc(name(it.who)):"Anyone"}</button>
+    <span class="st ${wc}"${it.notes?` title="${esc(it.notes)}"`:""}>${esc(w)}</span></div>
+    ${picking===it.id?`<div class="rp">${roster.map(x=>`<button data-setwho="${esc(x.id)}" data-item="${it.id}" class="${it.who===x.id?"on":""}">${RG.av(x,22)}${x.id===me.id?"Me":esc(x.name)}</button>`).join("")}<button data-setwho="" data-item="${it.id}" class="${it.who?"":"on"}">\u{1F64B} Anyone</button></div>`:""}</div>`}
 
 function draw(){
   if(!lists.some(l=>l.id===cur))cur=lists.length?lists[0].id:0;
@@ -222,8 +227,9 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button");i
     if(t.id==="addBtn"){adding=true;editing=null;draw();$("#addBox [name=title]").focus();return}
     if("cancel" in t.dataset){adding=false;editing=null;$("#addBox").innerHTML="";draw();return}
     if(t.dataset.edit){editing=+t.dataset.edit;adding=false;$("#addBox").innerHTML="";draw();return}
-    if(t.dataset.done){const it=items.find(x=>x.id===+t.dataset.done);put((await api({act:"done",id:it.id,done:!it.done})).item);draw();return}
-    if(t.dataset.take){put((await api({act:"who",id:+t.dataset.take,who:me.id})).item);draw();return}
+    if(t.dataset.done){const it=items.find(x=>x.id===+t.dataset.done),row=$("#it-"+it.id),to=!it.done;
+      row.classList.toggle("done",to);row.classList.toggle("pop",to);
+      try{const j=await api({act:"done",id:it.id,done:to});setTimeout(()=>{put(j.item);draw()},to?650:0)}catch(err){row.classList.toggle("done",!to);row.classList.remove("pop");throw err}return}
     if(t.dataset.idea){const s=IDEAS[+t.dataset.idea];ideasOpen=true;put((await api({act:"save",list:cur,...s,who:"",due:""})).item);draw();return}
     if(t.dataset.del){if(!confirm("Delete this item?"))return;await api({act:"del",id:+t.dataset.del});items=items.filter(x=>x.id!==+t.dataset.del);editing=null;draw();return}
   }catch(err){RG.toast(err.message)}});

@@ -25,6 +25,8 @@ function plan_db(): PDO {
     done_by TEXT NOT NULL DEFAULT '', done_at INTEGER NOT NULL DEFAULT 0, by TEXT NOT NULL, at INTEGER NOT NULL)");
   $cols = array_column($pdo->query('PRAGMA table_info(items)')->fetchAll(), 'name');
   if (!in_array('grp', $cols, true)) $pdo->exec("ALTER TABLE items ADD COLUMN grp TEXT NOT NULL DEFAULT ''");
+  /* a store is just its name ("Wegmans", not "From Wegmans"): short notes show on the list as where to get it */
+  $pdo->exec("UPDATE items SET notes = trim(substr(notes, 6)) WHERE notes LIKE 'From %' AND length(notes) <= 45 AND instr(notes, char(10)) = 0");
   if (!$pdo->query('SELECT COUNT(*) FROM lists')->fetchColumn()) $pdo->prepare('INSERT INTO lists (name, at) VALUES (?, ?)')->execute(['Shenandoah trip', time()]);
   @chmod($f, 0600);
   return $pdo;
