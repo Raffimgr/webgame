@@ -6,7 +6,8 @@
 <title>Trip To-do</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
 <style>
-/* To-do: what the group needs to buy, book and do for a trip or event, who is on it, and notes (plan.php). Logged-in players only. */
+/* To-do: what the group needs to buy, book, bring and do for a trip or event, who is on it, and notes (plan.php). Logged-in players only.
+   Shown by section, by person or by date; tap someone's name on an item to hand it to someone else. */
 :root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--ink:#15181e;--well:#202328;
   --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
   --in-sh:inset 3px 3px 8px rgba(0,0,0,.5);
@@ -64,6 +65,25 @@ textarea.in{resize:vertical;min-height:64px;line-height:1.4}
 .lbl{font:600 13px var(--font);color:var(--mut);text-transform:uppercase;letter-spacing:.6px;margin:8px 0 0}
 .empty{text-align:center;color:var(--mut);padding:24px 10px}
 .sug{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.ppl{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 6px}
+.ppl::-webkit-scrollbar{display:none}
+.ppl button{flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;cursor:pointer;color:var(--mut);font:600 11.5px var(--font);width:58px;padding:4px 0;border-radius:14px}
+.ppl button .rg-av,.ppl button .ev{box-shadow:0 0 0 2px #22252b,0 0 0 4px #3a3f48}
+.ppl button .ev{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#353a43;font-size:18px}
+.ppl button.on{color:var(--fg)}
+.ppl button.on .rg-av,.ppl button.on .ev{box-shadow:0 0 0 2px #22252b,0 0 0 4px var(--teal)}
+.ppl button small{font-size:10.5px;color:var(--mut)}
+.sortr{display:flex;align-items:center;gap:6px;margin:4px 0 2px;font-size:12.5px;color:var(--mut);font-weight:600}
+.sortr button{border:0;cursor:pointer;padding:6px 11px;border-radius:99px;font:600 12.5px var(--font);color:var(--mut);background:#2b2f37}
+.sortr button.on{color:var(--ink);background:var(--fg)}
+.ghd{display:flex;align-items:center;gap:8px;font:600 17px var(--play);margin:18px 2px 8px}
+.ghd small{font:600 12.5px var(--font);color:var(--mut)}
+.it .meta button.who{border:0;cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;background:#2b2f37;color:#c9cfda;font:inherit}
+.it .meta button.who::after{content:"\25BE";font-size:10px;opacity:.7}
+.it .rp{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.it .rp button{border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:6px 10px 6px 6px;border-radius:99px;background:#2b2f37;color:var(--fg);font:600 12.5px var(--font)}
+.it .rp button.on{background:var(--teal);color:var(--ink)}
+.imp{border:2px solid rgba(46,196,182,.5)}
 .ihd{width:100%;display:flex;justify-content:space-between;align-items:center;border:0;background:none;color:var(--fg);font:600 16px var(--play);cursor:pointer;padding:0}
 </style>
 </head>
@@ -75,14 +95,17 @@ textarea.in{resize:vertical;min-height:64px;line-height:1.4}
   </div>
   <div>
     <h1>&#128203; To-do</h1>
-    <p class="sub">What we need to buy, book and do, who's on it, and notes.</p>
+    <p class="sub">What we need to buy, book, bring and do, who's on it, and notes.</p>
   </div>
   <div id="app" hidden>
+    <div class="panel imp" id="impTop" hidden style="margin-bottom:12px"></div>
     <div class="chips" id="lists"></div>
     <div class="panel prog" id="prog" style="margin:8px 0 14px"></div>
     <button class="btn big" id="addBtn" style="width:100%">&#10133; Add something</button>
     <div class="panel" id="addBox" hidden style="margin-top:4px"></div>
     <div class="chips" id="filters" style="margin-top:14px"></div>
+    <div class="ppl" id="people"></div>
+    <div class="sortr" id="sortr"></div>
     <div id="list"></div>
   </div>
 </div>
@@ -91,7 +114,7 @@ textarea.in{resize:vertical;min-height:64px;line-height:1.4}
 (()=>{
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const KINDS={buy:{e:"\u{1F6D2}",n:"Buy",c:"#ffd23f"},book:{e:"\u{1F4C5}",n:"Book",c:"#5cc8ee"},do:{e:"✅",n:"Do",c:"#b392f0"}};
+const KINDS={buy:{e:"\u{1F6D2}",n:"Buy",c:"#ffd23f"},book:{e:"\u{1F4C5}",n:"Book",c:"#5cc8ee"},bring:{e:"\u{1F9F3}",n:"Bring",c:"#ff9f43"},do:{e:"✅",n:"Do",c:"#b392f0"}};
 /* starter ideas for the Shenandoah trip; nothing is added until someone taps them */
 const IDEAS=[
   {kind:"buy",title:"Park entrance pass",notes:"One per car at the gate, or an America the Beautiful pass covers it."},
@@ -102,7 +125,8 @@ const IDEAS=[
   {kind:"do",title:"Download offline maps on every phone",notes:"Cell signal is spotty on Skyline Drive."},
   {kind:"do",title:"Pack the games",notes:"Cards, cornhole, frisbee."},
   {kind:"do",title:"Pack warm layers and rain jackets",notes:"It's colder up on the ridge."}];
-let me=null,people={},roster=[],lists=[],items=[],cur=+(localStorage.getItem("rg-plan-list")||0),filter="all",editing=null,adding=false,ideasOpen=false;
+let me=null,people={},roster=[],lists=[],items=[],cur=+(localStorage.getItem("rg-plan-list")||0),filter="all",person="",editing=null,adding=false,ideasOpen=false,picking=0,incoming=null;
+let sortBy=(()=>{try{return localStorage.getItem("rg-plan-sort")||"grp"}catch(e){return "grp"}})();
 
 async function api(body){const r=await fetch("plan.php",{method:"POST",credentials:"same-origin",headers:{"X-RG":"1","Content-Type":"application/json"},body:JSON.stringify(body)});
   const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Something went wrong. Try again.");return j}
@@ -110,12 +134,14 @@ const name=id=>(people[id]||{}).name||"Someone";
 const fmtDue=d=>{const t=new Date(d+"T12:00");return t.toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"})};
 const today=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
 
-function formHTML(it){it=it||{kind:"buy",title:"",notes:"",who:"",due:""};
+function formHTML(it){it=it||{kind:"buy",title:"",grp:"",notes:"",who:person&&person!=="-"?person:"",due:""};
+  const groups=[...new Set(items.filter(i=>i.list===cur&&i.grp).map(i=>i.grp))];
   return `<form class="form" data-form="${it.id||""}">
     <div class="seg">${Object.entries(KINDS).map(([k,v])=>`<button type="button" data-kind="${k}" class="${it.kind===k?"on":""}" style="--x:${v.c}">${v.e} ${v.n}</button>`).join("")}</div>
     <input class="in" name="title" maxlength="120" placeholder="What needs doing? e.g. Buy firewood" value="${esc(it.title)}" required>
     <div class="row"><label>Who's on it<select class="in" name="who"><option value="">Anyone</option>${roster.map(p=>`<option value="${esc(p.id)}" ${it.who===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select></label>
       <label>By when (optional)<input class="in" type="date" name="due" value="${esc(it.due)}"></label></div>
+    <label>Section (optional)<input class="in" name="grp" maxlength="40" list="grps-${it.id||0}" placeholder="Like Breakfast or From home" value="${esc(it.grp||"")}"><datalist id="grps-${it.id||0}">${groups.map(g=>`<option value="${esc(g)}">`).join("")}</datalist></label>
     <label>Notes<textarea class="in" name="notes" maxlength="1000" placeholder="Details, links, how many, who to call…">${esc(it.notes)}</textarea></label>
     <div class="row" style="align-items:center"><button class="btn big">${it.id?"Save":"Add to the list"}</button><button type="button" class="btn big ghost" data-cancel>Cancel</button>
       ${it.id&&(me.id===it.by||me.is_admin)?`<button type="button" class="btn big red" data-del="${it.id}">Delete</button>`:""}</div></form>`}
@@ -125,24 +151,46 @@ function itemHTML(it){
   const k=KINDS[it.kind]||KINDS.do,late=!it.done&&it.due&&it.due<today();
   return `<div class="it ${it.done?"done":""}" id="it-${it.id}"><button class="ck" data-done="${it.id}" aria-label="${it.done?"Mark not done":"Mark done"}">${it.done?"✔":""}</button>
     <div class="bd"><h3>${esc(it.title)}</h3>
-      <div class="meta"><span class="k" style="--x:${k.c}">${k.e} ${k.n}</span>${it.who?`<span>${people[it.who]?RG.av(people[it.who],18):""}${esc(name(it.who))}</span>`:`<span>\u{1F64B} Anyone</span>`}
-        ${it.due?`<span class="${late?"late":""}">\u{1F4C6} ${fmtDue(it.due)}</span>`:""}</div>
+      <div class="meta"><span class="k" style="--x:${k.c}">${k.e} ${k.n}</span><button class="who" data-whopick="${it.id}" aria-label="Change who's on it">${it.who?`${people[it.who]?RG.av(people[it.who],18):""}${esc(name(it.who))}`:"\u{1F64B} Anyone"}</button>
+        ${it.grp&&sortBy!=="grp"?`<span>\u{1F5C2}\uFE0F ${esc(it.grp)}</span>`:""}${it.due?`<span class="${late?"late":""}">\u{1F4C6} ${fmtDue(it.due)}</span>`:""}</div>
+      ${picking===it.id?`<div class="rp">${roster.map(p=>`<button data-setwho="${esc(p.id)}" data-item="${it.id}" class="${it.who===p.id?"on":""}">${RG.av(p,22)}${esc(p.name)}</button>`).join("")}<button data-setwho="" data-item="${it.id}" class="${it.who?"":"on"}">\u{1F64B} Anyone</button></div>`:""}
       ${it.notes?`<p class="notes">${esc(it.notes)}</p>`:""}
       ${it.done?`<div class="meta"><span>✔ Done by ${esc(name(it.done_by))}</span></div>`:!it.who?`<div class="acts"><button class="btn" data-take="${it.id}">\u{1F64B} I'll do it</button></div>`:""}</div>
     <button class="edit" data-edit="${it.id}" aria-label="Edit">✏️</button></div>`}
 
 function draw(){
   if(!lists.some(l=>l.id===cur))cur=lists.length?lists[0].id:0;
+  const ip=$("#impTop");ip.hidden=!incoming;
+  if(incoming){const l=lists.find(x=>x.id===cur),n=incoming.items.length,d=incoming.items.filter(i=>i.done).length;
+    ip.innerHTML=`<b style="font:600 18px var(--play)">\u{1F4E5} Add ${n} items to \u201C${esc(l?l.name:"this list")}\u201D?</b><p class="sub" style="margin:4px 0 12px">${esc(incoming.from||"A shared list")}: ${n-d} still to get, ${d} already done. Anything already on the list is skipped.</p>
+      <div class="row"><button class="btn big" id="impGo">Add them</button><button class="btn big ghost" id="impNo">Not now</button></div>`}
   $("#lists").innerHTML=lists.map(l=>`<button class="chip ${l.id===cur?"on":""}" data-list="${l.id}">${esc(l.name)}</button>`).join("")+`<button class="chip" data-newlist>➕ New list</button>`;
   const mine=items.filter(i=>i.list===cur),done=mine.filter(i=>i.done).length;
   $("#prog").innerHTML=mine.length?`<div class="bar"><i style="width:${Math.round(done/mine.length*100)}%"></i></div><b>${done} of ${mine.length} done</b>`:`<b>Nothing on this list yet</b>`;
   $("#addBox").hidden=!adding;$("#addBtn").hidden=adding;if(adding&&!$("#addBox form"))$("#addBox").innerHTML=formHTML();
-  const F=[["all","All"],["mine","\u{1F464} Mine"],["open","\u{1F64B} Needs someone"],...Object.entries(KINDS).map(([k,v])=>[k,v.e+" "+v.n])];
+  const F=[["all","All"],["open","\u{1F64B} Needs someone"],...Object.entries(KINDS).map(([k,v])=>[k,v.e+" "+v.n])];
   $("#filters").innerHTML=F.map(([k,l])=>`<button class="chip ${filter===k?"on":""}" data-filter="${k}">${l}</button>`).join("");
-  const show=mine.filter(i=>filter==="all"||(filter==="mine"?i.who===me.id:filter==="open"?!i.who&&!i.done:i.kind===filter));
-  const todo=show.filter(i=>!i.done).sort((a,b)=>(a.due||"9999")<(b.due||"9999")?-1:(a.due||"9999")>(b.due||"9999")?1:a.id-b.id),fin=show.filter(i=>i.done).sort((a,b)=>b.done_at-a.done_at);
-  $("#list").innerHTML=(todo.length?`<div class="items">${todo.map(itemHTML).join("")}</div>`:mine.length?`<div class="empty">Nothing left here \u{1F389}</div>`:"")
-    +(fin.length?`<div class="lbl">Done (${fin.length})</div><div class="items" style="margin-top:8px">${fin.map(itemHTML).join("")}</div>`:"")
+  /* one face per person, with how many things they still have to do */
+  const left=id=>mine.filter(i=>!i.done&&i.who===id).length,nobody=mine.filter(i=>!i.done&&!i.who).length;
+  const ppl=roster.filter(p=>p.id===me.id||mine.some(i=>i.who===p.id));
+  $("#people").innerHTML=`<button data-person="" class="${person?"":"on"}"><span class="ev">\u{1F465}</span>Everyone</button>`
+    +ppl.map(p=>`<button data-person="${esc(p.id)}" class="${person===p.id?"on":""}">${RG.av(p,38)}${p.id===me.id?"Me":esc(p.name)}<small>${left(p.id)} to do</small></button>`).join("")
+    +(nobody?`<button data-person="-" class="${person==="-"?"on":""}"><span class="ev">\u{1F64B}</span>Nobody yet<small>${nobody} to do</small></button>`:"");
+  $("#sortr").innerHTML=`Show by <button data-sort="grp" class="${sortBy==="grp"?"on":""}">Section</button><button data-sort="who" class="${sortBy==="who"?"on":""}">Person</button><button data-sort="due" class="${sortBy==="due"?"on":""}">Date</button>`;
+  const show=mine.filter(i=>(filter==="all"||(filter==="open"?!i.who&&!i.done:i.kind===filter))&&(!person||(person==="-"?!i.who:i.who===person)));
+  const byDue=(a,b)=>(a.due||"9999")<(b.due||"9999")?-1:(a.due||"9999")>(b.due||"9999")?1:a.id-b.id;
+  /* in each group, what still needs doing comes first, then what's done */
+  const block=list=>{const todo=list.filter(i=>!i.done).sort(byDue),fin=list.filter(i=>i.done).sort((a,b)=>a.id-b.id);return `<div class="items">${todo.concat(fin).map(itemHTML).join("")}</div>`};
+  const head=(t,list)=>`<div class="ghd">${t} <small>${list.filter(i=>i.done).length} of ${list.length} done</small></div>`;
+  let h="";
+  if(sortBy==="due"){const todo=show.filter(i=>!i.done).sort(byDue),fin=show.filter(i=>i.done).sort((a,b)=>b.done_at-a.done_at);
+    h=(todo.length?`<div class="items">${todo.map(itemHTML).join("")}</div>`:"")+(fin.length?`<div class="lbl">Done (${fin.length})</div><div class="items" style="margin-top:8px">${fin.map(itemHTML).join("")}</div>`:"")}
+  else{const groups=new Map();
+    show.slice().sort((a,b)=>a.id-b.id).forEach(i=>{const g=sortBy==="grp"?i.grp:i.who;if(!groups.has(g))groups.set(g,[]);groups.get(g).push(i)});
+    let keys=[...groups.keys()];
+    if(sortBy==="who")keys.sort((a,b)=>!a?1:!b?-1:roster.findIndex(p=>p.id===a)-roster.findIndex(p=>p.id===b));else keys=keys.filter(Boolean).concat(groups.has("")?[""]:[]);
+    h=keys.map(g=>{const list=groups.get(g),t=sortBy==="grp"?(g?"\u{1F5C2}\uFE0F "+esc(g):"Other"):(g?`${people[g]?RG.av(people[g],24):""} ${esc(name(g))}`:"\u{1F64B} Nobody yet");return head(t,list)+block(list)}).join("")}
+  $("#list").innerHTML=(show.length?h:mine.length?`<div class="empty">Nothing here \u{1F389}</div>`:"")
     +ideasHTML(mine);
 }
 /* the starter ideas belong to the Shenandoah list; ones already on it are left out */
@@ -153,7 +201,7 @@ function ideasHTML(mine){
   return `<div class="panel" style="margin-top:14px"><button class="ihd" data-ideas>\u{1F4A1} Ideas to add (${left.length}) <span>${open?"▴":"▾"}</span></button>
     ${open?`<p class="sub" style="margin:2px 0 0">Tap any to put it on the list.</p><div class="sug">${left.map(([s,n])=>`<button class="btn ghost" data-idea="${n}" style="justify-content:flex-start;text-align:left">${KINDS[s.kind].e} ${esc(s.title)}</button>`).join("")}</div>`:""}</div>`;
 }
-function readForm(f){const on=f.querySelector(".seg .on");return {kind:on?on.dataset.kind:"do",title:f.title.value.trim(),who:f.who.value,due:f.due.value,notes:f.notes.value.trim()}}
+function readForm(f){const on=f.querySelector(".seg .on");return {kind:on?on.dataset.kind:"do",title:f.title.value.trim(),grp:f.grp.value.trim(),who:f.who.value,due:f.due.value,notes:f.notes.value.trim()}}
 function put(it){const i=items.findIndex(x=>x.id===it.id);if(i>=0)items[i]=it;else items.push(it)}
 
 document.addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;
@@ -163,12 +211,19 @@ document.addEventListener("click",async e=>{const t=e.target.closest("button");i
     if("newlist" in t.dataset){const n=prompt("Name the new list, like “Thanksgiving” or “Beach weekend”:");if(!n||!n.trim())return;
       const j=await api({act:"list",name:n.trim()});lists.push(j.list);cur=j.list.id;localStorage.setItem("rg-plan-list",cur);draw();return}
     if(t.dataset.filter){filter=t.dataset.filter;draw();return}
+    if(t.dataset.person!==undefined){person=t.dataset.person;draw();return}
+    if(t.dataset.sort){sortBy=t.dataset.sort;try{localStorage.setItem("rg-plan-sort",sortBy)}catch(x){}draw();return}
+    if(t.dataset.whopick){picking=picking===+t.dataset.whopick?0:+t.dataset.whopick;draw();return}
+    if(t.dataset.setwho!==undefined){picking=0;put((await api({act:"who",id:+t.dataset.item,who:t.dataset.setwho})).item);draw();return}
+    if(t.id==="impGo"){t.disabled=true;const j=await api({act:"import",list:cur,items:incoming.items});incoming=null;history.replaceState(null,"",location.pathname);await load();draw();
+      RG.toast(j.added?`Added ${j.added} item${j.added>1?"s":""} \u2714`:"Those are all on the list already.");return}
+    if(t.id==="impNo"){incoming=null;history.replaceState(null,"",location.pathname);draw();return}
     if("ideas" in t.dataset){ideasOpen=!ideasOpen;draw();return}
     if(t.id==="addBtn"){adding=true;editing=null;draw();$("#addBox [name=title]").focus();return}
     if("cancel" in t.dataset){adding=false;editing=null;$("#addBox").innerHTML="";draw();return}
     if(t.dataset.edit){editing=+t.dataset.edit;adding=false;$("#addBox").innerHTML="";draw();return}
     if(t.dataset.done){const it=items.find(x=>x.id===+t.dataset.done);put((await api({act:"done",id:it.id,done:!it.done})).item);draw();return}
-    if(t.dataset.take){const it=items.find(x=>x.id===+t.dataset.take);put((await api({act:"save",id:it.id,title:it.title,kind:it.kind,notes:it.notes,who:me.id,due:it.due})).item);draw();return}
+    if(t.dataset.take){put((await api({act:"who",id:+t.dataset.take,who:me.id})).item);draw();return}
     if(t.dataset.idea){const s=IDEAS[+t.dataset.idea];ideasOpen=true;put((await api({act:"save",list:cur,...s,who:"",due:""})).item);draw();return}
     if(t.dataset.del){if(!confirm("Delete this item?"))return;await api({act:"del",id:+t.dataset.del});items=items.filter(x=>x.id!==+t.dataset.del);editing=null;draw();return}
   }catch(err){RG.toast(err.message)}});
@@ -177,14 +232,23 @@ document.addEventListener("submit",async e=>{const f=e.target.closest("[data-for
   try{const id=+f.dataset.form||0;put((await api({act:"save",...d,...(id?{id}:{list:cur})})).item);adding=false;editing=null;$("#addBox").innerHTML="";draw();if(!id)RG.toast("Added ✔")}
   catch(err){RG.toast(err.message);btn.disabled=false}});
 
+/* plan.html#import=… carries a whole list (base64 JSON: {from, list, items:[{title, kind, grp, notes, who, done}]}), so a list someone
+   typed up elsewhere can be added in one tap without it ever sitting in this public code. */
+function readImport(){const m=/#import=([A-Za-z0-9_-]+)/.exec(location.hash);if(!m)return;
+  try{const b=atob(m[1].replace(/-/g,"+").replace(/_/g,"/")),j=JSON.parse(new TextDecoder().decode(Uint8Array.from(b,c=>c.charCodeAt(0))));
+    if(Array.isArray(j.items)&&j.items.length)incoming={from:String(j.from||""),list:String(j.list||""),items:j.items.slice(0,300)}}catch(e){RG.toast("That list link looks broken.")}}
+function pickImportList(){if(incoming&&incoming.list){const l=lists.find(x=>x.name.toLowerCase()===incoming.list.toLowerCase());if(l)cur=l.id}}
 async function load(){const r=await fetch("plan.php",{credentials:"same-origin"});if(!r.ok)throw new Error("Could not load the list.");const j=await r.json();lists=j.lists;items=j.items}
 async function boot(){
   try{const r=await RG.login();me={id:r.me.id,name:r.me.name,is_admin:+r.me.is_admin===1};
     if(r.state&&r.state.players){roster=r.state.players;roster.forEach(p=>people[p.id]=p)}
     const w=$("#who");w.hidden=false;w.innerHTML=RG.av(r.me,22)+" "+esc(r.me.name);
-    await load();$("#app").hidden=false;draw();
+    readImport();await load();pickImportList();
+    $("#app").hidden=false;draw();
+    /* tapping the same link again in this tab only changes the hash */
+    addEventListener("hashchange",()=>{readImport();if(incoming){pickImportList();draw();scrollTo(0,0)}});
     /* pick up everyone else's changes, unless someone is typing in a form */
-    setInterval(async()=>{if(document.hidden||adding||editing)return;try{await load();draw()}catch(e){}},30000);
+    setInterval(async()=>{if(document.hidden||adding||editing||picking||incoming)return;try{await load();draw()}catch(e){}},30000);
   }catch(e){$(".wrap").insertAdjacentHTML("beforeend",`<div class="empty">Could not load the list. ${esc(e.message||"")}</div>`)}}
 boot();
 })();

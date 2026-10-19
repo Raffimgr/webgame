@@ -1,5 +1,5 @@
 <?php
-/* Likes and comments on the guide (places, places to eat, history, videos, photos), kept in ridge-data/talk.sqlite
+/* Likes and comments on the guide (places, places to eat, history, trip-album photos) and on Trip Feed posts, kept in ridge-data/talk.sqlite
    and shown only to logged-in players.
    GET talk.php -> {items:{key:{likes:[player ids], comments:[{id,by,body,at}]}}}
    POST {act:"like", item} turns your like on or off.   POST {act:"say", item, body} adds a comment.
@@ -13,6 +13,8 @@ function talk_db(): PDO {
   $pdo->exec('PRAGMA busy_timeout=4000');
   $pdo->exec('CREATE TABLE IF NOT EXISTS likes (item TEXT NOT NULL, pid TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (item, pid))');
   $pdo->exec('CREATE TABLE IF NOT EXISTS comments (id INTEGER PRIMARY KEY AUTOINCREMENT, item TEXT NOT NULL, pid TEXT NOT NULL, body TEXT NOT NULL, at INTEGER NOT NULL)');
+  /* the guide's Videos and Photos tabs are gone (2026-10-19), so their likes and comments go too; trip-album photos (ph-al…) stay */
+  foreach (['likes', 'comments'] as $t) $pdo->exec("DELETE FROM $t WHERE item LIKE 'vid-%' OR (item LIKE 'ph-%' AND item NOT LIKE 'ph-al%')");
   @chmod($f, 0600);
   return $pdo;
 }

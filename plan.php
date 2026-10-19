@@ -1,16 +1,19 @@
 <?php
-/* The to-do lists (plan.html): what the group needs to buy, book or do for a trip or event, who is on it, and notes.
-   Kept in ridge-data/plan.sqlite, logged-in players only. Anyone can add, edit, take or tick off an item;
-   whoever added it (or the admin) can delete it.
+/* The to-do lists (plan.html): what the group needs to buy, book, bring or do for a trip or event, who is on it, and notes.
+   Items can sit in a section (like "Breakfast" or "From home"). Kept in ridge-data/plan.sqlite, logged-in players only.
+   Anyone can add, edit, reassign, take or tick off an item; whoever added it (or the admin) can delete it.
    GET  plan.php -> {lists:[{id,name}], items:[...]}
    POST {act:"list", name}                                            -> {list}  a new list (one per trip or event)
-   POST {act:"save", id?, list, title, kind, notes, who, due}         -> {item}  add, or edit when id is given
+   POST {act:"save", id?, list, title, kind, grp, notes, who, due}    -> {item}  add, or edit when id is given
+   POST {act:"who", id, who}                                          -> {item}  hand an item to someone else ('' = anyone)
    POST {act:"done", id, done}                                        -> {item}
+   POST {act:"import", list, items:[{title, kind, grp, notes, who, done}]} -> {added, skipped}  many at once; an item
+        already on the list (same title and section) is skipped, so the same import can't add things twice
    POST {act:"del", id}                                               -> {ok}    (POSTs need the X-RG header) */
 
 require __DIR__ . '/guide_lib.php';
 
-const KINDS = ['buy', 'book', 'do'];
+const KINDS = ['buy', 'book', 'bring', 'do'];
 
 function plan_db(): PDO {
   $f = data_dir() . '/plan.sqlite';
@@ -20,13 +23,15 @@ function plan_db(): PDO {
   $pdo->exec("CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY AUTOINCREMENT, list INTEGER NOT NULL, title TEXT NOT NULL, kind TEXT NOT NULL,
     notes TEXT NOT NULL DEFAULT '', who TEXT NOT NULL DEFAULT '', due TEXT NOT NULL DEFAULT '', done INTEGER NOT NULL DEFAULT 0,
     done_by TEXT NOT NULL DEFAULT '', done_at INTEGER NOT NULL DEFAULT 0, by TEXT NOT NULL, at INTEGER NOT NULL)");
+  $cols = array_column($pdo->query('PRAGMA table_info(items)')->fetchAll(), 'name');
+  if (!in_array('grp', $cols, true)) $pdo->exec("ALTER TABLE items ADD COLUMN grp TEXT NOT NULL DEFAULT ''");
   if (!$pdo->query('SELECT COUNT(*) FROM lists')->fetchColumn()) $pdo->prepare('INSERT INTO lists (name, at) VALUES (?, ?)')->execute(['Shenandoah trip', time()]);
   @chmod($f, 0600);
   return $pdo;
 }
 function text($s, int $max): string { return mb_substr(trim(preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', (string)$s) ?? ''), 0, $max); }
 function item_row(array $r): array {
-  return ['id' => (int)$r['id'], 'list' => (int)$r['list'], 'title' => $r['title'], 'kind' => $r['kind'], 'notes' => $r['notes'], 'who' => $r['who'],
+  return ['id' => (int)$r['id'], 'list' => (int)$r['list'], 'title' => $r['title'], 'kind' => $r['kind'], 'grp' => $r['grp'], 'notes' => $r['notes'], 'who' => $r['who'],
     'due' => $r['due'], 'done' => (int)$r['done'], 'done_by' => $r['done_by'], 'done_at' => (int)$r['done_at'], 'by' => $r['by'], 'at' => (int)$r['at']];
 }
 function get_item(PDO $db, int $id): array {
@@ -36,9 +41,16 @@ function get_item(PDO $db, int $id): array {
   return $r;
 }
 function is_player(string $id): bool {
-  $pdo = new PDO('sqlite:' . data_dir() . '/ridge.sqlite', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-  $s = $pdo->prepare('SELECT 1 FROM players WHERE id=? AND active=1'); $s->execute([$id]);
-  return (bool)$s->fetchColumn();
+  static $ids = null;
+  if ($ids === null) {
+    $pdo = new PDO('sqlite:' . data_dir() . '/ridge.sqlite', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $ids = $pdo->query('SELECT id FROM players WHERE active=1')->fetchAll(PDO::FETCH_COLUMN);
+  }
+  return in_array($id, $ids, true);
+}
+function need_list(PDO $db, int $list): void {
+  $s = $db->prepare('SELECT 1 FROM lists WHERE id=?'); $s->execute([$list]);
+  if (!$s->fetchColumn()) fail('That list is gone.', 404);
 }
 
 try {
@@ -62,21 +74,54 @@ try {
     $title = text($b['title'] ?? '', 120);
     if ($title === '') fail('Write what needs doing.');
     $kind = in_array($b['kind'] ?? '', KINDS, true) ? $b['kind'] : 'do';
+    $grp = text($b['grp'] ?? '', 40);
     $notes = text($b['notes'] ?? '', 1000);
     $who = (string)($b['who'] ?? '');
     if ($who !== '' && !is_player($who)) fail('Pick someone from the group.');
     $due = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($b['due'] ?? '')) ? $b['due'] : '';
     if (!empty($b['id'])) {
       $r = get_item($db, (int)$b['id']);
-      $db->prepare('UPDATE items SET title=?, kind=?, notes=?, who=?, due=? WHERE id=?')->execute([$title, $kind, $notes, $who, $due, $r['id']]);
+      $db->prepare('UPDATE items SET title=?, kind=?, grp=?, notes=?, who=?, due=? WHERE id=?')->execute([$title, $kind, $grp, $notes, $who, $due, $r['id']]);
       out(['item' => item_row(get_item($db, (int)$r['id']))]);
     }
     $list = (int)($b['list'] ?? 0);
-    $s = $db->prepare('SELECT 1 FROM lists WHERE id=?'); $s->execute([$list]);
-    if (!$s->fetchColumn()) fail('That list is gone.', 404);
-    $db->prepare('INSERT INTO items (list, title, kind, notes, who, due, by, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-       ->execute([$list, $title, $kind, $notes, $who, $due, $pid, time()]);
+    need_list($db, $list);
+    $db->prepare('INSERT INTO items (list, title, kind, grp, notes, who, due, by, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+       ->execute([$list, $title, $kind, $grp, $notes, $who, $due, $pid, time()]);
     out(['item' => item_row(get_item($db, (int)$db->lastInsertId()))]);
+  }
+  if ($act === 'who') {
+    $r = get_item($db, (int)($b['id'] ?? 0));
+    $who = (string)($b['who'] ?? '');
+    if ($who !== '' && !is_player($who)) fail('Pick someone from the group.');
+    $db->prepare('UPDATE items SET who=? WHERE id=?')->execute([$who, $r['id']]);
+    out(['item' => item_row(get_item($db, (int)$r['id']))]);
+  }
+  if ($act === 'import') {
+    $list = (int)($b['list'] ?? 0);
+    need_list($db, $list);
+    $rows = is_array($b['items'] ?? null) ? array_slice($b['items'], 0, 300) : [];
+    $have = $db->prepare('SELECT 1 FROM items WHERE list=? AND lower(title)=lower(?) AND lower(grp)=lower(?)');
+    $ins = $db->prepare('INSERT INTO items (list, title, kind, grp, notes, who, done, done_by, done_at, by, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $added = 0; $skipped = 0; $t = time();
+    $db->beginTransaction();
+    foreach ($rows as $x) {
+      if (!is_array($x)) continue;
+      $title = text($x['title'] ?? '', 120);
+      if ($title === '') continue;
+      $grp = text($x['grp'] ?? '', 40);
+      $have->execute([$list, $title, $grp]);
+      $dup = $have->fetchColumn(); $have->closeCursor();
+      if ($dup) { $skipped++; continue; }
+      $who = (string)($x['who'] ?? '');
+      if ($who !== '' && !is_player($who)) $who = '';
+      $done = !empty($x['done']);
+      $ins->execute([$list, $title, in_array($x['kind'] ?? '', KINDS, true) ? $x['kind'] : 'buy', $grp, text($x['notes'] ?? '', 1000), $who,
+        $done ? 1 : 0, $done ? ($who ?: $pid) : '', $done ? $t : 0, $pid, $t]);
+      $added++;
+    }
+    $db->commit();
+    out(['added' => $added, 'skipped' => $skipped]);
   }
   if ($act === 'done') {
     $r = get_item($db, (int)($b['id'] ?? 0));

@@ -76,7 +76,7 @@ h1{margin:0;font:700 28px/1.15 var(--play);overflow-wrap:anywhere}
 (()=>{
 const $=s=>document.querySelector(s),esc=RG.esc;
 const COLORS=["#d4f09a","#f7b8d2","#aab7ff","#ffe08a","#ffbf99","#ff9fb8","#7ee8f0","#9df0c8","#d8c39a","#c9a7ff","#7be08a","#ff8f70"];
-const KINDS={buy:"\u{1F6D2}",book:"\u{1F4C5}",do:"✅"};
+const KINDS={buy:"\u{1F6D2}",book:"\u{1F4C5}",bring:"\u{1F9F3}",do:"✅"};
 let me=null,players=[],who=null,posts=[],items=[],events=[],tab=localStorage.getItem("rg-prof-tab")||"posts";
 const P=id=>players.find(p=>p.id===id)||{id,name:"Someone",short:"?",color:"#9aa3b3"};
 const get=async u=>{const r=await fetch(u,{credentials:"same-origin"});if(!r.ok)throw new Error("Could not load "+u);return r.json()};
