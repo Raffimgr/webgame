@@ -243,7 +243,6 @@ const P={
   bear:{f:"Juvenile American black bear at Old Rag mountain.jpg",cap:"Young black bear near Old Rag"},
   homestead:{f:"Shenandoah Homestead (6613546223).jpg",cap:"An old mountain homestead"},
   jackson:{f:"Map of the Shenandoah Valley, to illustrate the Valley Campaign of \"Stonewall\" Jackson, 1862- LOC 99448345.jpg",by:"Library of Congress",cap:"1862 map of Jackson's Valley Campaign"},
-  marysTunnelC:{f:"Mary's Rock Tunnel.jpg",cap:"Mary's Rock Tunnel"},
   blackrockSunset:{f:"Blackrock Summit Sunset - Shenandoah National Park (52425318158).jpg",cap:"Sunset from Blackrock Summit"},
   hazel:{f:"Hazel Mountain Overlook 1.jpg",cap:"Hazel Mountain Overlook"},
   winter:{f:"Shenandoah in Winter.jpg",cap:"Shenandoah in winter"},
@@ -272,7 +271,9 @@ const P={
   deer:{u:"https://www.nps.gov/common/uploads/structured_data/183B110E-E008-CDD3-EC95F668F6CC3657.jpg?maxWidth=1200&maxHeight=800&quality=90",by:"NPS / Neal Lewis",cap:"Bucks sparring in Big Meadows",src:"https://www.nps.gov/shen/index.htm"},
   ragN:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/827699E5-94E1-A320-CEB9F6FC0A97FB6C.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Old Rag in fall",src:"https://www.nps.gov/places/old-rag.htm"},
   ladyslipper:{u:"https://www.nps.gov/shen/learn/news/images/20220523_PinkLadysSlipper_OldRagSummit_IMG_2122_nl.jpg?maxwidth=1300&maxheight=1300&autorotate=false",by:"NPS",cap:"Pink lady's slipper orchid on Old Rag",src:"https://www.nps.gov/shen/learn/news/04192023_wildflower.htm"},
-  marysTunnel:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/48DC40E0-F09C-DF12-156A6D34F10FF287.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Mary's Rock Tunnel",src:"https://www.nps.gov/places/000/marys-rock-tunnel.htm"},
+  marysTunnel:{u:"img/marys-tunnel-summer.jpg",by:"Shared by Sako",cap:"Mary's Rock Tunnel in summer green",src:"img/marys-tunnel-summer.jpg"},
+  marysPostcard:{u:"img/marys-tunnel-postcard.jpg",by:"Shared by Sako",cap:"An old postcard of the tunnel in fall color",src:"img/marys-tunnel-postcard.jpg"},
+  marysFall:{u:"img/marys-tunnel-fall.jpg",by:"Wikimedia Commons",cap:"Headlights in the tunnel in late fall",src:"img/marys-tunnel-fall.jpg"},
   marysSummit:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/DDBBBABA-C8B1-120B-B5A5E8DD0EF48AF2.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"On top of Mary's Rock",src:"https://nps.gov/places/000/marys-rock.htm"},
   rapidanN:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/B0BC264F-FF13-8BCA-63DACE0FAE4FFACF.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Rapidan Camp, Hoover\u2019s retreat",src:"https://www.nps.gov/places/000/rapidan-camp.htm"},
   whiteoak:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/1A45A3DB-B8E6-4908-0FC3C0120434219B.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Upper Whiteoak Falls",src:"https://www.nps.gov/places/upper-whiteoak-falls.htm"},
@@ -333,7 +334,7 @@ const PLACES=[
   {id:"skyline",dr:70,n:"Skyline Drive",cat:"view",ll:[38.6610,-78.3203],p:"fallBridge",more:["skyCurve","sky0303","skyTrees","skyBend"],mile:"Mile 0 to 105",time:"Half a day or more",lvl:"Easy",
    d:"The 105-mile road along the top of the Blue Ridge, with about 70 overlooks. Drive slow (the limit is 35 mph), stop often, and watch for bears and deer on the shoulder.",
    f:"Concrete mile markers count from 0 at Front Royal to 105 at Rockfish Gap. Every place in the park is described by its mile."},
-  {id:"marys",dr:70,n:"Mary's Rock Tunnel",cat:"view",ll:[38.6488,-78.3229],p:"marysTunnel",mile:"Mile 32.2",time:"A quick stop",lvl:"Easy",
+  {id:"marys",dr:70,n:"Mary's Rock Tunnel",cat:"view",ll:[38.6488,-78.3229],p:"marysTunnel",more:["marysPostcard","marysFall"],mile:"Mile 32.2",time:"A quick stop",lvl:"Easy",
    d:"The only tunnel on Skyline Drive, blasted through solid granite in 1932. Honk-free zone, but you can still cheer.",
    f:"The tunnel is about 600 feet long and only 12 feet 8 inches tall, so big RVs have to check their height."},
   {id:"stony",dr:85,n:"Stony Man Summit",cat:"hike",ll:[38.5937,-78.3757],p:"stonyMan",mile:"Mile 41.7 (Skyland)",time:"About 1 hour",lvl:"Easy",
@@ -414,7 +415,7 @@ const GALLERY_GROUPS=[
   ["Sunrise, sunset and stars",["sunsetRocks","valleySunset","blueRidges","sunrise","blackrockSunset","stars","peaks","rockyOvl"]],
   ["Summits and waterfalls",["hawksbillUpper","marysSummit","stonyHiker","whiteoakLow","meadowsView"]],
   ["Wildlife and wildflowers",["bearRoad","bearWet","deer","bear","ladyslipper","hepatica"]],
-  ["Every season",["winter","marysTunnelC"]]
+  ["Every season",["winter"]]
 ];
 const GALLERY=GALLERY_GROUPS.flatMap(g=>g[1]);
 
