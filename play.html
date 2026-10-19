@@ -363,7 +363,9 @@ function drawDone(){
     if(r.state.coins)coins=r.state.coins;window.bonusPer=r.state.bonus_per;
   }catch(e){app.innerHTML=`<div class="empty">${esc(e.message)}</div>`;return}
   const q=new URLSearchParams(location.search),id=+q.get("room"),nw=q.get("new");
-  if(id>0)openRoom(id);else if(nw&&GAMES[nw])newGame(nw);else openRoom(null);
+  const pre=(q.get("players")||"").split(",").filter(i=>people[i]&&i!==me.id); // e.g. from the map: play.html?new=imposter&players=rasha,sofia
+  const keep=pre.length?{players:pre}:{};["mind","level","cat","chips"].forEach(k=>{const v=q.get(k);if(v)keep[k]=/^\d+$/.test(v)?+v:v});
+  if(id>0)openRoom(id);else if(nw&&GAMES[nw])newGame(nw,keep);else openRoom(null);
 })();
 })();
 </script>
