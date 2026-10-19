@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
-/* Shenandoah Guide: tabs for places, map, Skyline Drive photos, history, videos, quiz and road-trip bingo. */
+/* Shenandoah Guide: tabs for places, map, photo gallery, history, videos, quiz and road-trip bingo. */
 :root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--ink:#15181e;--well:#202328;
   --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
   --in-sh:inset 3px 3px 8px rgba(0,0,0,.5);
@@ -58,12 +58,20 @@ h2{margin:6px 0 2px;font:600 26px var(--play)}
 .leaflet-container a.leaflet-popup-close-button{color:var(--mut)}
 .pin{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--x);border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.5);display:grid;place-items:center}
 .pin i{transform:rotate(45deg);font-style:normal;font-size:14px}
+.home{position:relative;width:64px;height:78px;display:flex;flex-direction:column;align-items:center}
+.home b{width:52px;height:52px;border-radius:50%;background:#e63946;border:4px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.6);display:grid;place-items:center;font-size:28px;position:relative;z-index:1}
+.home b::after{content:"";position:absolute;inset:-12px;border-radius:50%;border:4px solid #e63946;animation:ring 1.6s ease-out infinite}
+.home span{margin-top:-2px;background:#e63946;color:#fff;font:800 11px var(--font);padding:2px 8px;border-radius:99px;border:2px solid #fff;white-space:nowrap;letter-spacing:.5px;position:relative;z-index:1}
+@keyframes ring{from{transform:scale(.7);opacity:1}to{transform:scale(1.5);opacity:0}}
 .legend{display:flex;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--mut)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend b{width:12px;height:12px;border-radius:50%;background:var(--x)}
 .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
 .gallery figure{margin:0;border-radius:20px;overflow:hidden;background:var(--raise);box-shadow:var(--raise-sh);cursor:zoom-in}
 .gallery .ph{aspect-ratio:4/3}
+.ph.art{background:linear-gradient(150deg,color-mix(in srgb,var(--x) 70%,#1b1d22),color-mix(in srgb,var(--x) 25%,#1b1d22));display:grid;place-items:center}
+.ph.art svg{position:absolute;inset:0;width:100%;height:100%}
+.ph.art .em{position:relative;font-size:56px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.35))}
 .gallery figcaption{padding:10px 12px;font-size:13px;font-weight:600}
 .lb{position:fixed;inset:0;z-index:60;background:rgba(10,11,14,.94);display:grid;place-items:center;padding:16px}
 .lb img{max-width:100%;max-height:78vh;border-radius:16px}
@@ -157,7 +165,7 @@ a.vid span{font-size:12.5px;color:var(--mut)}
 
   <main id="view"></main>
 
-  <p class="foot">Photos come from Wikimedia Commons (tap a credit to see the photographer and license). Map data &copy; OpenStreetMap contributors. Videos open on YouTube and belong to their creators. Check <a href="https://www.nps.gov/shen/planyourvisit/conditions.htm" target="_blank" rel="noopener">park conditions</a> before you go.</p>
+  <p class="foot">Photos come from the National Park Service and USGS (public domain) and Wikimedia Commons. Tap a credit to see the source and license. Map data &copy; OpenStreetMap contributors. Videos open on YouTube and belong to their creators. Check <a href="https://www.nps.gov/shen/planyourvisit/conditions.htm" target="_blank" rel="noopener">park conditions</a> before you go.</p>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -168,9 +176,10 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store={get(k,d){try{const v=localStorage.getItem("rg-guide-"+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem("rg-guide-"+k,JSON.stringify(v))}catch(e){}}};
 
-/* Wikimedia Commons photos, hotlinked by file name. by = photographer when known; the link always shows the full credit and license. */
-const img=(f,w=900)=>"https://commons.wikimedia.org/wiki/Special:FilePath/"+encodeURIComponent(f)+"?width="+w;
-const page=f=>"https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(f.replace(/ /g,"_"));
+/* Photos: Wikimedia Commons files hotlinked by name (f), or public-domain National Park Service / USGS photos linked directly (u).
+   by = photographer or agency; the credit link opens the source page with the full credit and license. */
+const img=(p,w=900)=>p.u?p.u.replace(/([?&](?:width|maxWidth|maxwidth)=)\d+/,"$1"+w):"https://commons.wikimedia.org/wiki/Special:FilePath/"+encodeURIComponent(p.f)+"?width="+w;
+const page=p=>p.src||"https://commons.wikimedia.org/wiki/File:"+encodeURIComponent(p.f.replace(/ /g,"_"));
 const P={
   sandy:{f:"2016-10-24 13 08 17 View north from the Sandy Bottom Overlook along Shenandoah National Park's Skyline Drive in Rockingham County, Virginia.jpg",by:"Famartin",cap:"Sandy Bottom Overlook in fall"},
   hensley:{f:"2016-10-25 09 47 24 View north-northwest from the Hensley Hollow Overlook along Shenandoah National Park's Skyline Drive in Rockingham County, Virginia.jpg",by:"Famartin",cap:"Hensley Hollow Overlook"},
@@ -192,74 +201,142 @@ const P={
   wayside:{f:"Big Meadows Wayside (49669882606).jpg",cap:"Big Meadows Wayside"},
   bear:{f:"Juvenile American black bear at Old Rag mountain.jpg",cap:"Young black bear near Old Rag"},
   homestead:{f:"Shenandoah Homestead (6613546223).jpg",cap:"An old mountain homestead"},
-  jackson:{f:"Map of the Shenandoah Valley, to illustrate the Valley Campaign of \"Stonewall\" Jackson, 1862- LOC 99448345.jpg",by:"Library of Congress",cap:"1862 map of Jackson's Valley Campaign"}
+  jackson:{f:"Map of the Shenandoah Valley, to illustrate the Valley Campaign of \"Stonewall\" Jackson, 1862- LOC 99448345.jpg",by:"Library of Congress",cap:"1862 map of Jackson's Valley Campaign"},
+  marysTunnelC:{f:"Mary's Rock Tunnel.jpg",cap:"Mary's Rock Tunnel"},
+  blackrockSunset:{f:"Blackrock Summit Sunset - Shenandoah National Park (52425318158).jpg",cap:"Sunset from Blackrock Summit"},
+  hazel:{f:"Hazel Mountain Overlook 1.jpg",cap:"Hazel Mountain Overlook"},
+  winter:{f:"Shenandoah in Winter.jpg",cap:"Shenandoah in winter"},
+  bushong:{f:"New Market, Jacob Bushong's farm.jpg",cap:"The Bushong farm on the New Market battlefield"},
+  riverFR:{f:"South Fork Shenandoah River Front Royal crossing 2020a.jpg",cap:"The South Fork of the Shenandoah at Front Royal"},
+  frGazebo:{f:"Front Royal gazebo.JPG",cap:"Downtown Front Royal"},
+  singing:{f:"Belle Brown Northcott Memorial - Luray, Virginia - Sarah Stierch.jpg",by:"Sarah Stierch",cap:"The Luray Singing Tower"},
+  meems:{f:"Meems Bottom Bridge 2.JPG",cap:"Meems Bottom Covered Bridge"},
+  stonyMan:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/40381D58-CFEA-13B4-A323F6134CA86C5F.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"On top of Stony Man",src:"https://www.nps.gov/places/000/stony-man.htm"},
+  stonyHiker:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/D79AAFA0-97CB-4765-C8AE1C915FD064C3.jpg?width=1300&quality=90&mode=crop",by:"NPS / M. O'Neill",cap:"Snapping the view from Stony Man",src:"https://www.nps.gov/thingstodo/stony-man.htm"},
+  hawksbill:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/53D8B66C-B998-E968-C3DFC22761F8784F.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"The view from Hawksbill summit",src:"https://www.nps.gov/places/000/hawksbill-summit.htm"},
+  hawksbillUpper:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/401D9308-A919-FE1A-31D9F59B88CEDD42.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Upper Hawksbill, looking down to the valley",src:"https://www.nps.gov/places/000/upper-hawksbill-summit.htm"},
+  darkN:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/4E7C14F5-CD69-CBA4-E09999415A7F9B79.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Dark Hollow Falls in fall",src:"https://www.nps.gov/places/000/dark-hollow-falls.htm"},
+  roseN:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/48688783-9472-67E9-75BE2833D7F20420.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Rose River Falls in spring",src:"https://www.nps.gov/places/rose-river-falls.htm"},
+  meadowsN:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/7C48BBCF-B942-CFA4-36F1A901B7AFE2DA.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Big Meadows",src:"https://www.nps.gov/places/big-meadows.htm"},
+  meadowsSunset:{u:"https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/thumbnails/image/Austin-Big%20Meadows%20Sunset%20SNP.JPG",by:"USGS",cap:"Sunset at Big Meadows",src:"https://www.usgs.gov/media/images/sunset-big-meadows-shenandoah-national-park"},
+  meadowsView:{u:"https://home.nps.gov/articles/images/views-at-big-meadow_1.JPG?maxwidth=1300&autorotate=false",by:"NPS",cap:"The valley below Big Meadows",src:"https://home.nps.gov/articles/big-meadows-300117.htm"},
+  deer:{u:"https://www.nps.gov/common/uploads/structured_data/183B110E-E008-CDD3-EC95F668F6CC3657.jpg?maxWidth=1200&maxHeight=800&quality=90",by:"NPS / Neal Lewis",cap:"Bucks sparring in Big Meadows",src:"https://www.nps.gov/shen/index.htm"},
+  ragN:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/827699E5-94E1-A320-CEB9F6FC0A97FB6C.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Old Rag in fall",src:"https://www.nps.gov/places/old-rag.htm"},
+  ladyslipper:{u:"https://www.nps.gov/shen/learn/news/images/20220523_PinkLadysSlipper_OldRagSummit_IMG_2122_nl.jpg?maxwidth=1300&maxheight=1300&autorotate=false",by:"NPS",cap:"Pink lady's slipper orchid on Old Rag",src:"https://www.nps.gov/shen/learn/news/04192023_wildflower.htm"},
+  marysTunnel:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/48DC40E0-F09C-DF12-156A6D34F10FF287.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Mary's Rock Tunnel",src:"https://www.nps.gov/places/000/marys-rock-tunnel.htm"},
+  marysSummit:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/DDBBBABA-C8B1-120B-B5A5E8DD0EF48AF2.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"On top of Mary's Rock",src:"https://nps.gov/places/000/marys-rock.htm"},
+  rapidanN:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/B0BC264F-FF13-8BCA-63DACE0FAE4FFACF.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Rapidan Camp, Hoover\u2019s retreat",src:"https://www.nps.gov/places/000/rapidan-camp.htm"},
+  whiteoak:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/1A45A3DB-B8E6-4908-0FC3C0120434219B.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Upper Whiteoak Falls",src:"https://www.nps.gov/places/upper-whiteoak-falls.htm"},
+  whiteoakLow:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/1DE112E5-FB67-D772-4C13EA2C2E837462.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Lower Whiteoak Falls",src:"https://www.nps.gov/places/lower-whiteoak-falls.htm"},
+  whiteoakFall:{u:"https://www.nps.gov/common/uploads/structured_data/17DBC477-0435-15B7-F8F09620D0A64247.jpg?maxWidth=1200&maxHeight=800&quality=90",by:"NPS / Brett Raeburn",cap:"Whiteoak Canyon in autumn",src:"https://www.nps.gov/shen/index.htm"},
+  blackrock:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/E1349E0A-00BA-32D4-60933BF88D862F37.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Blackrock Summit boulders",src:"https://www.nps.gov/places/000/blackrock-summit.htm"},
+  bearfence:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/ACEFF5CA-0555-9552-CBACC1852B86C4B3.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Bearfence Mountain in fall",src:"https://www.nps.gov/places/bearfence-rock-scramble.htm"},
+  overall:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/DACE1C4D-05FD-9980-5B104E7529904BCB.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Overall Run canyon",src:"https://www.nps.gov/places/overall-run-falls.htm"},
+  pinnacles:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/0CAF3657-98B2-AB08-E1EEA0F2A8B90E46.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Pinnacles Overlook",src:"https://www.nps.gov/places/000/pinnacles-overlook.htm"},
+  crescent:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/E42F4ECA-E7DE-EE4F-D98CF4E0C25692E7.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Crescent Rock Overlook",src:"https://www.nps.gov/places/000/crescent-rock-overlook.htm"},
+  hogback:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/42B09CEC-ED64-3AF4-B2E48725F06E372C.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Hogback Overlook",src:"https://www.nps.gov/places/000/hogback-overlook.htm"},
+  rangeView:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/0CD958D3-EEDC-8490-16BCF87F2BFD149E.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Range View Overlook",src:"https://www.nps.gov/places/000/range-view-overlook.htm"},
+  franklin:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/3E1B0DF9-C261-F998-B0339E3E4EA7C994.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Franklin Cliffs Overlook",src:"https://www.nps.gov/places/000/franklin-cliffs-overlook.htm"},
+  thePoint:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/3F6A8618-B8EE-21E2-F863094E6DBA3A84.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"The Point Overlook",src:"https://www.nps.gov/places/000/the-point-overlook.htm"},
+  hazeltop:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/414166F4-A407-BC84-14006DFE714A5D04.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"Hazeltop Ridge Overlook",src:"https://www.nps.gov/places/000/hazeltop-ridge-overlook.htm"},
+  sunrise:{u:"https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/thumbnails/image/Shenandoah%20NP%20Sunrise%20nps.jpg",by:"NPS via USGS",cap:"Sunrise over the valley",src:"https://www.usgs.gov/media/images/sunrise-shenandoah-national-park"},
+  rockyOvl:{u:"https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/thumbnails/image/Austin-Geology.jpg",by:"USGS / Samuel H. Austin",cap:"A rocky overlook",src:"https://www.usgs.gov/media/images/rocky-overlook-shenandoah-national-park"},
+  peaks:{u:"https://www.nps.gov/common/uploads/structured_data/187E49E6-C473-3B6C-32A5429B5516C17B.jpg?maxWidth=1200&maxHeight=800&quality=90",by:"NPS / Neal Lewis",cap:"Ridges fading into the distance",src:"https://www.nps.gov/shen/index.htm"},
+  bearRoad:{u:"https://www.nps.gov/common/uploads/structured_data/40B4BA96-B7A2-896A-156E0E0E85486CC1.jpg?maxWidth=1200&maxHeight=800&quality=90",by:"NPS / B. Raeburn",cap:"A black bear crossing Skyline Drive",src:"https://www.nps.gov/shen/index.htm"},
+  bearWet:{u:"https://www.nps.gov/shen/learn/nature/images/20170520_BlackBear__MG_9131_dm_2.jpg?maxwidth=1300&maxheight=1300&autorotate=false",by:"NPS",cap:"A black bear after the rain",src:"https://www.nps.gov/shen/learn/nature/mammals.htm"},
+  hepatica:{u:"https://www.nps.gov/shen/learn/nature/images/20160325_Hepatica_6F1A6173_br_1.jpg?maxwidth=1300&maxheight=1300&autorotate=false",by:"NPS",cap:"Hepatica, an early spring wildflower",src:"https://www.nps.gov/shen/learn/nature/wildflowers.htm"},
+  fallStraight:{u:"https://www.nps.gov/shen/planyourvisit/images/20231020_TunnelOvlk_Fall_NDL6953_nl_6000.jpg?maxwidth=1600&maxheight=1600&autorotate=false",by:"NPS",cap:"Skyline Drive in peak fall color",src:"https://www.nps.gov/shen/planyourvisit/driving-skyline-drive.htm"},
+  fallFalls:{u:"https://www.nps.gov/common/uploads/structured_data/3C80B867-1DD8-B71B-0B328321E4420769.jpg?maxWidth=1200&maxHeight=800&quality=90",by:"NPS / Neal Lewis",cap:"Skyline Drive passing a little waterfall",src:"https://www.nps.gov/shen/index.htm"},
+  fallPoplar:{u:"https://www.nps.gov/common/uploads/structured_data/3C80B989-1DD8-B71B-0B3A418BF2F78CF0.jpg?maxWidth=1200&maxHeight=800&quality=90",by:"NPS / Katy Cain",cap:"Golden poplars near mile 8",src:"https://www.nps.gov/shen/index.htm"},
+  fallTile:{u:"https://www.nps.gov/common/uploads/grid_builder/shen/crop16_9/168B7EFB-FCAF-AC9F-673FB15A71E122EE.jpg?width=1300&quality=80&mode=crop",by:"NPS",cap:"Skyline Drive in autumn",src:"https://www.nps.gov/shen/index.htm"},
+  stars:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/1D0E7AAD-9273-D3BE-B37A53DE4DC3A840.jpg?width=1300&quality=90&mode=crop",by:"NPS",cap:"The Milky Way over Big Meadows",src:"https://www.nps.gov/thingstodo/stargaze-in-shenandoah.htm"},
+  cccCamp:{u:"https://www.nps.gov/shen/images/20061130135045.jpg",by:"NPS Archives",cap:"CCC Camp NP-1 at Skyland in the 1930s",src:"https://www.nps.gov/articles/shenandoah-not-without-the-ccc.htm"},
+  ironMike:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/42EFC744-0EC1-4E23-12EF5940694A2861.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"\"Iron Mike,\" the CCC worker statue",src:"https://www.nps.gov/places/000/iron-mike-statue.htm"},
+  wayside30s:{u:"https://home.nps.gov/subjects/culturallandscapes/images/SHEN-Wayside-Big-Meadows-CLR.jpg?maxwidth=1300&maxheight=1300&autorotate=false",by:"NPS Archives",cap:"Big Meadows Wayside in the late 1930s",src:"https://home.nps.gov/articles/big-meadows-300117.htm"},
+  cabinFog:{u:"https://www.nps.gov/common/uploads/grid_builder/shen/crop16_9/E67C92BC-1DD8-B71B-0B9993BD60911A16.jpg?width=640&quality=80&mode=crop",by:"NPS",cap:"An old mountain cabin in the fog",src:"https://www.nps.gov/shen/index.htm"},
+  byrd:{u:"https://www.nps.gov/shen/planyourvisit/images/ByrdVisitorCenter_nl_002_1.jpg?maxwidth=1300&maxheight=1300&autorotate=false",by:"NPS",cap:"Byrd Visitor Center at Big Meadows",src:"https://www.nps.gov/shen/planyourvisit/visitorcenters.htm"},
+  frEntrance:{u:"https://www.nps.gov/common/uploads/cropped_image/primary/408C94AB-095F-0021-30C722BF60FFA78E.jpg?width=1600&quality=90&mode=crop",by:"NPS",cap:"The north entrance near Front Royal",src:"https://www.nps.gov/places/000/front-royal-entrance.htm"}
 };
-const credit=p=>`<a class="cr" href="${page(p.f)}" target="_blank" rel="noopener">&#128247; ${esc(p.by||"Wikimedia Commons")}</a>`;
-const photo=(p,w,extra="")=>`<div class="ph">${extra}<img loading="lazy" src="${img(p.f,w)}" alt="${esc(p.cap)}" onerror="this.remove()">${credit(p)}</div>`;
+const credit=p=>`<a class="cr" href="${page(p)}" target="_blank" rel="noopener">&#128247; ${esc(p.by||"Wikimedia Commons")}</a>`;
+/* A place with no free photo gets a drawn card in its category color instead of a borrowed picture. */
+const photo=(p,w,extra="",art)=>p?`<div class="ph">${extra}<img loading="lazy" src="${img(p,w)}" alt="${esc(p.cap)}" onerror="this.remove()">${credit(p)}</div>`
+  :`<div class="ph art" style="--x:${art?art.c:"#2ec4b6"}">${extra}<svg viewBox="0 0 160 100" preserveAspectRatio="none" aria-hidden="true"><path d="M0 70 L30 45 L55 62 L85 30 L115 58 L140 42 L160 55 L160 100 L0 100Z" fill="rgba(0,0,0,.18)"/><path d="M0 85 C40 72 80 92 120 80 S160 78 160 80 L160 100 L0 100Z" fill="rgba(0,0,0,.22)"/></svg><span class="em">${art?art.e:""}</span></div>`;
 
 const CAT={near:{c:"#ff9f43",e:"\u{1F3E1}",n:"Near the cabin"},view:{c:"#2ec4b6",e:"\u{1F304}",n:"Views"},hike:{c:"#6fc04a",e:"\u{1F97E}",n:"Hikes"},water:{c:"#5cc8ee",e:"\u{1F4A7}",n:"Water"},history:{c:"#ff7b6b",e:"\u{1F3DB}️",n:"History"},town:{c:"#b392f0",e:"\u{1F3D8}️",n:"Towns & food"},cave:{c:"#ffd23f",e:"\u{1F987}",n:"Underground"}};
 const PLACES=[
-  {id:"bryce",dr:5,n:"Bryce Resort",cat:"near",ll:[38.8165,-78.7700],p:"thorofare",mile:"Basye, right by the cabin",time:"As long as you like",lvl:"Easy",
+  {id:"bryce",dr:5,n:"Bryce Resort",cat:"near",ll:[38.8165,-78.7700],p:null,mile:"Basye, right by the cabin",time:"As long as you like",lvl:"Easy",
    d:"The resort next door: Lake Laura for paddling and swimming, mini golf, lift-served mountain biking in the warm months, and skiing and snow tubing in winter.",
    f:"Bryce is one of the few ski areas in the Shenandoah Valley, and it is small enough that you can see the whole hill from the lodge."},
-  {id:"orkney",dr:10,n:"Orkney Springs",cat:"near",ll:[38.7962,-78.8070],p:"homestead",mile:"10 min west of the cabin",time:"30 minutes",lvl:"Easy",
+  {id:"orkney",dr:10,n:"Orkney Springs",cat:"near",ll:[38.7962,-78.8070],p:null,mile:"10 min west of the cabin",time:"30 minutes",lvl:"Easy",
    d:"A tiny village built around a mineral-springs resort from the 1800s, with a huge old wooden hotel and summer concerts on the lawn.",
    f:"People once traveled here by stagecoach to 'take the waters' because the springs were thought to cure illness."},
-  {id:"chips",dr:20,n:"Route 11 Potato Chips",cat:"near",ll:[38.7520,-78.6460],p:"sp2020",mile:"Mount Jackson",time:"30 minutes",lvl:"Easy",
+  {id:"chips",dr:20,n:"Route 11 Potato Chips",cat:"near",ll:[38.7520,-78.6460],p:null,mile:"Mount Jackson",time:"30 minutes",lvl:"Easy",
    d:"A small chip factory where you can watch the chips being made through windows and taste strange flavors before you buy.",
    f:"Kettle chips are fried in small batches, which is why every bag tastes a little different."},
-  {id:"meems",dr:20,n:"Meems Bottom Covered Bridge",cat:"near",ll:[38.7114,-78.6537],p:"homestead",mile:"Just south of Mount Jackson",time:"20 minutes",lvl:"Easy",
+  {id:"meems",dr:20,n:"Meems Bottom Covered Bridge",cat:"near",ll:[38.7114,-78.6537],p:"meems",mile:"Just south of Mount Jackson",time:"20 minutes",lvl:"Easy",
    d:"The longest covered bridge in Virginia, still open to cars, crossing the North Fork of the Shenandoah. Great group photo spot.",
    f:"Vandals burned it in 1976 and the town rebuilt it using the original timbers that survived."},
-  {id:"scaverns",dr:25,n:"Shenandoah Caverns",cat:"near",ll:[38.6890,-78.6510],p:"wish",mile:"Quicksburg, off I-81",time:"About 1.5 hours",lvl:"Easy",
+  {id:"scaverns",dr:25,n:"Shenandoah Caverns",cat:"near",ll:[38.6890,-78.6510],p:null,mile:"Quicksburg, off I-81",time:"About 1.5 hours",lvl:"Easy",
    d:"A smaller, quieter cave than Luray, with 'bacon' rock formations and an elevator down. Tickets also cover a quirky parade-float and toy museum.",
    f:"It has the only cave elevator in Virginia."},
-  {id:"woodstock",dr:40,n:"Woodstock Tower",cat:"near",ll:[38.8860,-78.4640],p:"rockytop",mile:"Massanutten Mountain",time:"1 hour",lvl:"Easy",
+  {id:"woodstock",dr:40,n:"Woodstock Tower",cat:"near",ll:[38.8860,-78.4640],p:null,mile:"Massanutten Mountain",time:"1 hour",lvl:"Easy",
    d:"A short walk to a wooden lookout tower with a famous view of the Seven Bends, where the North Fork river loops back and forth below you.",
    f:"From the top you can count the river bends; most people get a different number."},
-  {id:"skyline",dr:70,n:"Skyline Drive",cat:"view",ll:[38.6610,-78.3203],p:"hogwallow",mile:"Mile 0 to 105",time:"Half a day or more",lvl:"Easy",
+  {id:"skyline",dr:70,n:"Skyline Drive",cat:"view",ll:[38.6610,-78.3203],p:"fallStraight",mile:"Mile 0 to 105",time:"Half a day or more",lvl:"Easy",
    d:"The 105-mile road along the top of the Blue Ridge, with about 70 overlooks. Drive slow (the limit is 35 mph), stop often, and watch for bears and deer on the shoulder.",
    f:"Concrete mile markers count from 0 at Front Royal to 105 at Rockfish Gap. Every place in the park is described by its mile."},
-  {id:"marys",dr:70,n:"Mary's Rock Tunnel",cat:"view",ll:[38.6488,-78.3229],p:"sd2005",mile:"Mile 32.2",time:"A quick stop",lvl:"Easy",
+  {id:"marys",dr:70,n:"Mary's Rock Tunnel",cat:"view",ll:[38.6488,-78.3229],p:"marysTunnel",mile:"Mile 32.2",time:"A quick stop",lvl:"Easy",
    d:"The only tunnel on Skyline Drive, blasted through solid granite in 1932. Honk-free zone, but you can still cheer.",
    f:"The tunnel is about 600 feet long and only 12 feet 8 inches tall, so big RVs have to check their height."},
-  {id:"stony",dr:85,n:"Stony Man Summit",cat:"hike",ll:[38.5937,-78.3757],p:"thorofare",mile:"Mile 41.7 (Skyland)",time:"About 1 hour",lvl:"Easy",
+  {id:"stony",dr:85,n:"Stony Man Summit",cat:"hike",ll:[38.5937,-78.3757],p:"stonyMan",mile:"Mile 41.7 (Skyland)",time:"About 1 hour",lvl:"Easy",
    d:"An easy 1.6-mile loop to the second-highest peak in the park. Huge payoff for very little effort, and great for sunset.",
    f:"From the valley, the cliffs look like the face of a bearded man lying down, which is how it got its name."},
-  {id:"hawksbill",dr:90,n:"Hawksbill Summit",cat:"hike",ll:[38.5550,-78.3950],p:"rockytop",mile:"Mile 45.6",time:"1 to 2 hours",lvl:"Moderate",
+  {id:"hawksbill",dr:90,n:"Hawksbill Summit",cat:"hike",ll:[38.5550,-78.3950],p:"hawksbill",mile:"Mile 45.6",time:"1 to 2 hours",lvl:"Moderate",
    d:"The highest point in Shenandoah National Park at 4,051 feet, with a stone observation platform and 360-degree views.",
    f:"Peregrine falcons were brought back to nest on Hawksbill's cliffs after they disappeared from the area."},
-  {id:"dark",dr:95,n:"Dark Hollow Falls",cat:"water",ll:[38.5196,-78.4291],p:"dark",mile:"Mile 50.7",time:"About 1.5 hours",lvl:"Moderate",
+  {id:"dark",dr:95,n:"Dark Hollow Falls",cat:"water",ll:[38.5196,-78.4291],p:"darkN",mile:"Mile 50.7",time:"About 1.5 hours",lvl:"Moderate",
    d:"A 70-foot waterfall at the end of a 1.4-mile round trip. It is all downhill on the way in, so save some energy for the climb back.",
    f:"Thomas Jefferson is said to have visited these falls. It is the closest waterfall to Skyline Drive."},
-  {id:"rose",dr:90,n:"Rose River Falls",cat:"water",ll:[38.5266,-78.4170],p:"rose",mile:"Mile 49.4 (Fishers Gap)",time:"2 to 3 hours",lvl:"Moderate",
+  {id:"rose",dr:90,n:"Rose River Falls",cat:"water",ll:[38.5266,-78.4170],p:"roseN",mile:"Mile 49.4 (Fishers Gap)",time:"2 to 3 hours",lvl:"Moderate",
    d:"A quieter loop through the woods past several cascades. Combine it with Dark Hollow Falls for a full waterfall day.",
    f:"The loop follows the Rose River, which flows east out of the park toward the Rapidan."},
-  {id:"meadows",dr:95,n:"Big Meadows",cat:"view",ll:[38.5241,-78.4396],p:"meadows",mile:"Mile 51",time:"1 to 3 hours",lvl:"Easy",
+  {id:"meadows",dr:95,n:"Big Meadows",cat:"view",ll:[38.5241,-78.4396],p:"meadowsSunset",mile:"Mile 51",time:"1 to 3 hours",lvl:"Easy",
    d:"A wide open meadow where deer graze at dusk. There is a lodge, the Byrd Visitor Center, a wayside for blackberry ice cream, and amazing stargazing.",
    f:"President Franklin Roosevelt dedicated the park here on July 3, 1936."},
-  {id:"rag",dr:110,n:"Old Rag Mountain",cat:"hike",ll:[38.5512,-78.3157],p:"rag",mile:"Outside the drive (east side)",time:"7 to 8 hours",lvl:"Hard",
+  {id:"rag",dr:110,n:"Old Rag Mountain",cat:"hike",ll:[38.5512,-78.3157],p:"ragN",mile:"Outside the drive (east side)",time:"7 to 8 hours",lvl:"Hard",
    d:"The most famous hike in the park: a 9-mile loop with a wild rock scramble near the top. Needs a day-use ticket on recreation.gov from March to November.",
    f:"Old Rag's granite is over a billion years old, some of the oldest rock in the region."},
+  {id:"whiteoak",dr:85,n:"Whiteoak Canyon",cat:"water",ll:[38.5788,-78.3870],p:"whiteoak",mile:"Mile 42.6",time:"3 to 4 hours",lvl:"Hard",
+   d:"A canyon with six waterfalls. The upper falls drop 86 feet. Going down is easy, but the climb back up is long and steep, so bring water and snacks.",
+   f:"The canyon is named for the huge old white oak trees that once grew along the stream."},
+  {id:"overall",dr:90,n:"Overall Run Falls",cat:"water",ll:[38.7685,-78.3080],p:"overall",mile:"Mile 21.1 (Matthews Arm)",time:"3 to 4 hours",lvl:"Moderate",
+   d:"The tallest waterfall in the park, with a rock ledge looking down the whole canyon to the valley. Best after rain; in a dry summer it can trickle.",
+   f:"At 93 feet, Overall Run Falls is taller than any other waterfall in Shenandoah."},
+  {id:"bearfence",dr:100,n:"Bearfence Mountain",cat:"hike",ll:[38.4527,-78.4670],p:"bearfence",mile:"Mile 56.4",time:"About 1 hour",lvl:"Moderate",
+   d:"A short loop with a real rock scramble on top and a 360-degree view. It feels like a mini Old Rag in about an hour.",
+   f:"It is one of the few spots in the park where you can see in every direction at once."},
+  {id:"blackrock",dr:120,n:"Blackrock Summit",cat:"hike",ll:[38.2210,-78.7360],p:"blackrock",mile:"Mile 84.4",time:"About 1 hour",lvl:"Easy",
+   d:"An easy 1-mile loop to a giant pile of dark boulders with huge views west. One of the best sunset spots in the south of the park.",
+   f:"The jumbled boulders are called talus: rock that broke off the cliffs over thousands of years of freezing and thawing."},
   {id:"luray",dr:55,n:"Luray Caverns",cat:"cave",ll:[38.6643,-78.4836],p:"luray",mile:"Luray, 15 min from Thornton Gap",time:"About 1.5 hours",lvl:"Easy",
    d:"The largest cave system in the eastern US. A paved walking tour takes you past giant stalactites, Dream Lake and the Great Stalacpipe Organ.",
    f:"The cave stays about 54°F all year, so bring a light jacket even in summer."},
   {id:"dickey",dr:75,n:"Dickey Ridge Visitor Center",cat:"history",ll:[38.8707,-78.2034],p:"gimlet",mile:"Mile 4.6",time:"30 minutes",lvl:"Easy",
    d:"The first stop from the north entrance. Get maps, ask rangers about bear sightings, and pick up Junior Ranger booklets.",
    f:"The building started life in 1938 as a dining hall for travelers on the new road."},
-  {id:"rapidan",dr:110,n:"Rapidan Camp",cat:"history",ll:[38.4800,-78.4180],p:"homestead",mile:"Mile 52.8 (Mill Prong trail)",time:"3 to 4 hours",lvl:"Moderate",
+  {id:"rapidan",dr:110,n:"Rapidan Camp",cat:"history",ll:[38.4800,-78.4180],p:"rapidanN",mile:"Mile 52.8 (Mill Prong trail)",time:"3 to 4 hours",lvl:"Moderate",
    d:"President Herbert Hoover's summer fishing retreat, the first presidential 'Camp David'. A 4-mile hike, or a ranger-led van tour from Byrd Visitor Center.",
    f:"Hoover paid for the land himself and later gave the camp to the park."},
-  {id:"newmarket",dr:30,n:"New Market Battlefield",cat:"history",ll:[38.6633,-78.6618],p:"jackson",mile:"New Market, 35 min west of Luray",time:"1 to 2 hours",lvl:"Easy",
+  {id:"newmarket",dr:30,n:"New Market Battlefield",cat:"history",ll:[38.6633,-78.6618],p:"bushong",mile:"New Market, 35 min west of Luray",time:"1 to 2 hours",lvl:"Easy",
    d:"Walk the Field of Lost Shoes where 257 young cadets from the Virginia Military Institute charged in 1864. There is a museum and an old farmhouse.",
    f:"The mud was so deep that it pulled the shoes off the cadets' feet, which is how the field got its nickname."},
-  {id:"river",dr:55,n:"Shenandoah River",cat:"water",ll:[38.7000,-78.5000],p:"sp2020",mile:"Front Royal and Luray outfitters",time:"Half a day",lvl:"Easy",
+  {id:"river",dr:55,n:"Shenandoah River",cat:"water",ll:[38.7000,-78.5000],p:"riverFR",mile:"Front Royal and Luray outfitters",time:"Half a day",lvl:"Easy",
    d:"Rent tubes, canoes or kayaks and float the South Fork. Most outfitters drive you upstream and you float back to the car.",
    f:"The Shenandoah is one of the few big rivers in the US that flows north."},
-  {id:"frontroyal",dr:65,n:"Front Royal",cat:"town",ll:[38.9182,-78.1944],p:"banner",mile:"North entrance, Mile 0",time:"As long as you like",lvl:"Easy",
+  {id:"frontroyal",dr:65,n:"Front Royal",cat:"town",ll:[38.9182,-78.1944],p:"frGazebo",mile:"North entrance, Mile 0",time:"As long as you like",lvl:"Easy",
    d:"Small town at the start of Skyline Drive with diners, breweries and outfitters. Good place to fill the gas tank, since there are few stations in the park.",
    f:"The only gas inside the park is at Big Meadows Wayside."},
-  {id:"lurayTown",dr:50,n:"Luray",cat:"town",ll:[38.6654,-78.4597],p:"wish",mile:"Off US 211, west of Thornton Gap",time:"As long as you like",lvl:"Easy",
+  {id:"lurayTown",dr:50,n:"Luray",cat:"town",ll:[38.6654,-78.4597],p:"singing",mile:"Off US 211, west of Thornton Gap",time:"As long as you like",lvl:"Easy",
    d:"Home of the caverns, a cute Main Street, the Luray Singing Tower bells, and an easy town walk along Hawksbill Creek.",
    f:"The Singing Tower has 47 bells, and free carillon concerts in summer."}
 ];
@@ -283,7 +360,15 @@ const cabinCard=()=>`<article class="card" style="margin-bottom:16px"><div class
 const fmtDr=m=>m<60?m+" min":Math.floor(m/60)+" h"+(m%60?" "+m%60+" min":"");
 
 /* Skyline Drive photo gallery */
-const GALLERY=["hogwallow","sandy","hensley","rockytop","gimlet","sd2005","banner","ragFromSD","thorofare"];
+const GALLERY_GROUPS=[
+  ["Overlooks along the drive",["hogwallow","rangeView","pinnacles","franklin","crescent","hogback","thePoint","hazeltop","sandy","hensley","rockytop","hazel","thorofare","ragFromSD"]],
+  ["Fall colors",["fallTile","fallFalls","fallPoplar","banner","whiteoakFall","sd2005"]],
+  ["Sunrise, sunset and stars",["sunrise","blackrockSunset","stars","peaks","rockyOvl"]],
+  ["Summits and waterfalls",["hawksbillUpper","marysSummit","stonyHiker","whiteoakLow","meadowsView"]],
+  ["Wildlife and wildflowers",["bearRoad","bearWet","deer","bear","ladyslipper","hepatica"]],
+  ["Every season",["winter","marysTunnelC","wish"]]
+];
+const GALLERY=GALLERY_GROUPS.flatMap(g=>g[1]);
 
 const HISTORY=[
   {y:"Thousands of years ago",t:"The first people",c:"#2ec4b6",d:"Native Americans hunted, gathered and camped in these mountains for at least 9,000 years. Later the Monacan and Manahoac peoples lived east of the Blue Ridge, and Shawnee bands moved through the Valley. Nobody knows for sure where the name Shenandoah comes from; a favorite legend says it means 'Daughter of the Stars.'"},
@@ -295,10 +380,10 @@ const HISTORY=[
   {y:"August 13, 1878",t:"Luray Caverns discovered",c:"#ffd23f",d:"Local tinsmith Andrew Campbell, his brother William, his nephew Quint and photographer Benton Stebbins felt cool air blowing out of a sinkhole. They dug in, slid down a rope by candlelight, and found one of the most spectacular caves in the world.",p:"lurayEntrance"},
   {y:"1890s",t:"Skyland resort",c:"#ffd23f",d:"George Freeman Pollock opened a mountain camp near Stony Man that became the Skyland resort. City visitors came up for fresh air, dances and costume parties. His love of the mountains helped push for a national park."},
   {y:"1929 to 1933",t:"A president's fishing camp",c:"#b392f0",d:"President Herbert Hoover built Rapidan Camp on a trout stream as a weekend escape from Washington. British prime minister Ramsay MacDonald visited him there in 1929."},
-  {y:"1931 to 1939",t:"Building Skyline Drive",c:"#b392f0",d:"Workers carved a road along the crest of the Blue Ridge, blasted Mary's Rock Tunnel, and built the overlooks and stone walls. The first section opened in 1934 and the full 105 miles were finished in 1939.",p:"sd2005"},
-  {y:"1933 to 1942",t:"The Civilian Conservation Corps",c:"#b392f0",d:"During the Great Depression, thousands of young men in the CCC lived in camps in the park. They planted trees, built trails, picnic areas and the rock walls you still see along the drive, and sent most of their pay home to their families."},
-  {y:"1930s",t:"The families who had to leave",c:"#ff7b6b",d:"Around 500 families lived on the land that became the park. Most were moved out, some against their will, to resettlement homes in the valleys. You can still find old stone walls, chimneys and family cemeteries along the trails. Please leave them as you find them."},
-  {y:"July 3, 1936",t:"The park is dedicated",c:"#6fc04a",d:"President Franklin D. Roosevelt dedicated Shenandoah National Park in front of a big crowd at Big Meadows.",p:"meadows"},
+  {y:"1931 to 1939",t:"Building Skyline Drive",c:"#b392f0",d:"Workers carved a road along the crest of the Blue Ridge, blasted Mary's Rock Tunnel, and built the overlooks and stone walls. The first section opened in 1934 and the full 105 miles were finished in 1939.",p:"wayside30s"},
+  {y:"1933 to 1942",t:"The Civilian Conservation Corps",c:"#b392f0",d:"During the Great Depression, thousands of young men in the CCC lived in camps in the park. They planted trees, built trails, picnic areas and the rock walls you still see along the drive, and sent most of their pay home to their families.",p:"cccCamp"},
+  {y:"1930s",t:"The families who had to leave",c:"#ff7b6b",d:"Around 500 families lived on the land that became the park. Most were moved out, some against their will, to resettlement homes in the valleys. You can still find old stone walls, chimneys and family cemeteries along the trails. Please leave them as you find them.",p:"cabinFog"},
+  {y:"July 3, 1936",t:"The park is dedicated",c:"#6fc04a",d:"President Franklin D. Roosevelt dedicated Shenandoah National Park in front of a big crowd at Big Meadows.",p:"meadowsN"},
   {y:"1976",t:"Wilderness",c:"#6fc04a",d:"About 40 percent of the park was named official wilderness, where nature is left alone. Forests that were farms in 1930 have grown back so well that it is hard to believe they were ever cleared."},
   {y:"2008",t:"A national landmark",c:"#6fc04a",d:"The Skyline Drive Historic District, with its overlooks, stone walls and buildings, became a National Historic Landmark."}
 ];
@@ -324,6 +409,57 @@ const VIDEOS=[
     {id:"yJMLp8vnblY",t:"VMI cadets at New Market",s:"Battlefield history"}]}
 ];
 
+/* Places to eat near the cabin and on the drive. Ratings and review summaries were gathered in October 2026
+   from Google (via Wanderlog/Restaurantji), Tripadvisor and OpenTable; u = where they came from. Hours change, so the page says to check. */
+const MEALS={bfast:{n:"Breakfast & brunch",e:"\u{1F95E}",c:"#ffd23f"},dinner:{n:"Dinner",e:"\u{1F37D}️",c:"#ff7b6b"},lunch:{n:"Lunch & treats",e:"\u{1F354}",c:"#6fc04a"},park:{n:"Inside the park",e:"\u{1F332}",c:"#2ec4b6"}};
+const EATS=[
+  {n:"Woodstock Cafe",t:"Woodstock",dr:30,m:"bfast",pr:"$-$$",r:"4.7 Google (~1,150) · 4.6 Tripadvisor",h:"Breakfast & lunch, about 8am-3pm Mon-Sat, closed Sun",
+   s:"People love the creative, fresh, made-from-scratch food and friendly service in a rustic room with a wine shop. Only complaint: it gets crowded at peak times.",a:"117 S Main St, Woodstock, VA 22664",u:"https://wanderlog.com/place/details/1913949/woodstock-cafe"},
+  {n:"Woodstock Garden Cafe",t:"Woodstock",dr:30,m:"bfast",pr:"$$",r:"4.8 Google (251) · 4.6 Tripadvisor",h:"Tue-Sat 8am-2pm, closed Sun-Mon",
+   s:"Eat inside a greenhouse at a garden center. People praise the fresh food and veggie options; hours are short and the greenhouse runs warm in summer.",a:"1175 Hisey Ave, Woodstock, VA 22664",u:"https://wanderlog.com/place/details/2826338"},
+  {n:"Southern Kitchen",t:"New Market",dr:30,m:"bfast",grp:1,pr:"$$",r:"4.4 Google (3,457) · 4.2 Tripadvisor",h:"Daily 7am-9pm",
+   s:"A classic 1955 diner famous for fried chicken, country ham and homemade pies at good prices. Sides can be hit or miss and service slow when busy. Easy for a big group.",a:"9576 S Congress St, New Market, VA 22844",u:"https://www.tripadvisor.com/--d512347.html"},
+  {n:"Broad Porch Coffee & Cafe",t:"Luray",dr:50,m:"bfast",pr:"$",r:"4.8 Google (738) · 5.0 Tripadvisor",h:"Daily 7am-3pm",
+   s:"Creative coffee drinks, well-made breakfasts and very friendly staff. A great stop on the way to Skyline Drive. Expect a short wait.",a:"20 W Main St, Luray, VA 22835",u:"https://wanderlog.com/place/details/1929293/broad-porch-coffee-and-cafe"},
+  {n:"Gathering Grounds Patisserie",t:"Luray",dr:50,m:"bfast",pr:"$",r:"4.5 Google (1,221)",h:"Check hours before going",
+   s:"Popular downtown bakery for pastries, pies, sandwiches and local coffee, with a patio.",a:"24 E Main St, Luray, VA 22835",u:"https://wanderlog.com/list/geoCategory/11003/"},
+  {n:"Flour & Water Co.",t:"Woodstock",dr:30,m:"bfast",pr:"$",r:"4.8 Google (243)",h:"Wed-Sat about 8am-3pm, closed Sun-Tue",
+   s:"French-style bakery: fans rave about the croissants, focaccia sandwiches and seasonal lattes. Seating is tight when busy. May now be called Flour to Fork.",a:"124 S Main St, Woodstock, VA 22664",u:"https://wanderlog.com/place/details/1142025"},
+  {n:"Jackson's Corner Coffee",t:"New Market",dr:30,m:"bfast",pr:"$",r:"4.7 Google (435)",h:"Check hours before going",
+   s:"Cozy, friendly cafe roasting its own coffee; good for a quick coffee and light bite.",a:"9386 S Congress St, New Market, VA 22844",u:"https://wanderlog.com/list/geoCategory/204211"},
+  {n:"Copper Kettle at Bryce Resort",t:"Basye",dr:5,m:"dinner",grp:1,pr:"$$",r:"4.4 OpenTable (372) · 3.6 Tripadvisor",h:"Wed-Fri 4-9pm, Sat 11am-10pm, Sun 11am-9pm. Reservations required",
+   s:"The closest real dinner to the cabin, with views of the slopes. Diners like the salmon, burgers and ribeye and the attentive servers; it can be loud and slow when full.",a:"1982 Fairway Dr, Basye, VA 22810",u:"https://www.opentable.com/r/copper-kettle-at-bryce-resort-mount-jackson"},
+  {n:"RHouse Wine & Cafe",t:"Basye",dr:5,m:"dinner",pr:"$$-$$$",r:"4.5 Tripadvisor (10)",h:"Thu-Sat 5-8pm only. Book ahead",
+   s:"Tiny, cozy spot loved for homemade lasagna, short ribs and key lime cheesecake. Some find it pricey, and it is too small for the whole group unless you book early.",a:"1518 Orkney Grade, Basye, VA 22810",u:"https://www.tripadvisor.com/Restaurant_Review-g57489-d18543512-Reviews-RHouse_wine_cafe-Basye_Virginia.html"},
+  {n:"Sal's Italian Bistro",t:"Edinburg",dr:25,m:"dinner",grp:1,pr:"$-$$",r:"4.6 Google (579) · 4.4 Tripadvisor",h:"Wed-Thu & Sun 4-8pm, Fri-Sat 4-9pm, closed Mon-Tue",
+   s:"Cozy and friendly with big portions of pasta, cannelloni, pizza and fried shrimp at great prices. Call ahead on busy nights.",a:"125 S Main St, Edinburg, VA 22824",u:"https://wanderlog.com/place/details/2826351/sals-italian-bistro"},
+  {n:"Edinburg Mill Restaurant",t:"Edinburg",dr:25,m:"dinner",grp:1,pr:"$$",r:"4.4 Google (437) · 4.3 Tripadvisor",h:"Wed-Sun 11am-2pm & 4-8pm, closed Mon-Tue",
+   s:"Dinner inside a historic mill. Reviewers like the crab cakes, seafood platter and steaks and the professional staff. Closes at 8, so go early.",a:"214 S Main St, Edinburg, VA 22824",u:"https://wanderlog.com/place/details/514095"},
+  {n:"Woodstock Brewhouse",t:"Woodstock",dr:30,m:"dinner",grp:1,pr:"$",r:"4.5 Restaurantji (324)",h:"Most days lunch and dinner; Tue-Wed from 4pm",
+   s:"A brewpub in an old church with a beer garden. Fans love the Reuben tots, burgers and fish tacos; it gets loud and crowded.",a:"123 E Court St, Woodstock, VA 22664",u:"https://www.restaurantji.com/va/woodstock/woodstock-brew-house-/"},
+  {n:"The Chop House Bistro",t:"Luray",dr:50,m:"dinner",pr:"$$",r:"4.9 OpenTable (418) · 4.7 Google",h:"Mon-Sat 11am-3pm & 4-8:30pm, closed Sun. Reserve",
+   s:"Upscale but relaxed, praised for steaks, inventive cocktails and standout service. The best-rated dinner in Luray; a few say it's loud.",a:"132 E Main St, Luray, VA 22835",u:"https://www.opentable.com/r/the-chop-house-bistro-luray"},
+  {n:"The Speakeasy at the Mimslyn Inn",t:"Luray",dr:50,m:"dinner",pr:"$$",r:"4.4 Google (585)",h:"Check hours before going",
+   s:"Comfort food and cocktails in a grand historic inn; reviewers like the food, drinks and atmosphere.",a:"401 W Main St, Luray, VA 22835",u:"https://www.restaurantji.com/va/stanley/american/"},
+  {n:"Il Vesuvio",t:"Luray",dr:50,m:"dinner",grp:1,pr:"$",r:"4.3 Google (1,706)",h:"Check hours before going",
+   s:"Casual family-style Italian with scratch pasta, New York-style pizza and garlic knots. Often busy.",a:"402 W Main St, Luray, VA 22835",u:"https://yurtofun.com/things-to-do/restaurants"},
+  {n:"Bryce Landing Grill",t:"Basye",dr:5,m:"lunch",pr:"$",r:"No rating found",h:"Daily 8am-6pm",
+   s:"Sandwiches and burgers by the Bryce golf shop, right next to the cabin.",a:"Bryce Resort, 1982 Fairway Dr, Basye, VA 22810",u:"https://bryceresort.com/food-and-lodging/dining"},
+  {n:"Mount Heritage Bar & Grill",t:"Mount Jackson",dr:20,m:"lunch",pr:"$",r:"4.9 Restaurantji (132)",h:"Check hours before going",
+   s:"People rave about the gyros and the chicken and lamb platters over rice with homemade sauce, plus friendly service.",a:"6141 Main St, Mount Jackson, VA 22842",u:"https://www.restaurantji.com/va/mount-jackson/american/"},
+  {n:"Bean's Barbeque",t:"Edinburg",dr:25,m:"lunch",pr:"$",r:"4.8 Google (411) · 4.6 Tripadvisor",h:"Wed 10am-2pm, Thu-Fri 11am-6pm, Sat 11am-5pm",
+   s:"Big portions of brisket and pulled pork with homemade sauces in an old firehouse. Cash only, little seating, and it sells out, so call ahead for a group order.",a:"117 S Main St, Edinburg, VA 22824",u:"https://wanderlog.com/place/details/512904"},
+  {n:"Triple Crown BBQ",t:"Luray",dr:50,m:"lunch",pr:"$",r:"4.8 Google (998) · 4.5 Tripadvisor",h:"Weekends only (Fri-Sun), mid-April to Thanksgiving",
+   s:"Top-rated Carolina-style pulled pork, ribs and chicken with well-liked sides. Only open on weekends.",a:"1079 US-211, Luray, VA 22835",u:"https://triplecrownbbq.com/menu"},
+  {n:"Flotzies Soft Serve",t:"Luray",dr:50,m:"lunch",pr:"$",r:"4.7 Google (435) · 4.5 Tripadvisor",h:"Daily from noon, seasonal",
+   s:"Tons of soft-serve flavors and toppings (vegan too), big portions, and games for kids. A fun stop after Luray Caverns.",a:"1034 US-211, Luray, VA 22835",u:"https://wanderlog.com/place/details/1171971/flotzies-soft-serve"},
+  {n:"Spottswood Dining Room",t:"Big Meadows (mile 51)",dr:95,m:"park",grp:1,pr:"$$",r:"4.2 Evendo (40)",h:"7:30-10am, noon-2:30pm, 5-9pm. Season ends Nov 29. No reservations",
+   s:"Comfort food with big windows over the valley, and the famous blackberry ice cream Mile High pie. First come, first served, so arrive early with a group.",a:"Big Meadows Lodge, Skyline Drive mile 51.2, VA",u:"https://www.goshenandoah.com/dining/big-meadows-lodge"},
+  {n:"Pollock Dining Room",t:"Skyland (mile 42)",dr:85,m:"park",grp:1,pr:"$$",r:"4.1 Google (543)",h:"7:30-10am, noon-2:30pm, 5-9pm. Season ends Nov 8. No reservations",
+   s:"Valley views and the blackberry ice cream pie get the praise, and service is usually quick; the main dishes are only so-so.",a:"Skyland, Skyline Drive mile 41.7, VA",u:"https://goshenandoah.com/dining/skyland"},
+  {n:"Big Meadows Wayside",t:"Big Meadows (mile 51)",dr:95,m:"park",pr:"$",r:"4.2 Google (323)",h:"About 9am-8pm",
+   s:"Handy after a hike for fried chicken, burgers and blackberry ice cream. Service can be slow and food sometimes lukewarm.",a:"Big Meadows Wayside, Skyline Drive mile 51.2, VA",u:"https://wanderlog.com/place/details/1091352/big-meadows-wayside"}
+];
 const FACTS=[
   {b:"~1 h",t:"from the cabin to Skyline Drive at Thornton Gap (via New Market and Luray)",c:"#ff9f43"},
   {b:"105",t:"miles of Skyline Drive, from Front Royal to Rockfish Gap",c:"#2ec4b6"},
@@ -393,15 +529,15 @@ const dirs=ll=>`https://www.google.com/maps/dir/?api=1&destination=${ll[0]},${ll
 
 /* ---------- hero slideshow ---------- */
 (function(){
-  const h=$("#hero"),keys=["hogwallow","sandy","rockytop","gimlet","hensley"];let i=0;
+  const h=$("#hero"),keys=["fallTile","hogwallow","sunrise","rangeView","blackrockSunset","franklin"];let i=0;
   const im=document.createElement("img"),cr=document.createElement("a");cr.className="cr";cr.target="_blank";cr.rel="noopener";
   im.alt="Skyline Drive";im.onerror=()=>{im.style.opacity=0};h.prepend(im);h.appendChild(cr);
-  const show=()=>{const p=P[keys[i%keys.length]];im.style.opacity=0;setTimeout(()=>{im.src=img(p.f,1400);cr.href=page(p.f);cr.innerHTML="&#128247; "+esc(p.by||"Wikimedia Commons")},350);im.onload=()=>{im.style.opacity=1}};
+  const show=()=>{const p=P[keys[i%keys.length]];im.style.opacity=0;setTimeout(()=>{im.src=img(p,1400);cr.href=page(p);cr.innerHTML="&#128247; "+esc(p.by||"Wikimedia Commons")},350);im.onload=()=>{im.style.opacity=1}};
   show();setInterval(()=>{i++;show()},7000);
 })();
 
 /* ---------- tabs ---------- */
-const TABS=[["places","\u{1F4CD} Places","#2ec4b6"],["map","\u{1F5FA}️ Map","#5cc8ee"],["skyline","\u{1F304} Skyline Drive","#ffd23f"],["history","\u{1F4DC} History","#ff7b6b"],["quiz","\u{1F3C6} Quiz","#b392f0"],["bingo","\u{1F3B2} Bingo","#6fc04a"],["videos","▶️ Videos","#ff7b6b"]];
+const TABS=[["places","\u{1F4CD} Places","#2ec4b6"],["map","\u{1F5FA}️ Map","#5cc8ee"],["skyline","\u{1F4F8} Photos","#ffd23f"],["history","\u{1F4DC} History","#ff7b6b"],["quiz","\u{1F3C6} Quiz","#b392f0"],["eat","\u{1F37D}\uFE0F Eat","#ff9f43"],["bingo","\u{1F3B2} Bingo","#6fc04a"],["videos","▶️ Videos","#ff7b6b"]];
 let tab=store.get("tab","places");if(!TABS.some(t=>t[0]===tab))tab="places";
 function drawTabs(){$("#tabs").innerHTML=TABS.map(([k,l,c])=>`<button data-k="${k}" class="${k===tab?"on":""}" style="--x:${c}">${l}</button>`).join("");
   $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>go(b.dataset.k))}
@@ -410,7 +546,7 @@ function go(k){tab=k;store.set("tab",k);drawTabs();stopTimer();VIEWS[k]();const 
 /* ---------- places ---------- */
 let placeFilter="all",placeSort=store.get("sort","near");
 function placeCard(pl){const c=CAT[pl.cat],p=P[pl.p];
-  return `<article class="card" id="pl-${pl.id}">${photo(p,700,`<span class="tag" style="--x:${c.c}">${c.e} ${c.n}</span>`)}
+  return `<article class="card" id="pl-${pl.id}">${photo(p,700,`<span class="tag" style="--x:${c.c}">${c.e} ${c.n}</span>`,c)}
   <div class="b"><h3>${esc(pl.n)}</h3>
   <div class="meta"><span class="dr">\u{1F697} ${fmtDr(pl.dr)} from the cabin</span><span>${esc(pl.mile)}</span><span>⏱ ${esc(pl.time)}</span><span>${pl.lvl==="Hard"?"\u{1F525}":pl.lvl==="Moderate"?"\u{1F4AA}":"\u{1F642}"} ${esc(pl.lvl)}</span></div>
   <p>${esc(pl.d)}</p><p class="fact">\u{1F4A1} ${esc(pl.f)}</p>
@@ -446,17 +582,18 @@ function drawParkMap(){
 }
 VIEWS.map=()=>{
   $("#view").innerHTML=`<h2>Map</h2><p class="sub">\u{1F3E1} is the cabin in Basye. Skyline Drive runs along the ridge on the east side, with Luray in between.</p>
-  <div class="legend" style="margin-bottom:10px">${Object.values(CAT).map(c=>`<span style="--x:${c.c}"><b></b>${c.n}</span>`).join("")}</div><div id="map"></div>
+  <div class="legend" style="margin-bottom:10px">${Object.values(CAT).map(c=>`<span style="--x:${c.c}"><b></b>${c.n}</span>`).join("")}</div><div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn" id="toCabin" style="background:#e63946;color:#fff">\u{1F3E1} Show our cabin</button></div><div id="map"></div>
   <div id="parkmap"></div>`;
   drawParkMap();
   if(!window.L){$("#map").innerHTML=`<p style="padding:20px;color:var(--mut)">The map could not load here. Each place card has a Directions button that opens your maps app.</p>`;return}
   const m=L.map("map",{scrollWheelZoom:false}).setView([38.70,-78.55],9);
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
   const marks={};
-  L.marker(cabinLL(),{icon:L.divIcon({className:"",html:`<div class="pin" style="--x:#fff"><i>\u{1F3E1}</i></div>`,iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-28]}),zIndexOffset:1000}).addTo(m).bindPopup(`<b>${esc(CABIN.n)}</b><br><span style="color:#9aa3b3">Home base for the trip</span><br><a href="${cabinDirs()}" target="_blank" rel="noopener">\u{1F697} Directions to the cabin</a>`);
+  const cabinMark=L.marker(cabinLL(),{icon:L.divIcon({className:"",html:`<div class="home"><b>\u{1F3E1}</b><span>OUR CABIN</span></div>`,iconSize:[64,78],iconAnchor:[32,39],popupAnchor:[0,-36]}),zIndexOffset:10000}).addTo(m).bindPopup(`<b>${esc(CABIN.n)}</b><br><span style="color:#9aa3b3">Home base for the trip</span><br><a href="${cabinDirs()}" target="_blank" rel="noopener">\u{1F697} Directions to the cabin</a>`);
+  $("#toCabin").onclick=()=>{m.setView(cabinLL(),12);cabinMark.openPopup()};
   PLACES.forEach(pl=>{const c=CAT[pl.cat],p=P[pl.p];
     const ic=L.divIcon({className:"",html:`<div class="pin" style="--x:${c.c}"><i>${c.e}</i></div>`,iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-28]});
-    marks[pl.id]=L.marker(pl.ll,{icon:ic}).addTo(m).bindPopup(`<img src="${img(p.f,400)}" alt="" style="width:100%;border-radius:10px;margin-bottom:6px" onerror="this.remove()"><b>${esc(pl.n)}</b><br><span style="color:#9aa3b3">\u{1F697} ${fmtDr(pl.dr)} from the cabin · ${esc(pl.time)}</span><br><a href="${dirs(pl.ll)}" target="_blank" rel="noopener">Directions</a> · <a href="#" data-card="${pl.id}">Read more</a>`,{maxWidth:240});
+    marks[pl.id]=L.marker(pl.ll,{icon:ic}).addTo(m).bindPopup(`${p?`<img src="${img(p,400)}" alt="" style="width:100%;border-radius:10px;margin-bottom:6px" onerror="this.remove()">`:""}<b>${esc(pl.n)}</b><br><span style="color:#9aa3b3">\u{1F697} ${fmtDr(pl.dr)} from the cabin · ${esc(pl.time)}</span><br><a href="${dirs(pl.ll)}" target="_blank" rel="noopener">Directions</a> · <a href="#" data-card="${pl.id}">Read more</a>`,{maxWidth:240});
   });
   m.on("popupopen",e=>{const a=e.popup.getElement().querySelector("[data-card]");if(a)a.onclick=ev=>{ev.preventDefault();placeFilter="all";go("places");setTimeout(()=>{const el=document.getElementById("pl-"+a.dataset.card);if(el)el.scrollIntoView({behavior:"smooth",block:"center"})},50)}});
   if(focusId&&marks[focusId]){m.setView(marks[focusId].getLatLng(),12);marks[focusId].openPopup();focusId=null}
@@ -465,8 +602,8 @@ VIEWS.map=()=>{
 
 /* ---------- Skyline Drive gallery ---------- */
 VIEWS.skyline=()=>{
-  $("#view").innerHTML=`<h2>Skyline Drive photos</h2><p class="sub">The views you will see from the overlooks. Tap a photo to see it big.</p>
-  <div class="gallery">${GALLERY.map((k,i)=>`<figure data-i="${i}">${photo(P[k],600)}<figcaption>${esc(P[k].cap)}</figcaption></figure>`).join("")}</div>
+  $("#view").innerHTML=`<h2>Shenandoah in pictures</h2><p class="sub">Overlooks, fall colors, sunsets, waterfalls and wildlife you might see on the trip. Tap any photo to see it big and swipe through.</p>
+  ${GALLERY_GROUPS.map(([t,ks])=>`<div class="vgrp">${esc(t)}</div><div class="gallery">${ks.map(k=>`<figure data-i="${GALLERY.indexOf(k)}">${photo(P[k],600)}<figcaption>${esc(P[k].cap)}</figcaption></figure>`).join("")}</div>`).join("")}
   <h2 style="margin-top:22px">Tips for the drive</h2>
   <div class="grid">
     <div class="card"><div class="b"><h3>\u{1F39F}️ Entry</h3><p>The park charges an entrance fee per car (or use an America the Beautiful pass). There are four entrances: Front Royal (mile 0), Thornton Gap (31.5), Swift Run Gap (65.5) and Rockfish Gap (105).</p></div></div>
@@ -478,7 +615,7 @@ VIEWS.skyline=()=>{
 function lightbox(i){
   const d=document.createElement("div");d.className="lb";
   const draw=()=>{const p=P[GALLERY[i]];d.innerHTML=`<button class="pill x">Close ✕</button><button class="pill nav prev">‹</button><button class="pill nav next">›</button>
-    <div><img src="${img(p.f,1600)}" alt="${esc(p.cap)}"><div class="cap">${esc(p.cap)}<br><a href="${page(p.f)}" target="_blank" rel="noopener">Photo: ${esc(p.by||"Wikimedia Commons")} (tap for license)</a></div></div>`;
+    <div><img src="${img(p,1600)}" alt="${esc(p.cap)}"><div class="cap">${esc(p.cap)}<br><a href="${page(p)}" target="_blank" rel="noopener">Photo: ${esc(p.by||"Wikimedia Commons")} (tap for license)</a></div></div>`;
     d.querySelector(".x").onclick=()=>d.remove();
     d.querySelector(".prev").onclick=()=>{i=(i+GALLERY.length-1)%GALLERY.length;draw()};
     d.querySelector(".next").onclick=()=>{i=(i+1)%GALLERY.length;draw()}};
@@ -488,12 +625,30 @@ function lightbox(i){
 /* ---------- history ---------- */
 VIEWS.history=()=>{
   $("#view").innerHTML=`<h2>History of the Shenandoah</h2><p class="sub">From the first people to the park you will visit. Read it, then try the History quiz.</p>
-  <div class="tl">${HISTORY.map(h=>`<div class="ev" style="--x:${h.c}"><div class="yr">${esc(h.y)}</div><h3>${esc(h.t)}</h3><p>${esc(h.d)}</p>${h.p?`<img loading="lazy" src="${img(P[h.p].f,800)}" alt="${esc(P[h.p].cap)}" onerror="this.nextElementSibling.remove();this.remove()"><a class="cr" href="${page(P[h.p].f)}" target="_blank" rel="noopener">${esc(P[h.p].cap)}. Photo: ${esc(P[h.p].by||"Wikimedia Commons")}</a>`:""}</div>`).join("")}</div>
+  <div class="tl">${HISTORY.map(h=>`<div class="ev" style="--x:${h.c}"><div class="yr">${esc(h.y)}</div><h3>${esc(h.t)}</h3><p>${esc(h.d)}</p>${h.p?`<img loading="lazy" src="${img(P[h.p],800)}" alt="${esc(P[h.p].cap)}" onerror="this.nextElementSibling.remove();this.remove()"><a class="cr" href="${page(P[h.p])}" target="_blank" rel="noopener">${esc(P[h.p].cap)}. Photo: ${esc(P[h.p].by||"Wikimedia Commons")}</a>`:""}</div>`).join("")}</div>
   <div style="margin-top:16px"><button class="btn big" id="toQuiz">\u{1F3C6} Take the History quiz</button></div>`;
   $("#toQuiz").onclick=()=>{quiz.set="history";go("quiz")};
 };
 
 /* ---------- videos ---------- */
+/* ---------- places to eat ---------- */
+let eatFilter="bfast";
+VIEWS.eat=()=>{
+  const list=EATS.filter(e=>eatFilter==="all"||e.m===eatFilter).slice().sort((a,b)=>a.dr-b.dr);
+  $("#view").innerHTML=`<h2>Where to eat</h2><p class="sub">Breakfast, brunch and dinner near the cabin and along the way, with what reviewers say. Ratings checked October 2026; hours change, so call or check before you go.</p>
+  <div class="chips" style="margin:6px 0 14px">${Object.entries(MEALS).map(([k,c])=>`<button class="chip ${eatFilter===k?"on":""}" data-m="${k}" style="--x:${c.c}">${c.e} ${c.n}</button>`).join("")}<button class="chip ${eatFilter==="all"?"on":""}" data-m="all">All</button></div>
+  <div class="grid">${list.map(e=>{const c=MEALS[e.m];return `<article class="card"><div class="b">
+    <div class="meta"><span style="color:var(--ink);background:${c.c};box-shadow:none">${c.e} ${c.n}</span>${e.grp?`<span>\u{1F465} Good for groups</span>`:""}</div>
+    <h3>${esc(e.n)}</h3>
+    <div class="meta"><span class="dr">\u{1F697} ${fmtDr(e.dr)} from the cabin</span><span>${esc(e.t)}</span><span>${esc(e.pr)}</span></div>
+    <p class="fact">⭐ ${esc(e.r)}</p>
+    <p><b style="color:var(--fg)">What reviewers say:</b> ${esc(e.s)}</p>
+    <p style="font-size:13px;color:var(--mut)">\u{1F552} ${esc(e.h)}</p>
+    <div class="acts"><a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(e.n+", "+e.a)}" target="_blank" rel="noopener">Directions</a><a class="btn ghost" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.n+", "+e.a)}" target="_blank" rel="noopener">Reviews & photos</a></div>
+  </div></article>`}).join("")}</div>`;
+  $("#view").querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{eatFilter=b.dataset.m;VIEWS.eat()});
+};
+
 VIEWS.videos=()=>{
   $("#view").innerHTML=`<h2>Videos</h2><p class="sub">Watch before the trip to pick your favorites. Each one opens on YouTube.</p>
   ${VIDEOS.map(g=>`<div class="vgrp">${esc(g.g)}</div><div class="vids">${g.items.map(v=>`<a class="vid" href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener"><div class="ph"><img loading="lazy" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg" alt=""><div class="play"><b>▶</b></div></div><div class="b"><h3>${esc(v.t)}</h3><span>${esc(v.s)}</span></div></a>`).join("")}</div>`).join("")}`;
