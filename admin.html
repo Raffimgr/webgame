@@ -276,7 +276,11 @@ function drawSettings(){
   el.innerHTML=`<div class="panel"><h2>Coins for each place</h2><p class="hint">Every game gives coins by place. Places past the last box get nothing. Changing this re-counts every game already recorded.</p>
     <div class="coins-ed" id="ce">${coins.map((c,i)=>`<label>${RG.ordinal(i+1)}<input class="in" type="number" min="0" inputmode="numeric" value="${c}"></label>`).join("")}</div>
     <div class="actions" style="justify-content:flex-start"><button class="btn sm" id="cadd">＋ Place</button><button class="btn sm" id="cdel">− Place</button><span style="flex:1"></span><button class="btn main" id="csave">Save coins</button></div></div>
-  <div class="panel"><h2>Backup</h2><p class="hint">Download every player, game and score as one file (photos stay on the server).</p><div class="actions" style="justify-content:flex-start"><a class="btn" href="api.php?a=export" download>Download backup</a></div></div>`;
+  <div class="panel"><h2>Backup</h2><p class="hint">Download every player, game and score as one file (photos stay on the server).</p><div class="actions" style="justify-content:flex-start"><a class="btn" href="api.php?a=export" download>Download backup</a></div></div>
+  <div class="panel"><h2>Front page</h2><p class="hint" id="fr-h">Checking…</p><div class="actions" style="justify-content:flex-start"><button class="btn" id="fr" hidden></button></div></div>`;
+  (async()=>{const h=el.querySelector("#fr-h"),b=el.querySelector("#fr");
+    const paint=on=>{h.textContent=on?"raffaelco.com sends visitors straight to the games.":"raffaelco.com does not open the games. Use raffaelco.com/ridge-games/.";b.textContent=on?"Stop sending raffaelco.com here":"Make raffaelco.com open the games";b.hidden=false;b.onclick=async()=>{b.disabled=true;try{const r=await api("settings_save",{front:!on});paint(r.front);toast("Saved.")}catch(x){toast(x.message)}b.disabled=false}};
+    try{const r=await api("front");if(!r.possible){h.textContent="Only available on the real website.";return}paint(r.front)}catch(x){h.textContent=x.message}})();
   const read=()=>[...el.querySelectorAll("#ce input")].map(i=>+i.value||0);
   el.querySelector("#cadd").onclick=()=>{coins=[...read(),0];drawSettings()};
   el.querySelector("#cdel").onclick=()=>{coins=read().slice(0,-1);if(!coins.length)coins=[10];drawSettings()};

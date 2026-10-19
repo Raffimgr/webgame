@@ -78,6 +78,31 @@ function setting(string $k, $default) {
   return $r === false ? $default : json_decode($r, true);
 }
 
+/* raffaelco.com's front page can send visitors to the games. We only ever touch an index.html we wrote ourselves (it carries FRONT_MARK). */
+const FRONT_MARK = '<!-- ridge-games-front-redirect -->';
+function front_file(): ?string {
+  if (getenv('RG_DATA') || basename(__DIR__) !== 'ridge-games') return null; // only when installed as public_html/ridge-games
+  return dirname(__DIR__) . '/index.html';
+}
+function front_on(): bool { $f = front_file(); return $f && is_file($f) && str_contains((string)file_get_contents($f), FRONT_MARK); }
+function front_free(): bool { $root = dirname(__DIR__); foreach (['index.html', 'index.php', 'index.htm', 'default.php'] as $n) if (file_exists("$root/$n")) return false; return true; }
+function front_set(bool $on): void {
+  $f = front_file(); if (!$f) fail('This only works on the real website.');
+  if ($on) {
+    if (front_on()) return;
+    if (!front_free()) fail('The main site already has its own front page, so I left it alone.');
+    $html = "<!doctype html>\n" . FRONT_MARK . "\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<title>Ridge Games</title>\n<meta http-equiv=\"refresh\" content=\"0; url=/ridge-games/\">\n<script>location.replace('/ridge-games/')</script>\n<p style=\"font-family:system-ui;text-align:center;margin-top:20vh\"><a href=\"/ridge-games/\">Open Ridge Games</a></p>\n";
+    if (file_put_contents($f, $html) === false) fail('Could not write the front page.');
+  } elseif (front_on()) {
+    @unlink($f);
+  }
+}
+function front_auto(): void { // first run: switch the redirect on once, as Sako asked; after that only the admin toggle changes it
+  if (!front_file() || setting('front_auto', 0)) return;
+  if (front_free()) { try { front_set(true); } catch (Throwable $e) { return; } }
+  db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['front_auto', '1']);
+}
+
 function coins_table(): array { return setting('coins', DEFAULT_COINS); }
 function coins_for(int $place): int { $t = coins_table(); return $place >= 1 && $place <= count($t) ? (int)$t[$place - 1] : 0; }
 
@@ -173,10 +198,12 @@ if (!in_array($a, ['setup', 'login', 'logout', 'me_update'], true)) session_writ
 switch ($a) {
 
 case 'state': // who am I, who can log in, is the admin password set yet
+  front_auto();
   $adminSet = (int)db()->query('SELECT COUNT(*) FROM players WHERE is_admin=1 AND pass_hash IS NOT NULL')->fetchColumn() > 0;
   out(['me' => me(), 'players' => players_public(), 'admin_ready' => $adminSet, 'coins' => coins_table()]);
 
 case 'players':
+  front_auto();
   out(['players' => players_public()]);
 
 case 'setup': // first run only: the admin sets his own password
@@ -346,7 +373,11 @@ case 'settings_save':
     foreach ($rows as $r) $up->execute([coins_for((int)$r['place']), $r['event_id'], $r['player_id']]);
     db()->commit();
   }
-  out(['ok' => 1, 'coins' => coins_table()]);
+  if (array_key_exists('front', $b)) front_set(!empty($b['front']));
+  out(['ok' => 1, 'coins' => coins_table(), 'front' => front_on()]);
+
+case 'front':
+  need_admin(); out(['front' => front_on(), 'possible' => front_file() !== null]);
 
 case 'export':
   need_admin();
