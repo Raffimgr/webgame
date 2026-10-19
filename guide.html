@@ -44,6 +44,7 @@ h2{margin:6px 0 2px;font:600 26px var(--play)}
 .card h3{margin:0;font:600 20px var(--play)}
 .card p{margin:0;color:#c9cfda;font-size:14px}
 .meta{display:flex;flex-wrap:wrap;gap:6px}
+.meta span.dr{color:var(--ink);background:#ff9f43;box-shadow:none}
 .meta span{font-size:12px;font-weight:600;color:var(--mut);background:var(--well);box-shadow:var(--in-sh);padding:4px 9px;border-radius:99px}
 .acts{display:flex;gap:8px;margin-top:auto;padding-top:4px;flex-wrap:wrap}
 .btn{border:0;cursor:pointer;padding:10px 14px;border-radius:14px;font:700 13.5px var(--font);background:var(--teal);color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:6px}
@@ -195,54 +196,76 @@ const P={
 const credit=p=>`<a class="cr" href="${page(p.f)}" target="_blank" rel="noopener">&#128247; ${esc(p.by||"Wikimedia Commons")}</a>`;
 const photo=(p,w,extra="")=>`<div class="ph">${extra}<img loading="lazy" src="${img(p.f,w)}" alt="${esc(p.cap)}" onerror="this.remove()">${credit(p)}</div>`;
 
-const CAT={view:{c:"#2ec4b6",e:"\u{1F304}",n:"Views"},hike:{c:"#6fc04a",e:"\u{1F97E}",n:"Hikes"},water:{c:"#5cc8ee",e:"\u{1F4A7}",n:"Water"},history:{c:"#ff7b6b",e:"\u{1F3DB}️",n:"History"},town:{c:"#b392f0",e:"\u{1F3D8}️",n:"Towns & food"},cave:{c:"#ffd23f",e:"\u{1F987}",n:"Underground"}};
+const CAT={near:{c:"#ff9f43",e:"\u{1F3E1}",n:"Near the cabin"},view:{c:"#2ec4b6",e:"\u{1F304}",n:"Views"},hike:{c:"#6fc04a",e:"\u{1F97E}",n:"Hikes"},water:{c:"#5cc8ee",e:"\u{1F4A7}",n:"Water"},history:{c:"#ff7b6b",e:"\u{1F3DB}️",n:"History"},town:{c:"#b392f0",e:"\u{1F3D8}️",n:"Towns & food"},cave:{c:"#ffd23f",e:"\u{1F987}",n:"Underground"}};
 const PLACES=[
-  {id:"skyline",n:"Skyline Drive",cat:"view",ll:[38.6610,-78.3203],p:"hogwallow",mile:"Mile 0 to 105",time:"Half a day or more",lvl:"Easy",
+  {id:"bryce",dr:5,n:"Bryce Resort",cat:"near",ll:[38.8165,-78.7700],p:"thorofare",mile:"Basye, right by the cabin",time:"As long as you like",lvl:"Easy",
+   d:"The resort next door: Lake Laura for paddling and swimming, mini golf, lift-served mountain biking in the warm months, and skiing and snow tubing in winter.",
+   f:"Bryce is one of the few ski areas in the Shenandoah Valley, and it is small enough that you can see the whole hill from the lodge."},
+  {id:"orkney",dr:10,n:"Orkney Springs",cat:"near",ll:[38.7962,-78.8070],p:"homestead",mile:"10 min west of the cabin",time:"30 minutes",lvl:"Easy",
+   d:"A tiny village built around a mineral-springs resort from the 1800s, with a huge old wooden hotel and summer concerts on the lawn.",
+   f:"People once traveled here by stagecoach to 'take the waters' because the springs were thought to cure illness."},
+  {id:"chips",dr:20,n:"Route 11 Potato Chips",cat:"near",ll:[38.7520,-78.6460],p:"sp2020",mile:"Mount Jackson",time:"30 minutes",lvl:"Easy",
+   d:"A small chip factory where you can watch the chips being made through windows and taste strange flavors before you buy.",
+   f:"Kettle chips are fried in small batches, which is why every bag tastes a little different."},
+  {id:"meems",dr:20,n:"Meems Bottom Covered Bridge",cat:"near",ll:[38.7114,-78.6537],p:"homestead",mile:"Just south of Mount Jackson",time:"20 minutes",lvl:"Easy",
+   d:"The longest covered bridge in Virginia, still open to cars, crossing the North Fork of the Shenandoah. Great group photo spot.",
+   f:"Vandals burned it in 1976 and the town rebuilt it using the original timbers that survived."},
+  {id:"scaverns",dr:25,n:"Shenandoah Caverns",cat:"near",ll:[38.6890,-78.6510],p:"wish",mile:"Quicksburg, off I-81",time:"About 1.5 hours",lvl:"Easy",
+   d:"A smaller, quieter cave than Luray, with 'bacon' rock formations and an elevator down. Tickets also cover a quirky parade-float and toy museum.",
+   f:"It has the only cave elevator in Virginia."},
+  {id:"woodstock",dr:40,n:"Woodstock Tower",cat:"near",ll:[38.8860,-78.4640],p:"rockytop",mile:"Massanutten Mountain",time:"1 hour",lvl:"Easy",
+   d:"A short walk to a wooden lookout tower with a famous view of the Seven Bends, where the North Fork river loops back and forth below you.",
+   f:"From the top you can count the river bends; most people get a different number."},
+  {id:"skyline",dr:70,n:"Skyline Drive",cat:"view",ll:[38.6610,-78.3203],p:"hogwallow",mile:"Mile 0 to 105",time:"Half a day or more",lvl:"Easy",
    d:"The 105-mile road along the top of the Blue Ridge, with about 70 overlooks. Drive slow (the limit is 35 mph), stop often, and watch for bears and deer on the shoulder.",
    f:"Concrete mile markers count from 0 at Front Royal to 105 at Rockfish Gap. Every place in the park is described by its mile."},
-  {id:"marys",n:"Mary's Rock Tunnel",cat:"view",ll:[38.6488,-78.3229],p:"sd2005",mile:"Mile 32.2",time:"A quick stop",lvl:"Easy",
+  {id:"marys",dr:70,n:"Mary's Rock Tunnel",cat:"view",ll:[38.6488,-78.3229],p:"sd2005",mile:"Mile 32.2",time:"A quick stop",lvl:"Easy",
    d:"The only tunnel on Skyline Drive, blasted through solid granite in 1932. Honk-free zone, but you can still cheer.",
    f:"The tunnel is about 600 feet long and only 12 feet 8 inches tall, so big RVs have to check their height."},
-  {id:"stony",n:"Stony Man Summit",cat:"hike",ll:[38.5937,-78.3757],p:"thorofare",mile:"Mile 41.7 (Skyland)",time:"About 1 hour",lvl:"Easy",
+  {id:"stony",dr:85,n:"Stony Man Summit",cat:"hike",ll:[38.5937,-78.3757],p:"thorofare",mile:"Mile 41.7 (Skyland)",time:"About 1 hour",lvl:"Easy",
    d:"An easy 1.6-mile loop to the second-highest peak in the park. Huge payoff for very little effort, and great for sunset.",
    f:"From the valley, the cliffs look like the face of a bearded man lying down, which is how it got its name."},
-  {id:"hawksbill",n:"Hawksbill Summit",cat:"hike",ll:[38.5550,-78.3950],p:"rockytop",mile:"Mile 45.6",time:"1 to 2 hours",lvl:"Moderate",
+  {id:"hawksbill",dr:90,n:"Hawksbill Summit",cat:"hike",ll:[38.5550,-78.3950],p:"rockytop",mile:"Mile 45.6",time:"1 to 2 hours",lvl:"Moderate",
    d:"The highest point in Shenandoah National Park at 4,051 feet, with a stone observation platform and 360-degree views.",
    f:"Peregrine falcons were brought back to nest on Hawksbill's cliffs after they disappeared from the area."},
-  {id:"dark",n:"Dark Hollow Falls",cat:"water",ll:[38.5196,-78.4291],p:"dark",mile:"Mile 50.7",time:"About 1.5 hours",lvl:"Moderate",
+  {id:"dark",dr:95,n:"Dark Hollow Falls",cat:"water",ll:[38.5196,-78.4291],p:"dark",mile:"Mile 50.7",time:"About 1.5 hours",lvl:"Moderate",
    d:"A 70-foot waterfall at the end of a 1.4-mile round trip. It is all downhill on the way in, so save some energy for the climb back.",
    f:"Thomas Jefferson is said to have visited these falls. It is the closest waterfall to Skyline Drive."},
-  {id:"rose",n:"Rose River Falls",cat:"water",ll:[38.5266,-78.4170],p:"rose",mile:"Mile 49.4 (Fishers Gap)",time:"2 to 3 hours",lvl:"Moderate",
+  {id:"rose",dr:90,n:"Rose River Falls",cat:"water",ll:[38.5266,-78.4170],p:"rose",mile:"Mile 49.4 (Fishers Gap)",time:"2 to 3 hours",lvl:"Moderate",
    d:"A quieter loop through the woods past several cascades. Combine it with Dark Hollow Falls for a full waterfall day.",
    f:"The loop follows the Rose River, which flows east out of the park toward the Rapidan."},
-  {id:"meadows",n:"Big Meadows",cat:"view",ll:[38.5241,-78.4396],p:"meadows",mile:"Mile 51",time:"1 to 3 hours",lvl:"Easy",
+  {id:"meadows",dr:95,n:"Big Meadows",cat:"view",ll:[38.5241,-78.4396],p:"meadows",mile:"Mile 51",time:"1 to 3 hours",lvl:"Easy",
    d:"A wide open meadow where deer graze at dusk. There is a lodge, the Byrd Visitor Center, a wayside for blackberry ice cream, and amazing stargazing.",
    f:"President Franklin Roosevelt dedicated the park here on July 3, 1936."},
-  {id:"rag",n:"Old Rag Mountain",cat:"hike",ll:[38.5512,-78.3157],p:"rag",mile:"Outside the drive (east side)",time:"7 to 8 hours",lvl:"Hard",
+  {id:"rag",dr:110,n:"Old Rag Mountain",cat:"hike",ll:[38.5512,-78.3157],p:"rag",mile:"Outside the drive (east side)",time:"7 to 8 hours",lvl:"Hard",
    d:"The most famous hike in the park: a 9-mile loop with a wild rock scramble near the top. Needs a day-use ticket on recreation.gov from March to November.",
    f:"Old Rag's granite is over a billion years old, some of the oldest rock in the region."},
-  {id:"luray",n:"Luray Caverns",cat:"cave",ll:[38.6643,-78.4836],p:"luray",mile:"Luray, 15 min from Thornton Gap",time:"About 1.5 hours",lvl:"Easy",
+  {id:"luray",dr:55,n:"Luray Caverns",cat:"cave",ll:[38.6643,-78.4836],p:"luray",mile:"Luray, 15 min from Thornton Gap",time:"About 1.5 hours",lvl:"Easy",
    d:"The largest cave system in the eastern US. A paved walking tour takes you past giant stalactites, Dream Lake and the Great Stalacpipe Organ.",
    f:"The cave stays about 54°F all year, so bring a light jacket even in summer."},
-  {id:"dickey",n:"Dickey Ridge Visitor Center",cat:"history",ll:[38.8707,-78.2034],p:"gimlet",mile:"Mile 4.6",time:"30 minutes",lvl:"Easy",
+  {id:"dickey",dr:75,n:"Dickey Ridge Visitor Center",cat:"history",ll:[38.8707,-78.2034],p:"gimlet",mile:"Mile 4.6",time:"30 minutes",lvl:"Easy",
    d:"The first stop from the north entrance. Get maps, ask rangers about bear sightings, and pick up Junior Ranger booklets.",
    f:"The building started life in 1938 as a dining hall for travelers on the new road."},
-  {id:"rapidan",n:"Rapidan Camp",cat:"history",ll:[38.4800,-78.4180],p:"homestead",mile:"Mile 52.8 (Mill Prong trail)",time:"3 to 4 hours",lvl:"Moderate",
+  {id:"rapidan",dr:110,n:"Rapidan Camp",cat:"history",ll:[38.4800,-78.4180],p:"homestead",mile:"Mile 52.8 (Mill Prong trail)",time:"3 to 4 hours",lvl:"Moderate",
    d:"President Herbert Hoover's summer fishing retreat, the first presidential 'Camp David'. A 4-mile hike, or a ranger-led van tour from Byrd Visitor Center.",
    f:"Hoover paid for the land himself and later gave the camp to the park."},
-  {id:"newmarket",n:"New Market Battlefield",cat:"history",ll:[38.6633,-78.6618],p:"jackson",mile:"New Market, 35 min west of Luray",time:"1 to 2 hours",lvl:"Easy",
+  {id:"newmarket",dr:30,n:"New Market Battlefield",cat:"history",ll:[38.6633,-78.6618],p:"jackson",mile:"New Market, 35 min west of Luray",time:"1 to 2 hours",lvl:"Easy",
    d:"Walk the Field of Lost Shoes where 257 young cadets from the Virginia Military Institute charged in 1864. There is a museum and an old farmhouse.",
    f:"The mud was so deep that it pulled the shoes off the cadets' feet, which is how the field got its nickname."},
-  {id:"river",n:"Shenandoah River",cat:"water",ll:[38.7000,-78.5000],p:"sp2020",mile:"Front Royal and Luray outfitters",time:"Half a day",lvl:"Easy",
+  {id:"river",dr:55,n:"Shenandoah River",cat:"water",ll:[38.7000,-78.5000],p:"sp2020",mile:"Front Royal and Luray outfitters",time:"Half a day",lvl:"Easy",
    d:"Rent tubes, canoes or kayaks and float the South Fork. Most outfitters drive you upstream and you float back to the car.",
    f:"The Shenandoah is one of the few big rivers in the US that flows north."},
-  {id:"frontroyal",n:"Front Royal",cat:"town",ll:[38.9182,-78.1944],p:"banner",mile:"North entrance, Mile 0",time:"As long as you like",lvl:"Easy",
+  {id:"frontroyal",dr:65,n:"Front Royal",cat:"town",ll:[38.9182,-78.1944],p:"banner",mile:"North entrance, Mile 0",time:"As long as you like",lvl:"Easy",
    d:"Small town at the start of Skyline Drive with diners, breweries and outfitters. Good place to fill the gas tank, since there are few stations in the park.",
    f:"The only gas inside the park is at Big Meadows Wayside."},
-  {id:"lurayTown",n:"Luray",cat:"town",ll:[38.6654,-78.4597],p:"wish",mile:"Off US 211, west of Thornton Gap",time:"As long as you like",lvl:"Easy",
+  {id:"lurayTown",dr:50,n:"Luray",cat:"town",ll:[38.6654,-78.4597],p:"wish",mile:"Off US 211, west of Thornton Gap",time:"As long as you like",lvl:"Easy",
    d:"Home of the caverns, a cute Main Street, the Luray Singing Tower bells, and an easy town walk along Hawksbill Creek.",
    f:"The Singing Tower has 47 bells, and free carillon concerts in summer."}
 ];
+
+/* Home base: Basye, VA (village center only; the street address stays out of this public repo). */
+const CABIN={n:"The cabin (Basye)",ll:[38.8090,-78.7930]};
+const fmtDr=m=>m<60?m+" min":Math.floor(m/60)+" h"+(m%60?" "+m%60+" min":"");
 
 /* Skyline Drive photo gallery */
 const GALLERY=["hogwallow","sandy","hensley","rockytop","gimlet","sd2005","banner","ragFromSD","thorofare"];
@@ -287,6 +310,7 @@ const VIDEOS=[
 ];
 
 const FACTS=[
+  {b:"~1 h",t:"from the cabin to Skyline Drive at Thornton Gap (via New Market and Luray)",c:"#ff9f43"},
   {b:"105",t:"miles of Skyline Drive, from Front Royal to Rockfish Gap",c:"#2ec4b6"},
   {b:"35",t:"mph speed limit on the whole drive",c:"#ffd23f"},
   {b:"4,051 ft",t:"Hawksbill, the highest peak in the park",c:"#6fc04a"},
@@ -369,20 +393,22 @@ function drawTabs(){$("#tabs").innerHTML=TABS.map(([k,l,c])=>`<button data-k="${
 function go(k){tab=k;store.set("tab",k);drawTabs();stopTimer();VIEWS[k]();const t=$("#tabs");if(t.getBoundingClientRect().top<0||scrollY>t.offsetTop)scrollTo({top:t.offsetTop-4,behavior:"smooth"})}
 
 /* ---------- places ---------- */
-let placeFilter="all";
+let placeFilter="all",placeSort=store.get("sort","near");
 function placeCard(pl){const c=CAT[pl.cat],p=P[pl.p];
   return `<article class="card" id="pl-${pl.id}">${photo(p,700,`<span class="tag" style="--x:${c.c}">${c.e} ${c.n}</span>`)}
   <div class="b"><h3>${esc(pl.n)}</h3>
-  <div class="meta"><span>${esc(pl.mile)}</span><span>⏱ ${esc(pl.time)}</span><span>${pl.lvl==="Hard"?"\u{1F525}":pl.lvl==="Moderate"?"\u{1F4AA}":"\u{1F642}"} ${esc(pl.lvl)}</span></div>
+  <div class="meta"><span class="dr">\u{1F697} ${fmtDr(pl.dr)} from the cabin</span><span>${esc(pl.mile)}</span><span>⏱ ${esc(pl.time)}</span><span>${pl.lvl==="Hard"?"\u{1F525}":pl.lvl==="Moderate"?"\u{1F4AA}":"\u{1F642}"} ${esc(pl.lvl)}</span></div>
   <p>${esc(pl.d)}</p><p class="fact">\u{1F4A1} ${esc(pl.f)}</p>
   <div class="acts"><a class="btn" href="${dirs(pl.ll)}" target="_blank" rel="noopener">Directions</a><button class="btn ghost" data-map="${pl.id}">Show on map</button></div></div></article>`}
 const VIEWS={};
 VIEWS.places=()=>{
-  const list=PLACES.filter(p=>placeFilter==="all"||p.cat===placeFilter);
-  $("#view").innerHTML=`<h2>Places to visit</h2><p class="sub">Tap a filter, then tap Directions to open your maps app.</p>
+  const list=PLACES.filter(p=>placeFilter==="all"||p.cat===placeFilter).slice();if(placeSort==="near")list.sort((a,b)=>a.dr-b.dr);
+  $("#view").innerHTML=`<h2>Places to visit</h2><p class="sub">Drive times are rough, from the cabin in Basye. Tap Directions to open your maps app.</p>
+  <div class="chips" style="margin-top:6px"><button class="chip ${placeSort==="near"?"on":""}" data-sort="near" style="--x:#ff9f43">\u{1F697} Closest first</button><button class="chip ${placeSort==="type"?"on":""}" data-sort="type">\u{1F4CB} By type</button></div>
   <div class="chips" style="margin:6px 0 14px"><button class="chip ${placeFilter==="all"?"on":""}" data-f="all">All</button>${Object.entries(CAT).map(([k,c])=>`<button class="chip ${placeFilter===k?"on":""}" data-f="${k}" style="--x:${c.c}">${c.e} ${c.n}</button>`).join("")}</div>
   <div class="grid">${list.map(placeCard).join("")}</div>
   <h2 style="margin-top:22px">Quick facts</h2><div class="facts">${FACTS.map(f=>`<div class="fc" style="--x:${f.c}"><b>${f.b}</b><span>${esc(f.t)}</span></div>`).join("")}</div>`;
+  $("#view").querySelectorAll("[data-sort]").forEach(b=>b.onclick=()=>{placeSort=b.dataset.sort;store.set("sort",placeSort);VIEWS.places()});
   $("#view").querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{placeFilter=b.dataset.f;VIEWS.places()});
   $("#view").querySelectorAll("[data-map]").forEach(b=>b.onclick=()=>{focusId=b.dataset.map;go("map")});
 };
@@ -390,18 +416,20 @@ VIEWS.places=()=>{
 /* ---------- map ---------- */
 let focusId=null;
 VIEWS.map=()=>{
-  $("#view").innerHTML=`<h2>Map</h2><p class="sub">Tap a pin to see the place. Skyline Drive runs along the ridge in the middle.</p>
+  $("#view").innerHTML=`<h2>Map</h2><p class="sub">\u{1F3E1} is the cabin in Basye. Skyline Drive runs along the ridge on the east side, with Luray in between.</p>
   <div class="legend" style="margin-bottom:10px">${Object.values(CAT).map(c=>`<span style="--x:${c.c}"><b></b>${c.n}</span>`).join("")}</div><div id="map"></div>`;
   if(!window.L){$("#map").innerHTML=`<p style="padding:20px;color:var(--mut)">The map could not load here. Each place card has a Directions button that opens your maps app.</p>`;return}
-  const m=L.map("map",{scrollWheelZoom:false}).setView([38.65,-78.38],10);
+  const m=L.map("map",{scrollWheelZoom:false}).setView([38.70,-78.55],9);
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
   const marks={};
+  L.marker(CABIN.ll,{icon:L.divIcon({className:"",html:`<div class="pin" style="--x:#fff"><i>\u{1F3E1}</i></div>`,iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-28]}),zIndexOffset:1000}).addTo(m).bindPopup(`<b>${esc(CABIN.n)}</b><br><span style="color:#9aa3b3">Home base for the trip</span>`);
   PLACES.forEach(pl=>{const c=CAT[pl.cat],p=P[pl.p];
     const ic=L.divIcon({className:"",html:`<div class="pin" style="--x:${c.c}"><i>${c.e}</i></div>`,iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-28]});
-    marks[pl.id]=L.marker(pl.ll,{icon:ic}).addTo(m).bindPopup(`<img src="${img(p.f,400)}" alt="" style="width:100%;border-radius:10px;margin-bottom:6px" onerror="this.remove()"><b>${esc(pl.n)}</b><br><span style="color:#9aa3b3">${esc(pl.mile)} · ${esc(pl.time)}</span><br><a href="${dirs(pl.ll)}" target="_blank" rel="noopener">Directions</a> · <a href="#" data-card="${pl.id}">Read more</a>`,{maxWidth:240});
+    marks[pl.id]=L.marker(pl.ll,{icon:ic}).addTo(m).bindPopup(`<img src="${img(p.f,400)}" alt="" style="width:100%;border-radius:10px;margin-bottom:6px" onerror="this.remove()"><b>${esc(pl.n)}</b><br><span style="color:#9aa3b3">\u{1F697} ${fmtDr(pl.dr)} from the cabin · ${esc(pl.time)}</span><br><a href="${dirs(pl.ll)}" target="_blank" rel="noopener">Directions</a> · <a href="#" data-card="${pl.id}">Read more</a>`,{maxWidth:240});
   });
   m.on("popupopen",e=>{const a=e.popup.getElement().querySelector("[data-card]");if(a)a.onclick=ev=>{ev.preventDefault();placeFilter="all";go("places");setTimeout(()=>{const el=document.getElementById("pl-"+a.dataset.card);if(el)el.scrollIntoView({behavior:"smooth",block:"center"})},50)}});
   if(focusId&&marks[focusId]){m.setView(marks[focusId].getLatLng(),12);marks[focusId].openPopup();focusId=null}
+  else m.fitBounds(L.latLngBounds([CABIN.ll,...PLACES.map(p=>p.ll)]),{padding:[24,24]});
 };
 
 /* ---------- Skyline Drive gallery ---------- */
