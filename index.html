@@ -39,6 +39,13 @@ h2{margin:6px 0 2px;font:600 26px var(--play)}
 .ph{position:relative;aspect-ratio:16/10;background:linear-gradient(135deg,#3b6b4f,#24443a);overflow:hidden}
 .ph img{width:100%;height:100%;object-fit:cover;display:block}
 .ph .cr{position:absolute;right:8px;bottom:8px;font-size:10.5px;color:#fff;text-decoration:none;background:rgba(0,0,0,.5);padding:2px 7px;border-radius:99px}
+.ph.slides img{position:absolute;inset:0;opacity:0;transition:opacity .8s;cursor:pointer}
+.ph.slides img.on{opacity:1}
+.ph.slides .tag{z-index:1}
+.ph .dots{position:absolute;left:0;right:0;bottom:4px;display:flex;justify-content:center;z-index:1;pointer-events:none}
+.ph .dots button{width:22px;height:22px;border:0;padding:0;background:none;cursor:pointer;pointer-events:auto}
+.ph .dots button::after{content:"";display:block;width:8px;height:8px;margin:auto;border-radius:50%;background:rgba(255,255,255,.55);box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.ph .dots button.on::after{background:#fff}
 .ph .tag{position:absolute;left:10px;top:10px;font:700 12px var(--font);color:var(--ink);background:var(--x,var(--gold));padding:4px 10px;border-radius:99px}
 .card .b{padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px;flex:1}
 .card h3{margin:0;font:600 20px var(--play)}
@@ -186,7 +193,7 @@ const P={
   sakoPool:{u:"img/luray-mirror-pool.jpg",by:"Sako",cap:"The mirror pool in Luray Caverns",src:"img/luray-mirror-pool.jpg"},
   sakoReflect:{u:"img/luray-reflections.jpg",by:"Sako",cap:"Stalactites reflected in still water",src:"img/luray-reflections.jpg"},
   sakoForm:{u:"img/luray-formations.jpg",by:"Sako",cap:"Looking down on the formations",src:"img/luray-formations.jpg"},
-  bryceFall:{u:"img/bryce-fall-valley.jpg",by:"Shared by Sako",cap:"Fall color over the Bryce Resort valley",src:"img/bryce-fall-valley.jpg"},
+  orkneyFall:{u:"img/orkney-fall.jpg",by:"Shared by Sako",cap:"Fall color in the hills around Orkney Springs",src:"img/orkney-fall.jpg"},
   bryceResort:{u:"img/bryce-resort.jpg",by:"Shared by Sako",cap:"Bryce Resort from the air: slopes, lodge and the little airport",src:"img/bryce-resort.jpg"},
   bryceGolf:{u:"img/bryce-golf.jpg",by:"Shared by Sako",cap:"The Bryce golf course from above",src:"img/bryce-golf.jpg"},
   lakeLaura:{u:"img/lake-laura.jpg",by:"Shared by Sako",cap:"Dinner set up by Lake Laura at Bryce",src:"img/lake-laura.jpg"},
@@ -197,7 +204,7 @@ const P={
   r11Store:{u:"img/route11-store.jpg",by:"Shared by Sako",cap:"Inside the Route 11 chip store",src:"img/route11-store.jpg"},
   woodstockTower:{u:"img/woodstock-tower.jpg",by:"Shared by Sako",cap:"Woodstock Tower on Massanutten Mountain",src:"img/woodstock-tower.jpg"},
   meemsSide:{u:"img/meems-side.jpg",by:"Shared by Sako",cap:"The bridge rests on stone and concrete piers",src:"img/meems-side.jpg"},
-  meemsUnder:{u:"img/meems-under.jpg",by:"Shared by Sako",cap:"Under the bridge, over the North Fork of the Shenandoah",src:"img/meems-under.jpg"},
+  meemsBW:{u:"img/meems-bw.jpg",by:"Dawn M. Miller",cap:"The bridge in black and white",src:"img/meems-bw.jpg"},
   meemsInside:{u:"img/meems-inside.jpg",by:"Shared by Sako",cap:"Inside the covered bridge",src:"img/meems-inside.jpg"},
   meemsPlaque:{u:"img/meems-plaque.jpg",by:"Shared by Sako",cap:"The plaque: Virginia's longest covered bridge, built 1892-93",src:"img/meems-plaque.jpg"},
   stonySunset:{u:"img/stony-man-sunset.jpg",by:"Shared by Sako",cap:"Stony Man glowing at sunset, from Skyline Drive",src:"img/stony-man-sunset.jpg"},
@@ -296,13 +303,13 @@ const PLACES=[
   {id:"bryce",dr:5,n:"Bryce Resort",cat:"near",ll:[38.8165,-78.7700],p:"bryceGolf",mile:"Basye, right by the cabin",time:"As long as you like",lvl:"Easy",
    d:"The resort next door: Lake Laura for paddling and swimming, mini golf, lift-served mountain biking in the warm months, and skiing and snow tubing in winter.",
    f:"Bryce is one of the few ski areas in the Shenandoah Valley, and it is small enough that you can see the whole hill from the lodge."},
-  {id:"orkney",dr:10,n:"Orkney Springs",cat:"near",ll:[38.7962,-78.8070],p:"orkneyAerial",mile:"10 min west of the cabin",time:"30 minutes",lvl:"Easy",
+  {id:"orkney",dr:10,n:"Orkney Springs",cat:"near",ll:[38.7962,-78.8070],p:"orkneyAerial",more:["orkneyFall","shrineMont"],mile:"10 min west of the cabin",time:"30 minutes",lvl:"Easy",
    d:"A tiny village built around a mineral-springs resort from the 1800s, with a huge old wooden hotel and summer concerts on the lawn.",
    f:"People once traveled here by stagecoach to 'take the waters' because the springs were thought to cure illness."},
-  {id:"chips",dr:20,n:"Route 11 Potato Chips",cat:"near",ll:[38.7520,-78.6460],p:"chipsFryer",mile:"Mount Jackson",time:"30 minutes",lvl:"Easy",
+  {id:"chips",dr:20,n:"Route 11 Potato Chips",cat:"near",ll:[38.7520,-78.6460],p:"chipsFryer",more:["r11Counter","r11Store"],mile:"Mount Jackson",time:"30 minutes",lvl:"Easy",
    d:"A small chip factory where you can watch the chips being made through windows and taste strange flavors before you buy.",
    f:"Kettle chips are fried in small batches, which is why every bag tastes a little different."},
-  {id:"meems",dr:20,n:"Meems Bottom Covered Bridge",cat:"near",ll:[38.7114,-78.6537],p:"meems",mile:"Just south of Mount Jackson",time:"20 minutes",lvl:"Easy",
+  {id:"meems",dr:20,n:"Meems Bottom Covered Bridge",cat:"near",ll:[38.7114,-78.6537],p:"meems",more:["meemsInside","meemsSide","meemsPlaque","meemsBW"],mile:"Just south of Mount Jackson",time:"20 minutes",lvl:"Easy",
    d:"The longest covered bridge in Virginia, still open to cars, crossing the North Fork of the Shenandoah. Great group photo spot.",
    f:"Vandals burned it in 1976 and the town rebuilt it using the original timbers that survived."},
   {id:"scaverns",dr:25,n:"Shenandoah Caverns",cat:"near",ll:[38.6890,-78.6510],p:null,mile:"Quicksburg, off I-81",time:"About 1.5 hours",lvl:"Easy",
@@ -391,8 +398,7 @@ const fmtDr=m=>m<60?m+" min":Math.floor(m/60)+" h"+(m%60?" "+m%60+" min":"");
 /* Skyline Drive photo gallery */
 const GALLERY_GROUPS=[
   ["Inside Luray Caverns",["sakoPool","sakoReflect","sakoForm","wish"]],
-  ["Near our cabin",["bryceResort","bryceFall","lakeLaura","shrineMont","r11Counter","r11Store"]],
-  ["Meems Bottom Covered Bridge",["meemsSide","meemsUnder","meemsInside","meemsPlaque"]],
+  ["Near our cabin",["bryceResort","lakeLaura"]],
   ["Skyline Drive",["stonySunset","skyCurve","sky0303","skyTrees","skyBend","skySummer"]],
   ["Sunrise, sunset and stars",["sunsetRocks","valleySunset","blueRidges","sunrise","blackrockSunset","stars","peaks","rockyOvl"]],
   ["Summits and waterfalls",["hawksbillUpper","marysSummit","stonyHiker","whiteoakLow","meadowsView"]],
@@ -576,8 +582,17 @@ function go(k){tab=k;store.set("tab",k);drawTabs();stopTimer();VIEWS[k]();const 
 
 /* ---------- places ---------- */
 let placeFilter="all",placeSort=store.get("sort","near");
-function placeCard(pl){const c=CAT[pl.cat],p=P[pl.p];
-  return `<article class="card" id="pl-${pl.id}">${photo(p,700,`<span class="tag" style="--x:${c.c}">${c.e} ${c.n}</span>`,c)}
+/* A place with more photos (more:[keys]) cycles through them on its card; tap the photo or a dot to change it. */
+function slides(ks,extra){
+  return `<div class="ph slides" data-k="${ks.join(",")}" data-i="0">${extra}${ks.map((k,i)=>`<img class="${i?"":"on"}" loading="lazy" src="${img(P[k],700)}" alt="${esc(P[k].cap)}">`).join("")}${credit(P[ks[0]])}<div class="dots">${ks.map((k,i)=>`<button class="${i?"":"on"}" data-i="${i}" aria-label="Photo ${i+1} of ${ks.length}"></button>`).join("")}</div></div>`}
+function slideTo(el,i){const ims=el.querySelectorAll("img"),ks=el.dataset.k.split(",");i=(i+ims.length)%ims.length;el.dataset.i=i;
+  ims.forEach((m,j)=>m.classList.toggle("on",j===i));el.querySelectorAll(".dots button").forEach((d,j)=>d.classList.toggle("on",j===i));
+  const p=P[ks[i]],cr=el.querySelector(".cr");cr.href=page(p);cr.innerHTML="&#128247; "+esc(p.by||"Wikimedia Commons")}
+setInterval(()=>document.querySelectorAll(".ph.slides").forEach(el=>{if(Date.now()-(+el.dataset.t||0)>8000)slideTo(el,+el.dataset.i+1)}),4500);
+document.addEventListener("click",e=>{const el=e.target.closest(".ph.slides");if(!el)return;const d=e.target.closest(".dots button");el.dataset.t=Date.now();
+  if(d)slideTo(el,+d.dataset.i);else if(e.target.tagName==="IMG")slideTo(el,+el.dataset.i+1)});
+function placeCard(pl){const c=CAT[pl.cat],p=P[pl.p],tag=`<span class="tag" style="--x:${c.c}">${c.e} ${c.n}</span>`;
+  return `<article class="card" id="pl-${pl.id}">${pl.more?slides([pl.p,...pl.more],tag):photo(p,700,tag,c)}
   <div class="b"><h3>${esc(pl.n)}</h3>
   <div class="meta"><span class="dr">\u{1F697} ${fmtDr(pl.dr)} from the cabin</span><span>${esc(pl.mile)}</span><span>⏱ ${esc(pl.time)}</span><span>${pl.lvl==="Hard"?"\u{1F525}":pl.lvl==="Moderate"?"\u{1F4AA}":"\u{1F642}"} ${esc(pl.lvl)}</span></div>
   <p>${esc(pl.d)}</p><p class="fact">\u{1F4A1} ${esc(pl.f)}</p>
