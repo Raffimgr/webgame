@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Profile</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Profiles: yours (edit your picture, name, color and password, log out) or anyone else's (profile.html?id=…).
+   Shows their Trip Feed posts as a grid, their to-dos and their games. Logged-in players only. */
+:root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--ink:#15181e;--well:#202328;
+  --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
+  --in-sh:inset 3px 3px 8px rgba(0,0,0,.5);--teal:#2ec4b6;--gold:#ffd23f;
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--play:"Fredoka","Inter",system-ui,sans-serif}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:linear-gradient(170deg,#2c3037 0%,#22252b 55%,#1b1d22 100%) fixed;color:var(--fg);font:15px/1.5 var(--font);min-height:100vh;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+.wrap{max-width:720px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 30px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px}
+.ppl{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding:4px 2px 2px}
+.ppl::-webkit-scrollbar{display:none}
+.ppl a{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--mut);font-size:11.5px;font-weight:600;text-decoration:none;width:58px}
+.ppl a .rg-av{box-shadow:0 0 0 2px #22252b,0 0 0 4px #3a3f48}
+.ppl a.on{color:var(--fg)}
+.ppl a.on .rg-av{box-shadow:0 0 0 2px #22252b,0 0 0 4px var(--teal)}
+.top{display:flex;gap:18px;align-items:center}
+.top .rg-av{box-shadow:0 0 0 3px #22252b,0 0 0 5px var(--teal)}
+h1{margin:0;font:700 28px/1.15 var(--play);overflow-wrap:anywhere}
+.tag{color:var(--mut);font-size:13px;margin-top:2px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);text-align:center;border-radius:20px;background:var(--raise);box-shadow:var(--raise-sh);padding:12px 4px}
+.stats b{display:block;font:700 21px/1.2 var(--play)}
+.stats span{color:var(--mut);font-size:12px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{flex:1;border:0;cursor:pointer;padding:11px 14px;border-radius:14px;font:700 13.5px var(--font);background:#353a43;color:var(--fg);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.btn.main{background:var(--teal);color:var(--ink)}
+.tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.08)}
+.tabs button{flex:1;border:0;background:none;color:var(--mut);font:600 14px var(--font);padding:10px 4px;cursor:pointer;border-bottom:2px solid transparent}
+.tabs button.on{color:var(--fg);border-color:var(--fg)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin:0 -6px}
+.grid a{position:relative;aspect-ratio:1;background:#2b2f37;overflow:hidden;display:grid;place-items:center;font-size:30px;text-decoration:none;border-radius:4px}
+.grid img{width:100%;height:100%;object-fit:cover;display:block}
+.grid .v{position:absolute;top:6px;right:7px;font-size:15px;text-shadow:0 1px 4px rgba(0,0,0,.7)}
+.row{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:18px;background:var(--raise);box-shadow:var(--raise-sh);color:inherit;text-decoration:none}
+.row .t{flex:1;min-width:0}
+.row .t b{display:block;font:600 15.5px/1.3 var(--play);overflow-wrap:anywhere}
+.row .t span{color:var(--mut);font-size:12.5px}
+.row .r{font:700 15px var(--play);white-space:nowrap}
+.list{display:flex;flex-direction:column;gap:10px}
+.empty{text-align:center;color:var(--mut);padding:28px 10px}
+.more{text-align:center}
+.more a{color:var(--teal);font-weight:600;text-decoration:none;font-size:14px}
+/* edit sheet */
+.sheet{position:fixed;inset:0;z-index:60;background:rgba(10,11,14,.8);display:grid;place-items:end center;padding:0}
+.sheet form{width:min(560px,100%);max-height:92vh;overflow:auto;background:#2a2e35;border-radius:26px 26px 0 0;padding:20px max(18px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.sheet h2{margin:0;font:600 22px var(--play)}
+.lab{font-size:12.5px;color:var(--mut);font-weight:600}
+.in{width:100%;border:0;border-radius:12px;padding:11px 13px;background:var(--well);color:var(--fg);font:16px var(--font);box-shadow:var(--in-sh)}
+.colors{display:flex;gap:10px;flex-wrap:wrap}
+.colors button{width:34px;height:34px;border-radius:50%;border:0;background:var(--x);cursor:pointer}
+.colors button.on{box-shadow:0 0 0 3px #2a2e35,0 0 0 5px var(--fg)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="ppl" id="ppl"></div>
+  <div id="app" hidden>
+    <div class="top" id="top"></div>
+    <div class="stats" id="stats" style="margin-top:16px"></div>
+    <div class="btns" id="btns" style="margin-top:14px"></div>
+    <div class="tabs" id="tabs" style="margin-top:16px"></div>
+    <div id="pane" style="margin-top:12px"></div>
+  </div>
+</div>
+<script src="rg.js?v=3"></script>
+<script>
+(()=>{
+const $=s=>document.querySelector(s),esc=RG.esc;
+const COLORS=["#d4f09a","#f7b8d2","#aab7ff","#ffe08a","#ffbf99","#ff9fb8","#7ee8f0","#9df0c8","#d8c39a","#c9a7ff","#7be08a","#ff8f70"];
+const KINDS={buy:"\u{1F6D2}",book:"\u{1F4C5}",do:"✅"};
+let me=null,players=[],who=null,posts=[],items=[],events=[],tab=localStorage.getItem("rg-prof-tab")||"posts";
+const P=id=>players.find(p=>p.id===id)||{id,name:"Someone",short:"?",color:"#9aa3b3"};
+const get=async u=>{const r=await fetch(u,{credentials:"same-origin"});if(!r.ok)throw new Error("Could not load "+u);return r.json()};
+
+function draw(){
+  const p=P(who),mine=who===me.id;
+  document.title=mine?"My profile":p.name;
+  $("#ppl").innerHTML=players.map(x=>`<a href="?id=${encodeURIComponent(x.id)}" data-who="${esc(x.id)}" class="${x.id===who?"on":""}">${RG.av(x,46)}${esc(x.id===me.id?"Me":x.name)}</a>`).join("");
+  const myPosts=posts.filter(x=>x.by===who),myItems=items.filter(i=>i.who===who),open=myItems.filter(i=>!i.done);
+  const res=events.flatMap(e=>e.results.filter(r=>r.player_id===who).map(r=>({e,r})));
+  const coins=res.reduce((a,x)=>a+(+x.r.coins||0),0),wins=res.filter(x=>x.r.place===1).length;
+  $("#top").innerHTML=`${RG.av(p,84)}<div style="min-width:0"><h1>${esc(p.name)}</h1><div class="tag">${p.is_admin?"\u{1F451} Admin · ":""}${res.length} game${res.length===1?"":"s"} played</div></div>`;
+  $("#stats").innerHTML=[[myPosts.length,"Posts"],[coins,"Coins"],[wins,"Wins"],[open.length,"To-dos"]].map(([n,l])=>`<div><b>${n}</b><span>${l}</span></div>`).join("");
+  $("#btns").innerHTML=mine?`<button class="btn" id="edit">✏️ Edit profile</button>${me.is_admin?`<a class="btn" href="admin.html">\u{1F6E0}️ Admin</a>`:""}<button class="btn" id="out">Log out</button>`
+    :`<a class="btn main" href="chat.html">\u{1F4AC} Message in the group chat</a>`;
+  const T=[["posts","\u{1F4F8} Posts"],["todo","\u{1F4CB} To-dos"],["games","\u{1F3C6} Games"]];
+  $("#tabs").innerHTML=T.map(([k,l])=>`<button data-tab="${k}" class="${tab===k?"on":""}">${l}</button>`).join("");
+  let h="";
+  if(tab==="posts")h=myPosts.length?`<div class="grid">${myPosts.map(x=>`<a href="social.html#po-${x.id}" aria-label="${esc(x.cap||(x.kind==="video"?"Video":"Photo"))}">${x.kind==="photo"||x.prev?`<img loading="lazy" src="social.php?f=${x.id}&s=1" alt="">`:"\u{1F3AC}"}${x.kind==="video"?`<span class="v">▶️</span>`:""}</a>`).join("")}</div>`
+    :`<div class="empty">${mine?`No posts yet. <a href="social.html" style="color:var(--teal)">Share a photo or video</a>`:"No posts yet."}</div>`;
+  if(tab==="todo"){const done=myItems.length-open.length;
+    h=open.length?`<div class="list">${open.sort((a,b)=>(a.due||"9")<(b.due||"9")?-1:1).map(i=>`<a class="row" href="plan.html"><span style="font-size:22px">${KINDS[i.kind]||"✅"}</span><div class="t"><b>${esc(i.title)}</b><span>${i.due?"By "+new Date(i.due+"T12:00").toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"}):"No date"}</span></div></a>`).join("")}</div>`
+      :`<div class="empty">Nothing on ${mine?"your":"their"} list right now.</div>`;
+    if(done)h+=`<p class="more" style="color:var(--mut);font-size:13px;margin:12px 0 0">✔ ${done} done</p>`;
+    h+=`<p class="more"><a href="plan.html">Open the to-do list →</a></p>`}
+  if(tab==="games"){h=res.length?`<div class="list">${res.slice(0,15).map(({e,r})=>`<div class="row"><span style="font-size:22px">${r.place===1?"\u{1F947}":r.place===2?"\u{1F948}":r.place===3?"\u{1F949}":"\u{1F3B2}"}</span><div class="t"><b>${esc(e.game)}</b><span>${RG.fmtDate(e.played_at)}${r.place?" · "+RG.ordinal(r.place):""}${r.team?" · "+esc(r.team):""}</span></div><span class="r">+${r.coins}</span></div>`).join("")}</div>`
+      :`<div class="empty">No games recorded yet.</div>`;
+    h+=`<p class="more"><a href="scores.html">See the whole scoreboard →</a></p>`}
+  $("#pane").innerHTML=h;
+  const on=$("#ppl .on");if(on)on.scrollIntoView({inline:"center",block:"nearest"});
+}
+
+function editSheet(){
+  const d={name:me.name,short:me.short,color:me.color,avatar:me.avatar};let pw=false;
+  const s=document.createElement("div");s.className="sheet";document.body.appendChild(s);
+  const keep=()=>{const f=s.querySelector("form");d.name=f.n.value;d.short=f.s.value};
+  const paint=()=>{s.innerHTML=`<form><h2>Edit profile</h2>
+    <div style="display:flex;gap:14px;align-items:center">${RG.av(d,64)}<div class="btns" style="flex:1"><label class="btn">\u{1F4F7} Photo<input type="file" accept="image/*" name="ph" hidden></label>${d.avatar?`<button type="button" class="btn" data-x="letters">Use letters</button>`:""}</div></div>
+    <label style="display:flex;flex-direction:column;gap:6px"><span class="lab">Name</span><input class="in" name="n" value="${esc(d.name)}" maxlength="30"></label>
+    <label style="display:flex;flex-direction:column;gap:6px"><span class="lab">Letters (when there is no photo)</span><input class="in" name="s" value="${esc(d.short)}" maxlength="3"></label>
+    <div><div class="lab" style="margin-bottom:8px">Color</div><div class="colors">${COLORS.map(c=>`<button type="button" style="--x:${c}" data-c="${c}" class="${c===d.color?"on":""}" aria-label="Color ${c}"></button>`).join("")}</div></div>
+    ${pw?`<div style="display:flex;flex-direction:column;gap:8px"><span class="lab">Change password</span><input class="in" type="password" name="p0" placeholder="Current password" autocomplete="current-password"><input class="in" type="password" name="p1" placeholder="New password (at least 4 letters)" autocomplete="new-password"><button type="button" class="btn" data-x="pwok">Change password</button></div>`
+      :`<button type="button" class="btn" data-x="pw">\u{1F511} Change password</button>`}
+    <div class="btns"><button type="button" class="btn" data-x="close">Cancel</button><button class="btn main">Save</button></div></form>`;
+    const f=s.querySelector("form");
+    f.ph.onchange=async e=>{const file=e.target.files[0];if(!file)return;keep();try{d.avatar=await RG.shrinkAvatar(file);paint()}catch(x){RG.toast(x.message)}};
+    f.onsubmit=async e=>{e.preventDefault();keep();try{const r=await RG.api("me_update",{name:d.name,short:d.short,color:d.color,avatar:d.avatar});Object.assign(me,r.me);
+      const i=players.findIndex(x=>x.id===me.id);if(i>=0)players[i]={...players[i],...r.me};s.remove();draw();RG.toast("Saved.");
+      const navMe=document.querySelector('.rg-nav [data-k="me"]>span');if(navMe)navMe.innerHTML=RG.av(me,24)}catch(x){RG.toast(x.message)}};
+  };
+  s.addEventListener("click",async e=>{if(e.target===s){s.remove();return}
+    const c=e.target.closest("[data-c]");if(c){keep();d.color=c.dataset.c;paint();return}
+    const x=e.target.closest("[data-x]");if(!x)return;const k=x.dataset.x;
+    if(k==="close")s.remove();
+    if(k==="letters"){keep();d.avatar=null;paint()}
+    if(k==="pw"){keep();pw=true;paint();s.querySelector("[name=p0]").focus()}
+    if(k==="pwok"){const f=s.querySelector("form"),nw=f.p1.value;if(nw.length<4)return RG.toast("Use at least 4 characters.");
+      try{await RG.api("me_update",{password:f.p0.value,new_password:nw});keep();pw=false;paint();RG.toast("Password changed.")}catch(err){RG.toast(err.message)}}});
+  paint();
+}
+
+document.addEventListener("click",async e=>{
+  const t=e.target.closest("[data-tab]");if(t){tab=t.dataset.tab;try{localStorage.setItem("rg-prof-tab",tab)}catch(x){}draw();return}
+  const w=e.target.closest("[data-who]");if(w&&!e.metaKey&&!e.ctrlKey){e.preventDefault();who=w.dataset.who;history.replaceState(null,"","?id="+encodeURIComponent(who));draw();scrollTo(0,0);return}
+  if(e.target.closest("#edit")){editSheet();return}
+  if(e.target.closest("#out")){if(!confirm("Log out on this device?"))return;try{await RG.api("logout",{})}catch(x){}location.href="./"}
+});
+
+async function boot(){
+  try{const r=await RG.login();me={...r.me,is_admin:+r.me.is_admin===1};players=(r.state&&r.state.players)||[];
+    const want=new URLSearchParams(location.search).get("id");who=players.some(p=>p.id===want)?want:me.id;
+    const [s,pl,ev]=await Promise.all([get("social.php").catch(()=>({posts:[]})),get("plan.php").catch(()=>({items:[]})),RG.api("events").catch(()=>({events:[]}))]);
+    posts=s.posts||[];items=pl.items||[];events=(ev.events||[]).filter(e=>e.status==="done");
+    $("#app").hidden=false;draw();
+  }catch(e){$(".wrap").insertAdjacentHTML("beforeend",`<div class="empty">Could not load the profile. ${esc(e.message||"")}</div>`)}}
+boot();
+})();
+</script>
+</body>
+</html>

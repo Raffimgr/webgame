@@ -1,5 +1,5 @@
 /* Ridge Games shared helpers: talking to api.php, the login screen, photo shrinking, avatars, periods,
-   and the bottom bar (Trip / Games / Feed / To-do) on the main pages. Used by every page that loads it. */
+   and the bottom bar (Trip / Games / Feed / Chat / To-do / Me) on the main pages. Used by every page that loads it. */
 (function(){
 const CSS=`
 .rg-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(15,17,21,.86);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
@@ -18,24 +18,40 @@ const CSS=`
 .rg-av{display:inline-grid;place-items:center;border-radius:50%;font-weight:800;color:#15181e;overflow:hidden;flex:none;background:var(--x)}
 .rg-av img{width:100%;height:100%;object-fit:cover}
 .rg-toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#eef1f6;color:#15181e;font:700 14px "Inter",system-ui;padding:11px 18px;border-radius:99px;z-index:80;box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:calc(100vw - 32px)}
-.rg-nav{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;justify-content:center;gap:6px;padding:7px max(12px,env(safe-area-inset-right,0px)) calc(7px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));background:rgba(27,29,34,.93);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid rgba(255,255,255,.07)}
-.rg-nav a{flex:1;max-width:150px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 4px;border-radius:14px;color:#9aa3b3;font:600 12px "Inter",system-ui;text-decoration:none}
-.rg-nav a span{font-size:21px;line-height:1.1}
-.rg-nav a.on{color:#15181e;background:#2ec4b6;box-shadow:0 0 14px rgba(46,196,182,.35)}
+.rg-nav{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;justify-content:center;gap:2px;padding:6px max(6px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px));background:rgba(27,29,34,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid rgba(255,255,255,.07)}
+.rg-nav a{position:relative;flex:1;min-width:0;max-width:110px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px;border-radius:14px;color:#9aa3b3;font:600 11px "Inter",system-ui;text-decoration:none;white-space:nowrap}
+.rg-nav a>span{height:24px;display:grid;place-items:center;font-size:21px;line-height:1}
+.rg-nav a.on{color:#2ec4b6;background:rgba(46,196,182,.13)}
+.rg-nav a.on .rg-av{box-shadow:0 0 0 2px #2ec4b6}
+.rg-nav b{position:absolute;top:2px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:#ff5a5f;color:#fff;font:800 11px/18px "Inter",system-ui;text-align:center;box-shadow:0 0 0 2px #1b1d22}
 html.rg-nav-on body{padding-bottom:calc(68px + env(safe-area-inset-bottom,0px))}
 html.rg-nav-on .toast,html.rg-nav-on .rg-toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 `;
 const st=document.createElement("style");st.textContent=CSS;document.head.appendChild(st);
 
-/* Bottom bar to switch between the Shenandoah Guide (the front page), the games home and the trip feed. Only on those three pages,
-   so it never covers a game while it is being played. */
+/* Bottom bar (like Instagram's) to switch between the Shenandoah Guide (the front page), the games home, the trip feed, the group chat,
+   the to-do list and your profile. Only on those pages, so it never covers a game while it is being played.
+   The Chat button shows how many messages you haven't read yet; the Me button shows your picture once you are logged in. */
 (function(){
-  const here={"":"trip","index.html":"trip","games.html":"games","social.html":"feed","plan.html":"plan"}[location.pathname.split("/").pop()];
+  const here={"":"trip","index.html":"trip","games.html":"games","social.html":"feed","chat.html":"chat","plan.html":"plan","profile.html":"me"}[location.pathname.split("/").pop()];
   if(!here)return;
-  const items=[["trip","./","\u{1F3D4}\uFE0F","Trip"],["games","games.html","\u{1F3B2}","Games"],["feed","social.html","\u{1F4F8}","Feed"],["plan","plan.html","\u{1F4CB}","To-do"]];
-  const add=()=>{const n=document.createElement("nav");n.className="rg-nav";n.setAttribute("aria-label","Main");
-    n.innerHTML=items.map(([k,href,icon,label])=>`<a href="${href}"${k===here?' class="on" aria-current="page"':""}><span>${icon}</span>${label}</a>`).join("");
-    document.body.appendChild(n);document.documentElement.classList.add("rg-nav-on")};
+  const items=[["trip","./","\u{1F3D4}️","Trip"],["games","games.html","\u{1F3B2}","Games"],["feed","social.html","\u{1F4F8}","Feed"],
+    ["chat","chat.html","\u{1F4AC}","Chat"],["plan","plan.html","\u{1F4CB}","To-do"],["me","profile.html","\u{1F464}","Me"]];
+  let nav=null,shownMe=false;
+  const add=()=>{nav=document.createElement("nav");nav.className="rg-nav";nav.setAttribute("aria-label","Main");
+    nav.innerHTML=items.map(([k,href,icon,label])=>`<a href="${href}" data-k="${k}"${k===here?' class="on" aria-current="page"':""}><span>${icon}</span>${label}</a>`).join("");
+    document.body.appendChild(nav);document.documentElement.classList.add("rg-nav-on");check()};
+  async function check(){
+    if(document.hidden)return;
+    try{const r=await fetch("chat.php?badge=1"+(shownMe?"":"&me=1"),{credentials:"same-origin"});if(!r.ok)return;const j=await r.json();
+      if(j.me&&!shownMe){shownMe=true;nav.querySelector('[data-k="me"]>span').innerHTML=av(j.me,24)}
+      const c=nav.querySelector('[data-k="chat"]');let b=c.querySelector("b");
+      if(here==="chat"||!j.n){if(b)b.remove();return}
+      if(!b){b=document.createElement("b");c.appendChild(b)}b.textContent=j.n>9?"9+":j.n;
+    }catch(e){}
+  }
+  window.addEventListener("rg-login",()=>{shownMe=false;check()});
+  setInterval(check,30000);document.addEventListener("visibilitychange",check);
   document.body?add():document.addEventListener("DOMContentLoaded",add);
 })();
 
@@ -96,7 +112,7 @@ async function login({admin=false}={}){
           if(needSetup){if(pw!==f.password2.value)throw new Error("The two passwords don't match.");r=await api("setup",{password:pw})}
           else r=await api("login",{id:pick.id,password:pw});
           if(admin&&!r.me.is_admin)throw new Error("That profile is not the admin.");
-          g.remove();resolve({me:r.me,state:await api("state")});
+          g.remove();window.dispatchEvent(new Event("rg-login"));resolve({me:r.me,state:await api("state")});
         }catch(x){err.textContent=x.message;btn.disabled=false}
       };
     };

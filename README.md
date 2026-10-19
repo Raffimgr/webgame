@@ -7,7 +7,9 @@ Party games for the Shenandoah trip: the Road to the Crown map, 18 mind games, c
 - Front page (`index.html`) is the Shenandoah Guide; its "Games for the trip" button opens the games home (`games.html`). `guide.html` just forwards to the front page for old links. Everyone logged in can like and comment on any place, place to eat, history event, video or photo (`talk.js` + `talk.php`, stored in `ridge-data/talk.sqlite`).
 - Trip Feed (`social.html`, `social.php`): everyone shares photos and videos, likes, comments and downloads them. Photos are kept in `ridge-data/social`; videos go to Raffi's Cloudflare R2 bucket `ridge-media` through the Worker in `cloudflare/media-worker.js` (served at ridge-media.raffaelco.workers.dev), which checks each upload ticket and viewing token with `social.php`.
 - To-do (`plan.html`, `plan.php`): lists of what to buy, book and do for a trip or event, who is on it, due dates and notes (`ridge-data/plan.sqlite`). Anyone logged in can add, edit, take or tick off items; whoever added one (or the admin) can delete it.
-- Bottom bar (in `rg.js`): Trip / Games / Feed / To-do on the guide, the games home, the feed and the to-do page only, never inside a game.
+- Group chat (`chat.html`, `chat.php`): one conversation for everyone, with hearts (double-tap), "seen by" and an unread count on the Chat button (`ridge-data/chat.sqlite`).
+- Profiles (`profile.html`, `profile.html?id=…`): picture, name, color and password for your own; anyone's feed posts as a grid, their to-dos and games.
+- Bottom bar (in `rg.js`): Trip / Games / Feed / Chat / To-do / Me on those main pages only, never inside a game. Pages load `rg.js?v=N`; bump N when rg.js changes, and `.htaccess` makes phones check for new copies of pages and scripts.
 - Static pages + `api.php` (PHP 8, SQLite). Hosted at raffaelco.com/ridge-games/ (Hostinger pulls this repo).
 - Data (database, photos, sessions) lives outside the web folder in `domains/raffaelco.com/ridge-data/`, never in this repo.
 - First visit to `admin.html`: the admin (Raffael) picks his password, then sets each player's password.

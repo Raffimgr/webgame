@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<title>Group Chat</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* The group chat: everyone in one conversation (chat.php). Logged-in players only. */
+:root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--ink:#15181e;--well:#202328;
+  --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
+  --in-sh:inset 3px 3px 8px rgba(0,0,0,.5);--teal:#2ec4b6;--red:#ff5a5f;
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--play:"Fredoka","Inter",system-ui,sans-serif}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:linear-gradient(170deg,#2c3037 0%,#22252b 55%,#1b1d22 100%) fixed;color:var(--fg);font:15px/1.45 var(--font);min-height:100vh;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+.head{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));background:rgba(30,33,38,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.06)}
+.head h1{margin:0;font:700 22px/1.1 var(--play)}
+.head p{margin:1px 0 0;color:var(--mut);font-size:12.5px}
+.stack{display:flex;margin-left:auto}
+.stack .rg-av{margin-left:-8px;box-shadow:0 0 0 2px #262a30}
+.wrap{max-width:720px;margin:0 auto;padding:8px max(12px,env(safe-area-inset-right,0px)) 0 max(12px,env(safe-area-inset-left,0px))}
+.day{text-align:center;color:var(--mut);font-size:12px;font-weight:600;margin:16px 0 8px}
+.grp{display:flex;gap:8px;align-items:flex-end;margin:10px 0}
+.grp.mine{flex-direction:row-reverse}
+.grp>a{flex:none;text-decoration:none}
+.col{display:flex;flex-direction:column;gap:3px;min-width:0;max-width:78%}
+.mine .col{align-items:flex-end}
+.who{font-size:12px;color:var(--mut);font-weight:600;margin:0 0 1px 12px}
+.bub{position:relative;padding:8px 13px;border-radius:20px;background:#363b44;white-space:pre-wrap;overflow-wrap:anywhere;cursor:pointer;-webkit-user-select:text;user-select:text;max-width:100%}
+.mine .bub{background:var(--teal);color:var(--ink)}
+.bub a{color:inherit;text-decoration:underline}
+.bub.big{background:none!important;font-size:38px;line-height:1.1;padding:2px 4px}
+.hrt{align-self:flex-start;margin:-9px 0 0 10px;position:relative;z-index:1;font-size:11.5px;padding:1px 7px;border-radius:99px;background:#2b2f37;border:2px solid #22252b;color:#eef1f6;cursor:pointer}
+.mine .hrt{align-self:flex-end;margin:-9px 10px 0 0}
+.hrt.me{background:#4a2b33}
+.acts{display:flex;gap:6px;margin:2px 4px}
+.acts button{border:0;cursor:pointer;padding:6px 11px;border-radius:99px;font:600 12.5px var(--font);background:#2b2f37;color:var(--fg)}
+.acts .del{color:#ffb3b3}
+.tm{font-size:11px;color:var(--mut);margin:1px 10px 0}
+.seen{display:flex;justify-content:flex-end;align-items:center;gap:3px;color:var(--mut);font-size:11px;margin:2px 4px 0}
+.empty{text-align:center;color:var(--mut);padding:50px 20px}
+.empty b{display:block;font:600 20px var(--play);color:var(--fg);margin-bottom:4px}
+.cmp{position:fixed;left:0;right:0;bottom:0;z-index:39;padding:8px max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px));background:rgba(27,29,34,.96);border-top:1px solid rgba(255,255,255,.06)}
+.cmp form{max-width:720px;margin:0 auto;display:flex;gap:8px;align-items:flex-end}
+.cmp textarea{flex:1;resize:none;border:0;border-radius:22px;padding:11px 16px;background:var(--well);color:var(--fg);font:16px/1.35 var(--font);box-shadow:var(--in-sh);max-height:130px;min-height:44px}
+.cmp textarea:focus{outline:2px solid rgba(46,196,182,.55);outline-offset:0}
+.cmp button{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--teal);color:var(--ink);font-size:19px;cursor:pointer;display:grid;place-items:center}
+.cmp button:disabled{opacity:.45}
+html.kb .rg-nav{display:none}
+.newp{position:fixed;left:50%;transform:translateX(-50%);z-index:38;border:0;cursor:pointer;padding:8px 14px;border-radius:99px;background:var(--teal);color:var(--ink);font:700 13px var(--font);box-shadow:0 8px 20px rgba(0,0,0,.45)}
+.pop{position:absolute;left:50%;top:50%;font-size:40px;transform:translate(-50%,-50%) scale(.2);animation:pop .7s ease-out forwards;pointer-events:none}
+@keyframes pop{40%{transform:translate(-50%,-50%) scale(1.15);opacity:1}100%{transform:translate(-50%,-80%) scale(1);opacity:0}}
+</style>
+</head>
+<body>
+<div class="head">
+  <div><h1>&#128172; Group chat</h1><p id="sub">Everyone on the trip</p></div>
+  <div class="stack" id="stack"></div>
+</div>
+<div class="wrap"><div id="msgs"></div></div>
+<button class="newp" id="newp" hidden>&darr; New messages</button>
+<div class="cmp" id="cmp" hidden>
+  <form id="f"><textarea id="t" rows="1" maxlength="1000" placeholder="Message everyone&hellip;" aria-label="Message"></textarea><button id="send" aria-label="Send" disabled>&#10148;</button></form>
+</div>
+<script src="rg.js?v=3"></script>
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let me=null,people={},roster=[],msgs=[],rev=-1,seen={},open=0,busy=false,again=false;
+
+async function api(body){const r=await fetch("chat.php",{method:"POST",credentials:"same-origin",headers:{"X-RG":"1","Content-Type":"application/json"},body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Something went wrong. Try again.");return j}
+const P=id=>people[id]||{id,name:"Someone",short:"?",color:"#9aa3b3"};
+const link=s=>esc(s).replace(/https?:\/\/[^\s<]+[^\s<.,;:!?)"']/g,u=>`<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+/* a message that is only one to three emoji shows big, like other chat apps */
+const onlyEmoji=s=>s.length<=12&&/^(?:\p{Extended_Pictographic}|\p{Emoji_Component}|‍|️|\s)+$/u.test(s)&&!/^[\d#*\s]+$/.test(s);
+const dayName=t=>{const d=new Date(t*1000),n=new Date(),y=new Date(n);y.setDate(n.getDate()-1);
+  return d.toDateString()===n.toDateString()?"Today":d.toDateString()===y.toDateString()?"Yesterday":d.toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"})};
+const clock=t=>new Date(t*1000).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+const nearBottom=()=>innerHeight+scrollY>=document.documentElement.scrollHeight-160;
+const toBottom=()=>window.scrollTo(0,document.documentElement.scrollHeight);
+
+function bubble(m){
+  const mineH=m.hearts.includes(me.id),canDel=m.by===me.id||me.is_admin;
+  return `<div class="bub${onlyEmoji(m.body)?" big":""}" data-m="${m.id}">${link(m.body)}</div>`
+    +(m.hearts.length?`<span class="hrt${mineH?" me":""}" data-heart="${m.id}" title="${esc(m.hearts.map(h=>P(h).name).join(", "))}">❤️${m.hearts.length>1?" "+m.hearts.length:""}</span>`:"")
+    +(open===m.id?`<div class="acts"><button data-heart="${m.id}">${mineH?"\u{1F494} Unlike":"❤️ Like"}</button>${canDel?`<button class="del" data-del="${m.id}">Delete</button>`:""}</div>`:"");
+}
+function draw(){
+  const keep=nearBottom();
+  if(!msgs.length){$("#msgs").innerHTML=`<div class="empty"><b>Say hi to everyone \u{1F44B}</b>Plans, questions, where to meet: anything you write here, the whole group sees.</div>`;return}
+  let h="",lastDay="",g=null;const flush=()=>{if(!g)return;const mine=g.by===me.id,p=P(g.by);
+    h+=`<div class="grp${mine?" mine":""}">${mine?"":`<a href="profile.html?id=${encodeURIComponent(g.by)}" aria-label="${esc(p.name)}">${RG.av(p,30)}</a>`}<div class="col">${mine?"":`<div class="who">${esc(p.name)}</div>`}${g.list.map(bubble).join("")}<div class="tm">${clock(g.list[g.list.length-1].at)}</div></div></div>`;g=null};
+  for(const m of msgs){const d=dayName(m.at);if(d!==lastDay){flush();h+=`<div class="day">${d}</div>`;lastDay=d}
+    if(g&&g.by===m.by&&m.at-g.list[g.list.length-1].at<300)g.list.push(m);else{flush();g={by:m.by,list:[m]}}}
+  flush();
+  /* under your own newest message: who has read it */
+  const last=msgs[msgs.length-1];
+  if(last.by===me.id){const readers=Object.entries(seen).filter(([pid,id])=>pid!==me.id&&id>=last.id&&people[pid]).map(([pid])=>P(pid));
+    if(readers.length)h+=`<div class="seen">${readers.length>=roster.length-1&&readers.length>1?"Seen by everyone":"Seen by"} ${readers.slice(0,8).map(p=>RG.av(p,16)).join("")}</div>`}
+  $("#msgs").innerHTML=h;
+  if(keep)toBottom();
+}
+async function markSeen(){const last=msgs.length?msgs[msgs.length-1].id:0;if(!last||document.hidden||(seen[me.id]||0)>=last)return;
+  seen[me.id]=last;try{await api({act:"seen",id:last})}catch(e){}}
+async function poll(force){
+  if(busy){again=again||!!force;return}busy=true;
+  try{const r=await fetch("chat.php?rev="+(force?-1:rev),{credentials:"same-origin"});if(!r.ok)return;const j=await r.json();
+    const changedSeen=JSON.stringify(j.seen)!==JSON.stringify(seen);seen=j.seen||{};
+    if(j.msgs){const before=msgs.length?msgs[msgs.length-1].id:0,wasDown=nearBottom();msgs=j.msgs;rev=j.rev;draw();
+      const newest=msgs.length?msgs[msgs.length-1]:null;
+      if(newest&&newest.id>before&&before&&!wasDown&&newest.by!==me.id)$("#newp").hidden=false;}
+    else if(changedSeen)draw();
+    markSeen();
+  }catch(e){}finally{busy=false;if(again){again=false;poll(true)}}
+}
+
+/* the message box sits above the bottom bar; while typing, the bar steps aside so the box rides on top of the keyboard */
+function place(){
+  const nav=document.querySelector(".rg-nav"),kb=document.documentElement.classList.contains("kb"),vv=window.visualViewport;
+  const lift=vv?Math.max(0,innerHeight-vv.height-vv.offsetTop):0;
+  const bottom=kb||!nav?lift:nav.offsetHeight;
+  $("#cmp").style.bottom=bottom+"px";
+  $("#cmp").style.paddingBottom=bottom||kb?"8px":"calc(8px + env(safe-area-inset-bottom,0px))";
+  document.body.style.paddingBottom=(bottom+$("#cmp").offsetHeight+10)+"px";
+  $("#newp").style.bottom=(bottom+$("#cmp").offsetHeight+12)+"px";
+}
+const grow=()=>{const t=$("#t");t.style.height="auto";t.style.height=Math.min(130,t.scrollHeight)+"px";$("#send").disabled=!t.value.trim();place()};
+
+async function send(){const t=$("#t"),body=t.value.trim();if(!body)return;t.value="";grow();
+  try{const j=await api({act:"say",body});
+    if(j.rev===rev+1){msgs.push(j.msg);rev=j.rev;seen[me.id]=j.msg.id;draw()}else await poll(true);toBottom();}
+  catch(err){RG.toast(err.message);if(!t.value.trim()){t.value=body;grow()}}}
+
+let lastTap=0,lastTapId=0;
+document.addEventListener("click",async e=>{
+  const hb=e.target.closest("[data-heart]"),del=e.target.closest("[data-del]"),bub=e.target.closest(".bub");
+  try{
+    if(hb){const id=+hb.dataset.heart;open=0;await api({act:"heart",id});await poll(true);return}
+    if(del){if(!confirm("Delete this message for everyone?"))return;open=0;await api({act:"del",id:+del.dataset.del});await poll(true);return}
+    if(bub&&!e.target.closest("a")){const id=+bub.dataset.m,now=Date.now();
+      if(now-lastTap<350&&lastTapId===id){lastTap=0;open=0;const m=msgs.find(x=>x.id===id);
+        if(m&&!m.hearts.includes(me.id)){bub.insertAdjacentHTML("beforeend",`<span class="pop">❤️</span>`);await api({act:"heart",id});await poll(true)}
+        else draw();return}
+      lastTap=now;lastTapId=id;setTimeout(()=>{if(lastTap===now){open=open===id?0:id;draw()}},360);return}
+    if(open&&!e.target.closest(".acts")){open=0;draw()}
+  }catch(err){RG.toast(err.message)}});
+$("#newp").onclick=()=>{$("#newp").hidden=true;toBottom()};
+addEventListener("scroll",()=>{if(!$("#newp").hidden&&nearBottom())$("#newp").hidden=true},{passive:true});
+$("#f").onsubmit=e=>{e.preventDefault();send()};
+/* tapping send keeps the keyboard open, like other chat apps */
+$("#send").addEventListener("mousedown",e=>e.preventDefault());$("#send").addEventListener("touchstart",e=>{e.preventDefault();send()},{passive:false});
+$("#t").addEventListener("input",grow);
+/* Enter sends on a computer; on a phone Enter makes a new line and the arrow button sends */
+$("#t").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey&&!matchMedia("(pointer:coarse)").matches){e.preventDefault();send()}});
+$("#t").addEventListener("focus",()=>{document.documentElement.classList.add("kb");place();setTimeout(()=>{place();toBottom()},300)});
+$("#t").addEventListener("blur",()=>{document.documentElement.classList.remove("kb");place()});
+if(window.visualViewport){visualViewport.addEventListener("resize",place);visualViewport.addEventListener("scroll",place)}
+addEventListener("resize",place);
+
+async function boot(){
+  try{const r=await RG.login();me={id:r.me.id,name:r.me.name,is_admin:+r.me.is_admin===1};
+    roster=(r.state&&r.state.players)||[];roster.forEach(p=>people[p.id]=p);
+    $("#stack").innerHTML=roster.slice(0,5).map(p=>RG.av(p,28)).join("");
+    $("#sub").textContent=`Everyone on the trip · ${roster.length} people`;
+    $("#cmp").hidden=false;place();setTimeout(place,300);
+    await poll(true);toBottom();
+    setInterval(()=>{if(!document.hidden)poll()},3000);
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden)poll()});
+  }catch(e){$("#msgs").innerHTML=`<div class="empty">Could not load the chat. ${esc(e.message||"")}</div>`}}
+boot();
+})();
+</script>
+</body>
+</html>

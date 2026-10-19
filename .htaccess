@@ -1,0 +1,7 @@
+# Pages, scripts and styles change often: phones must check for a newer copy every time
+# (an unchanged file still comes back as a quick "not modified", so this costs almost nothing).
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|css)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

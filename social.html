@@ -46,6 +46,7 @@ textarea{width:100%;border:0;border-radius:14px;padding:11px 13px;background:var
 .post{border-radius:24px;background:var(--raise);box-shadow:var(--raise-sh);overflow:hidden}
 .post header{display:flex;align-items:center;gap:10px;padding:12px 14px}
 .post header .tm{color:var(--mut);font-size:12.5px}
+.post header .byl{display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none;min-width:0}
 .post header .del{margin-left:auto;padding:7px 11px}
 .post .media{display:block;background:#0e0f12}
 .post .media img{display:block;width:100%;height:auto;max-height:80vh;object-fit:contain;cursor:zoom-in}
@@ -94,8 +95,8 @@ textarea{width:100%;border:0;border-radius:14px;padding:11px 13px;background:var
   </div>
   <div id="feed"></div>
 </div>
-<script src="rg.js"></script>
-<script src="talk.js"></script>
+<script src="rg.js?v=3"></script>
+<script src="talk.js?v=3"></script>
 <script>
 (()=>{
 const $=s=>document.querySelector(s);
@@ -201,14 +202,16 @@ function postHTML(p){const mine=me&&(me.id===p.by||me.is_admin);
   const m=p.kind==="photo"
     ?`<a class="media" href="social.php?f=${p.id}" data-zoom="${p.id}"><img loading="lazy" src="social.php?f=${p.id}&s=1" alt="${esc(p.cap||"Photo")}"${p.w&&p.h?` width="${p.w}" height="${p.h}"`:""}></a>`
     :`<div class="media"><video controls playsinline preload="${p.prev?"none":"metadata"}"${p.prev?` poster="social.php?f=${p.id}&s=1"`:""} src="${esc(videoUrl(p))}"></video></div>`;
-  return `<article class="post" id="po-${p.id}" data-id="${p.id}"><header>${Talk.av(p.by,38)}<div><b>${esc(Talk.name(p.by))}</b><div class="tm">${Talk.ago(p.at)}${p.kind==="video"&&p.dur?" · \u{1F3AC} "+fmtDur(p.dur):""}</div></div>
+  return `<article class="post" id="po-${p.id}" data-id="${p.id}"><header><a class="byl" href="profile.html?id=${encodeURIComponent(p.by)}">${Talk.av(p.by,38)}<div><b>${esc(Talk.name(p.by))}</b><div class="tm">${Talk.ago(p.at)}${p.kind==="video"&&p.dur?" · \u{1F3AC} "+fmtDur(p.dur):""}</div></div></a>
     ${mine?`<button class="pill del" data-delpost="${p.id}" aria-label="Delete this post">&#128465;</button>`:""}</header>${m}
     <div class="b">${p.cap?`<p class="cap">${esc(p.cap)}</p>`:""}<div class="acts"><a class="btn ghost" href="${esc(dlUrl(p))}" download="${esc(dlName(p))}">&#11015;&#65039; Download${p.size?" ("+fmtSize(p.size)+")":""}</a></div>${Talk.bar("po-"+p.id)}</div></article>`}
 function emptyCheck(){const e=$("#empty"),has=!!document.querySelector(".post");if(has&&e)e.remove();if(!has&&!e)$("#feed").insertAdjacentHTML("beforeend",`<div class="empty" id="empty">No posts yet. Share the first photo! &#128247;</div>`)}
 function addPost(p,top){if(document.getElementById("po-"+p.id))return;$("#feed").insertAdjacentHTML(top?"afterbegin":"beforeend",postHTML(p));emptyCheck()}
 async function refresh(first){const r=await fetch("social.php",{credentials:"same-origin"});if(!r.ok)throw new Error("Could not load the feed.");const j=await r.json();
   view=j.view;media=j.media;
-  if(first){$("#feed").innerHTML=j.posts.map(postHTML).join("");emptyCheck();return}
+  if(first){$("#feed").innerHTML=j.posts.map(postHTML).join("");emptyCheck();
+    /* opened from a profile grid: jump to that post */
+    const go=/^#po-\d+$/.test(location.hash)&&document.querySelector(location.hash);if(go)setTimeout(()=>go.scrollIntoView({block:"start"}),50);return}
   const ids=new Set(j.posts.map(p=>p.id));document.querySelectorAll(".post").forEach(el=>{if(!ids.has(+el.dataset.id))el.remove()});
   j.posts.slice().reverse().forEach(p=>addPost(p,true));emptyCheck()}
 document.addEventListener("click",async e=>{
