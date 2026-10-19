@@ -205,6 +205,7 @@ h2{margin:6px 0 2px;font:600 26px var(--play)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="rg.js"></script>
+<script src="talk.js"></script>
 <script>
 (function(){
 const $=s=>document.querySelector(s);
@@ -612,34 +613,16 @@ const dirs=ll=>`https://www.google.com/maps/dir/?api=1&destination=${ll[0]},${ll
 })();
 
 /* ---------- tabs ---------- */
-const TABS=[["places","\u{1F4CD} Places","#2ec4b6"],["map","\u{1F5FA}️ Map","#5cc8ee"],["skyline","\u{1F4F8} Photos","#ffd23f"],["history","\u{1F4DC} History","#ff7b6b"],["quiz","\u{1F3C6} Quiz","#b392f0"],["eat","\u{1F37D}\uFE0F Eat","#ff9f43"],["bingo","\u{1F3B2} Bingo","#6fc04a"],["videos","▶️ Videos","#ff7b6b"],["games","\u{1F3B2} Games","#ffd23f"]];
-let tab=store.get("tab","places");if(!TABS.some(t=>t[0]===tab)||tab==="games")tab="places";
+const TABS=[["places","\u{1F4CD} Places","#2ec4b6"],["map","\u{1F5FA}️ Map","#5cc8ee"],["skyline","\u{1F4F8} Photos","#ffd23f"],["history","\u{1F4DC} History","#ff7b6b"],["quiz","\u{1F3C6} Quiz","#b392f0"],["eat","\u{1F37D}\uFE0F Eat","#ff9f43"],["bingo","\u{1F3B2} Bingo","#6fc04a"],["videos","▶️ Videos","#ff7b6b"]];
+let tab=store.get("tab","places");if(!TABS.some(t=>t[0]===tab))tab="places";
 function drawTabs(){$("#tabs").innerHTML=TABS.map(([k,l,c])=>`<button data-k="${k}" class="${k===tab?"on":""}" style="--x:${c}">${l}</button>`).join("");
-  $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>b.dataset.k==="games"?location.href="games.html":go(b.dataset.k))}
+  $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>go(b.dataset.k))}
 function go(k){tab=k;store.set("tab",k);drawTabs();stopTimer();VIEWS[k]();const t=$("#tabs");if(t.getBoundingClientRect().top<0||scrollY>t.offsetTop)scrollTo({top:t.offsetTop-4,behavior:"smooth"})}
 
-/* ---------- likes and comments (talk.php, behind the login) ---------- */
+/* ---------- likes and comments (talk.js / talk.php, behind the login) ---------- */
 /* Each place, place to eat, history event, video and photo has a key (pl-, eat-, hi-, vid-, ph-); everyone can like it and comment on it. */
-let talk=null;const talkOpen=new Set();
 const slug=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,50);
-const pname=id=>(rosterById[id]||{}).name||"Someone";
-async function loadTalk(){try{const r=await fetch("talk.php",{credentials:"same-origin"});if(r.ok)talk=(await r.json()).items||{}}catch(e){}}
-function ago(t){const s=Date.now()/1000-t;if(s<60)return "just now";if(s<3600)return Math.floor(s/60)+"m ago";if(s<86400)return Math.floor(s/3600)+"h ago";
-  return new Date(t*1000).toLocaleDateString([],{month:"short",day:"numeric"})}
-function talkBar(key){
-  if(!talk||!me)return "";
-  const t=talk[key]||{likes:[],comments:[]},mine=t.likes.includes(me.id),n=t.comments.length,open=talkOpen.has(key),names=t.likes.map(pname);
-  return `<div class="talk" data-talk="${esc(key)}"><div class="tb"><button class="tk ${mine?"on":""}" data-like aria-pressed="${mine}">${mine?"❤️":"\u{1F90D}"} ${t.likes.length||"Like"}</button>
-    <button class="tk" data-cm aria-expanded="${open}">\u{1F4AC} ${n?n+(n===1?" comment":" comments"):"Comment"}</button></div>
-    ${names.length?`<div class="tw">Liked by ${esc(names.length>4?names.slice(0,4).join(", ")+" and "+(names.length-4)+" more":names.join(", "))}</div>`:""}
-    ${open?`<div class="tc">${t.comments.map(c=>`<div class="cmt">${rosterById[c.by]&&window.RG?RG.av(rosterById[c.by],28):""}<div>${me.id===c.by||me.is_admin?`<button class="tdel" data-tdel="${c.id}" aria-label="Delete comment">✕</button>`:""}<b>${esc(pname(c.by))}</b> <span class="tm">${ago(c.at)}</span><div class="tx">${esc(c.body)}</div></div></div>`).join("")}
-      <form class="tf" data-say><input name="b" maxlength="500" placeholder="Write a comment…" autocomplete="off" aria-label="Write a comment"><button class="btn">Post</button></form></div>`:""}</div>`}
-function talkCount(key){const t=talk&&talk[key];if(!t)return "";const a=t.likes.length,b=t.comments.length;return a||b?` <span class="tcnt">${a?"❤️ "+a:""}${a&&b?" ":""}${b?"\u{1F4AC} "+b:""}</span>`:""}
-/* redraw one item's bars (or all of them); keepDraft leaves alone a bar someone is typing in */
-function redrawTalk(key,keepDraft){document.querySelectorAll(".talk").forEach(el=>{if(key&&el.dataset.talk!==key)return;const inp=el.querySelector("input");
-  if(keepDraft&&inp&&(inp.value||document.activeElement===inp))return;el.insertAdjacentHTML("afterend",talkBar(el.dataset.talk));el.remove()})}
-async function talkPost(body){const r=await fetch("talk.php",{method:"POST",credentials:"same-origin",headers:{"X-RG":"1","Content-Type":"application/json"},body:JSON.stringify(body)});
-  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Could not save. Try again.");talk[j.item]=j.data;return j.item}
+const talkBar=k=>window.Talk?Talk.bar(k):"",talkCount=k=>window.Talk?Talk.count(k):"";
 /* where a key lives: [tab, name] */
 function talkWhere(k){const i=k.indexOf("-"),pre=k.slice(0,i),id=k.slice(i+1);
   if(pre==="pl"){const p=PLACES.find(x=>x.id===id);return p&&["places",p.n]}
@@ -648,24 +631,14 @@ function talkWhere(k){const i=k.indexOf("-"),pre=k.slice(0,i),id=k.slice(i+1);
   if(pre==="vid"){const v=VIDEOS.flatMap(g=>g.items).find(x=>x.id===id);return v&&["videos",v.t]}
   if(pre==="ph"){const p=P[id];return p&&["skyline",p.cap||"a photo"]}}
 function talkFeed(){
-  if(!talk||!me)return "";const all=[];Object.entries(talk).forEach(([k,t])=>t.comments.forEach(c=>{const w=talkWhere(k);if(w)all.push({k,w,...c})}));if(!all.length)return "";
+  if(!window.Talk||!Talk.data||!me)return "";const all=[];Object.entries(Talk.data).forEach(([k,t])=>t.comments.forEach(c=>{const w=talkWhere(k);if(w)all.push({k,w,...c})}));if(!all.length)return "";
   all.sort((a,b)=>b.at-a.at);
-  return `<div class="panel feed"><h3>\u{1F4AC} Latest comments</h3>${all.slice(0,4).map(c=>`<button class="fi" data-jump="${esc(c.k)}">${rosterById[c.by]&&window.RG?RG.av(rosterById[c.by],26):""}<span><b>${esc(pname(c.by))}</b> on <b>${esc(c.w[1])}</b>: ${esc(c.body.length>90?c.body.slice(0,90)+"…":c.body)} <span class="tm">${ago(c.at)}</span></span></button>`).join("")}</div>`}
-function talkJump(key){const w=talkWhere(key);if(!w)return;talkOpen.add(key);
+  return `<div class="panel feed"><h3>\u{1F4AC} Latest comments</h3>${all.slice(0,4).map(c=>`<button class="fi" data-jump="${esc(c.k)}">${Talk.av(c.by,26)}<span><b>${esc(Talk.name(c.by))}</b> on <b>${esc(c.w[1])}</b>: ${esc(c.body.length>90?c.body.slice(0,90)+"…":c.body)} <span class="tm">${Talk.ago(c.at)}</span></span></button>`).join("")}</div>`}
+function talkJump(key){const w=talkWhere(key);if(!w)return;Talk.open.add(key);
   if(w[0]==="places")placeFilter="all";if(w[0]==="eat")eatFilter="all";go(w[0]);
   if(w[0]==="skyline"){const k=key.slice(3),g=GALLERY.indexOf(k);if(g>=0)lightbox(g);else if(album){const a=album.items.findIndex(it=>"al"+it.id===k);if(a>=0)albumLightbox(a)}return}
   setTimeout(()=>{const el=document.getElementById(key);if(el)el.scrollIntoView({behavior:"smooth",block:"center"})},80)}
-document.addEventListener("click",async e=>{
-  const j=e.target.closest("[data-jump]");if(j){talkJump(j.dataset.jump);return}
-  const el=e.target.closest(".talk");if(!el)return;const key=el.dataset.talk;
-  if(e.target.closest("[data-like]")){try{await talkPost({act:"like",item:key});redrawTalk(key)}catch(err){toast(err.message)}}
-  else if(e.target.closest("[data-cm]")){talkOpen.has(key)?talkOpen.delete(key):talkOpen.add(key);redrawTalk(key)}
-  else{const d=e.target.closest("[data-tdel]");if(d){if(!confirm("Delete this comment?"))return;try{await talkPost({act:"del",id:+d.dataset.tdel});redrawTalk(key)}catch(err){toast(err.message)}}}});
-document.addEventListener("submit",async e=>{const f=e.target.closest("[data-say]");if(!f)return;e.preventDefault();
-  const key=f.closest(".talk").dataset.talk,inp=f.querySelector("input"),btn=f.querySelector("button"),body=inp.value.trim();if(!body)return;
-  btn.disabled=true;try{await talkPost({act:"say",item:key,body});inp.value="";redrawTalk(key)}catch(err){toast(err.message);btn.disabled=false}});
-/* pick up everyone else's likes and comments while the page is open */
-setInterval(()=>{if(talk&&!document.hidden)loadTalk().then(()=>redrawTalk(null,true))},30000);
+document.addEventListener("click",e=>{const j=e.target.closest("[data-jump]");if(j)talkJump(j.dataset.jump)});
 
 /* ---------- places ---------- */
 let placeFilter="all",placeSort=store.get("sort","near");
@@ -790,7 +763,7 @@ function lightboxItems(list,i){
   const d=document.createElement("div");d.className="lb";
   const draw=()=>{const p=list[i];d.innerHTML=`<button class="pill x">Close \u2715</button>${list.length>1?`<button class="pill nav prev">\u2039</button><button class="pill nav next">\u203A</button>`:""}
     <div><img src="${esc(p.src)}" alt="${esc(p.cap)}"><div class="cap">${esc(p.cap)}<br>${p.href?`<a href="${esc(p.href)}" target="_blank" rel="noopener">Photo: ${esc(p.by)}</a>`:`<a>Photo: ${esc(p.by)}</a>`}</div>${p.k?talkBar(p.k):""}</div>`;
-    d.querySelector(".x").onclick=()=>{d.remove();if(tab==="skyline"&&talk)VIEWS.skyline()};
+    d.querySelector(".x").onclick=()=>{d.remove();if(tab==="skyline"&&window.Talk&&Talk.data)VIEWS.skyline()};
     if(list.length>1){d.querySelector(".prev").onclick=()=>{i=(i+list.length-1)%list.length;draw()};d.querySelector(".next").onclick=()=>{i=(i+1)%list.length;draw()}}};
   draw();d.onclick=e=>{if(e.target===d)d.remove()};document.body.appendChild(d);
 }
@@ -926,7 +899,7 @@ async function boot(){
     online=true;
     try{const c=await fetch("cabin.php",{credentials:"same-origin"});if(c.ok)cabinInfo=await c.json()}catch(e){}
     try{const m=await fetch("tripmap.php?info=1",{credentials:"same-origin"});if(m.ok)parkMap=await m.json()}catch(e){}
-    await loadAlbum();await loadTalk();
+    await loadAlbum();if(window.Talk){Talk.setMe(me,rosterById);await Talk.load()}
     if(tab!=="quiz"||!quiz.state)VIEWS[tab]();
   }catch(e){/* no game server (file or preview): the guide still works */}
 }

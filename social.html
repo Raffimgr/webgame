@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Trip Feed</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Trip Feed: everyone shares photos and videos from the trip, likes them, comments and downloads them.
+   Photos live on this server (social.php), videos in Raffi's Cloudflare storage (cloudflare/media-worker.js). Logged-in players only. */
+:root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--ink:#15181e;--well:#202328;
+  --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
+  --in-sh:inset 3px 3px 8px rgba(0,0,0,.5);
+  --teal:#2ec4b6;--gold:#ffd23f;--green:#6fc04a;--red:#ff7b6b;--blue:#5cc8ee;--purple:#b392f0;
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--play:"Fredoka","Inter",system-ui,sans-serif}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:linear-gradient(170deg,#2c3037 0%,#22252b 55%,#1b1d22 100%) fixed;color:var(--fg);font:15px/1.55 var(--font);min-height:100vh;-webkit-font-smoothing:antialiased}
+a{color:var(--teal)}
+[hidden]{display:none!important}
+.wrap{max-width:680px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(40px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:18px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pill{display:inline-flex;align-items:center;gap:6px;color:var(--fg);font-size:13px;font-weight:600;text-decoration:none;padding:9px 14px;border-radius:99px;background:var(--raise);box-shadow:var(--raise-sh);border:0;cursor:pointer;font-family:var(--font)}
+h1{margin:0;font:700 34px/1.1 var(--play)}
+.sub{margin:4px 0 0;color:var(--mut)}
+.panel{border-radius:26px;background:var(--raise);box-shadow:var(--raise-sh);padding:18px}
+.btn{border:0;cursor:pointer;padding:10px 14px;border-radius:14px;font:700 13.5px var(--font);background:var(--teal);color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn.ghost{background:#353a43;color:var(--fg)}
+.btn.big{padding:14px 20px;font-size:15.5px;border-radius:16px;justify-content:center}
+.btn:disabled{opacity:.5;cursor:default}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.note{font-size:13px;color:var(--mut);margin:10px 0 0}
+/* the share box */
+.picks{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.pk{display:flex;gap:10px;align-items:center;font-size:14px}
+.pk .th{width:56px;height:56px;border-radius:12px;background:#15181e center/cover;flex:none;display:grid;place-items:center;font-size:24px}
+.pk .nm{flex:1;min-width:0}
+.pk .nm div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pk .st{font-size:12.5px;color:var(--mut)}
+.pk .st.bad{color:var(--red)}
+.pk .bar{height:6px;border-radius:99px;background:#15181e;margin-top:5px;overflow:hidden}
+.pk .bar i{display:block;height:100%;width:0;background:var(--teal);transition:width .3s}
+textarea{width:100%;border:0;border-radius:14px;padding:11px 13px;background:var(--well);color:var(--fg);font:16px/1.4 var(--font);box-shadow:var(--in-sh);resize:vertical;min-height:70px;margin:12px 0 10px}
+/* posts */
+#feed{display:flex;flex-direction:column;gap:18px}
+.post{border-radius:24px;background:var(--raise);box-shadow:var(--raise-sh);overflow:hidden}
+.post header{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.post header .tm{color:var(--mut);font-size:12.5px}
+.post header .del{margin-left:auto;padding:7px 11px}
+.post .media{display:block;background:#0e0f12}
+.post .media img{display:block;width:100%;height:auto;max-height:80vh;object-fit:contain;cursor:zoom-in}
+.post video{display:block;width:100%;max-height:80vh;background:#000}
+.post .b{padding:12px 14px 14px;display:flex;flex-direction:column;gap:10px}
+.post .cap{margin:0;color:#d6dbe4;white-space:pre-wrap;overflow-wrap:anywhere}
+.empty{text-align:center;color:var(--mut);padding:30px 10px}
+.lb{position:fixed;inset:0;z-index:60;background:rgba(10,11,14,.95);display:grid;place-items:center;padding:16px}
+.lb img{max-width:100%;max-height:88vh;border-radius:12px}
+.lb .x{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:16px}
+/* likes and comments (talk.js) */
+.talk{display:flex;flex-direction:column;gap:8px;border-top:1px solid rgba(255,255,255,.07);padding-top:10px}
+.talk .tb{display:flex;gap:8px;flex-wrap:wrap}
+.tk{border:0;cursor:pointer;background:#2b2f37;color:var(--fg);font:600 13px var(--font);padding:7px 13px;border-radius:99px;box-shadow:var(--in-sh)}
+.tk.on{background:#3b2b33;color:#ffc2cf}
+.talk .tw{font-size:12.5px;color:var(--mut)}
+.talk .tc{display:flex;flex-direction:column;gap:10px}
+.cmt{display:flex;gap:9px;align-items:flex-start;font-size:14px;line-height:1.4}
+.cmt>div{flex:1;min-width:0}
+.cmt .tm{font-size:11.5px;color:var(--mut);font-weight:500}
+.cmt .tx{color:#d6dbe4;white-space:pre-wrap;overflow-wrap:anywhere}
+.tdel{border:0;background:none;color:var(--mut);cursor:pointer;font-size:12px;padding:0 4px;float:right}
+.tf{display:flex;gap:6px}
+.tf input{flex:1;min-width:0;border:0;border-radius:12px;padding:9px 12px;background:var(--well);color:var(--fg);font:16px var(--font);box-shadow:var(--in-sh)}
+.tf .btn{padding:8px 14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="pill" href="./">&larr; Shenandoah Guide</a>
+    <span class="pill" id="who" hidden></span>
+  </div>
+  <div>
+    <h1>&#128248; Trip Feed</h1>
+    <p class="sub">Share photos and videos from the trip. Everyone here can like them, comment, and download them.</p>
+  </div>
+  <div class="panel" id="share" hidden>
+    <div id="pickRow"><label class="btn big" style="width:100%">&#10133; Share photos or videos<input type="file" id="pick" accept="image/*,video/*" multiple hidden></label>
+      <p class="note" id="vidNote" hidden>Video sharing is still being switched on. Photos work now.</p></div>
+    <div id="compose" hidden>
+      <div class="picks" id="picks"></div>
+      <textarea id="cap" maxlength="500" placeholder="Say something about it (optional)"></textarea>
+      <div class="acts"><button class="btn big" id="post" style="flex:1">Post</button><button class="btn big ghost" id="cancel">Cancel</button></div>
+    </div>
+  </div>
+  <div id="feed"></div>
+</div>
+<script src="rg.js"></script>
+<script src="talk.js"></script>
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const PART=50*1048576; /* videos go up in 50 MB pieces (a Cloudflare request can carry about 100 MB) */
+let me=null,people={},view="",media="",videoOn=false,picked=[],busy=false;
+
+const fmtSize=b=>b>=1073741824?(b/1073741824).toFixed(1)+" GB":b>=1048576?Math.round(b/1048576)+" MB":Math.max(1,Math.round(b/1024))+" KB";
+const fmtDur=s=>{s=Math.round(s);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
+const videoUrl=p=>`${media}/f/${p.key}?v=${view}`;
+const dlName=p=>p.kind==="photo"?p.name.replace(/\.[A-Za-z0-9]+$/,"")+".jpg":p.name;
+const dlUrl=p=>p.kind==="photo"?`social.php?f=${p.id}&dl=1`:`${videoUrl(p)}&dl=${encodeURIComponent(dlName(p))}`;
+
+async function api(body){const r=await fetch("social.php",{method:"POST",credentials:"same-origin",headers:{"X-RG":"1","Content-Type":"application/json"},body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Something went wrong. Try again.");return j}
+/* XMLHttpRequest, because fetch can't report upload progress */
+function send(method,url,blob,onp,ours){return new Promise((res,rej)=>{const x=new XMLHttpRequest();x.open(method,url);
+  x.setRequestHeader("Content-Type",blob.type||"application/octet-stream");if(ours)x.setRequestHeader("X-RG","1");
+  x.upload.onprogress=e=>onp&&onp(e.loaded);
+  x.onload=()=>{let j={};try{j=JSON.parse(x.responseText)}catch(e){}x.status<300?res(j):rej(new Error(j.error||"Upload failed ("+x.status+")."))};
+  x.onerror=()=>rej(new Error("Upload failed. Check your connection and try again."));x.send(blob)})}
+
+/* ---------- getting files ready ---------- */
+function loadImg(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();
+  im.onload=()=>res({im,u});im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error("This photo type can't be opened on this device."))};im.src=u})}
+function toJpeg(src,w,h,max,q){const k=Math.min(1,max/Math.max(w,h)),c=document.createElement("canvas");c.width=Math.round(w*k);c.height=Math.round(h*k);
+  c.getContext("2d").drawImage(src,0,0,c.width,c.height);return new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error("Could not read this photo.")),"image/jpeg",q))}
+/* Photos are redrawn as JPEG (up to 4032 px, full size for most phones), which also leaves the hidden location data behind. */
+async function prepPhoto(file){const {im,u}=await loadImg(file);
+  try{const w=im.naturalWidth,h=im.naturalHeight;let main=await toJpeg(im,w,h,4032,.9);if(main.size>30*1048576)main=await toJpeg(im,w,h,4032,.75);
+    return {main,prev:await toJpeg(im,w,h,1200,.82)}}finally{URL.revokeObjectURL(u)}}
+/* size, length and a cover picture for a video (the cover can fail for formats this browser can't play; that's fine) */
+function videoInfo(file){return new Promise(res=>{const v=document.createElement("video"),u=URL.createObjectURL(file);let done=false;
+  const fin=r=>{if(done)return;done=true;URL.revokeObjectURL(u);res(r)};
+  v.muted=true;v.playsInline=true;v.preload="auto";
+  v.onloadedmetadata=()=>{v.currentTime=Math.min(1,(v.duration||2)/2)};
+  v.onseeked=async()=>{const w=v.videoWidth,h=v.videoHeight;let poster=null;try{if(w&&h)poster=await toJpeg(v,w,h,1200,.82)}catch(e){}fin({w,h,dur:v.duration,poster})};
+  v.onerror=()=>fin({});setTimeout(()=>fin({}),10000);v.src=u})}
+/* Phones write where a video was taken as text like +38.8090-078.7930+350.000/ near the start or end of the file.
+   Turn those digits into zeros so the location doesn't travel with the video; nothing else in the file changes. */
+const LOC_RE=/[+-]\d{2}\.\d{2,}[+-]\d{3}\.\d{2,}(?:[+-]\d+(?:\.\d+)?)?\//g;
+function zapLocation(bytes){const s=new TextDecoder("latin1").decode(bytes);let hit=false,m;LOC_RE.lastIndex=0;
+  while((m=LOC_RE.exec(s))){hit=true;for(let i=m.index;i<m.index+m[0].length;i++)if(bytes[i]>=48&&bytes[i]<=57)bytes[i]=48}return hit}
+async function stripVideoLocation(file){const N=8*1048576,type=file.type||"video/mp4";
+  if(file.size<=2*N){const b=new Uint8Array(await file.arrayBuffer());zapLocation(b);return new Blob([b],{type})}
+  const head=new Uint8Array(await file.slice(0,N).arrayBuffer()),tail=new Uint8Array(await file.slice(file.size-N).arrayBuffer());
+  const a=zapLocation(head),b=zapLocation(tail);return a||b?new Blob([head,file.slice(N,file.size-N),tail],{type}):new Blob([file],{type})}
+
+async function sendVideo(key,blob,ticket,onp){const q=`t=${ticket}`;
+  if(blob.size<=PART)return send("PUT",`${media}/up/${key}?${q}`,blob,onp);
+  const r=await fetch(`${media}/mp/${key}?${q}&action=create&type=${encodeURIComponent(blob.type)}`,{method:"POST"}),c=await r.json().catch(()=>({}));
+  if(!r.ok||!c.uploadId)throw new Error(c.error||"Could not start the upload.");
+  const base=`${media}/mp/${key}?${q}&uploadId=${encodeURIComponent(c.uploadId)}`,parts=[];let done=0;
+  try{for(let off=0,n=1;off<blob.size;off+=PART,n++){const piece=blob.slice(off,off+PART);let p;
+      for(let tries=0;;tries++){try{p=await send("PUT",`${base}&part=${n}`,piece,l=>onp(done+l));break}catch(e){if(tries>=2)throw e}}
+      parts.push({partNumber:p.partNumber,etag:p.etag});done+=piece.size}
+    const f=await fetch(`${base}&action=complete`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({parts})});
+    if(!f.ok)throw new Error("Could not finish the upload.")}
+  catch(e){fetch(base,{method:"DELETE"}).catch(()=>{});throw e}}
+
+async function shareOne(it,cap,onp){
+  if(it.kind==="photo"){
+    const d=await prepPhoto(it.file),total=d.main.size+d.prev.size;
+    const s=await api({act:"start",kind:"photo",name:it.file.name,cap});
+    try{await send("POST",`social.php?up=main&id=${s.id}`,d.main,l=>onp(l/total),true);
+      await send("POST",`social.php?up=prev&id=${s.id}`,d.prev,l=>onp((d.main.size+l)/total),true);
+      return (await api({act:"done",id:s.id})).post}
+    catch(e){api({act:"del",id:s.id}).catch(()=>{});throw e}}
+  const info=await videoInfo(it.file),file=await stripVideoLocation(it.file);
+  const s=await api({act:"start",kind:"video",name:it.file.name,size:file.size,type:file.type,w:info.w,h:info.h,dur:info.dur,cap});
+  try{if(info.poster)await send("POST",`social.php?up=prev&id=${s.id}`,info.poster,null,true).catch(()=>{});
+    await sendVideo(s.key,file,s.ticket,l=>onp(l/file.size));
+    return (await api({act:"done",id:s.id})).post}
+  catch(e){api({act:"del",id:s.id}).catch(()=>{});throw e}}
+
+/* ---------- the share box ---------- */
+function drawPicks(){$("#picks").innerHTML=picked.map((it,i)=>`<div class="pk" id="pk${i}"><div class="th" style="${it.thumb?`background-image:url(${it.thumb})`:""}">${it.thumb?"":"&#127916;"}</div>
+  <div class="nm"><div>${esc(it.file.name)}</div><div class="st${it.blocked||it.failed?" bad":""}">${esc(it.msg||(it.kind==="video"?"Video":"Photo")+" · "+fmtSize(it.file.size))}</div>${it.prog!=null?`<div class="bar"><i style="width:${Math.round(it.prog*100)}%"></i></div>`:""}</div></div>`).join("");
+  $("#compose").hidden=!picked.length;$("#pickRow").hidden=!!picked.length}
+function setPick(i,patch){Object.assign(picked[i],patch);const el=$("#pk"+i);if(!el)return;
+  const st=el.querySelector(".st");if(patch.msg!=null){st.textContent=patch.msg;st.classList.toggle("bad",!!(picked[i].blocked||picked[i].failed))}
+  if(patch.prog!=null){let bar=el.querySelector(".bar i");if(!bar){el.querySelector(".nm").insertAdjacentHTML("beforeend",`<div class="bar"><i></i></div>`);bar=el.querySelector(".bar i")}bar.style.width=Math.round(patch.prog*100)+"%"}}
+function clearPicks(){picked.forEach(it=>it.thumb&&URL.revokeObjectURL(it.thumb));picked=[];$("#cap").value="";$("#post").textContent="Post";drawPicks()}
+$("#pick").onchange=e=>{const files=[...e.target.files];e.target.value="";
+  for(const f of files){const kind=f.type.startsWith("video/")||/\.(mov|mp4|m4v|webm|3gp|mkv)$/i.test(f.name)?"video":"photo";
+    const it={file:f,kind,thumb:kind==="photo"?URL.createObjectURL(f):null};
+    if(kind==="video"&&!videoOn){it.blocked=true;it.msg="Video sharing isn't switched on yet."}
+    picked.push(it)}
+  drawPicks()};
+$("#cancel").onclick=()=>{if(!busy)clearPicks()};
+$("#post").onclick=async()=>{if(busy)return;const todo=picked.map((it,i)=>i).filter(i=>!picked[i].blocked&&!picked[i].done);if(!todo.length){clearPicks();return}
+  busy=true;$("#post").disabled=$("#cancel").disabled=true;const cap=$("#cap").value.trim();let ok=0;
+  for(const i of todo){setPick(i,{failed:false,msg:"Getting it ready…",prog:0});
+    try{const post=await shareOne(picked[i],cap,f=>setPick(i,{msg:`Uploading… ${Math.round(f*100)}%`,prog:f}));
+      setPick(i,{done:true,msg:"Shared ✔",prog:1});ok++;addPost(post,true)}
+    catch(err){setPick(i,{failed:true,msg:err.message||"Could not share this one."})}}
+  busy=false;$("#post").disabled=$("#cancel").disabled=false;
+  if(picked.every(it=>it.done||it.blocked)){if(ok)RG.toast(ok>1?`${ok} posts shared \u{1F389}`:"Shared \u{1F389}");clearPicks()}
+  else $("#post").textContent="Try again"};
+
+/* ---------- the feed ---------- */
+function postHTML(p){const mine=me&&(me.id===p.by||me.is_admin);
+  const m=p.kind==="photo"
+    ?`<a class="media" href="social.php?f=${p.id}" data-zoom="${p.id}"><img loading="lazy" src="social.php?f=${p.id}&s=1" alt="${esc(p.cap||"Photo")}"${p.w&&p.h?` width="${p.w}" height="${p.h}"`:""}></a>`
+    :`<div class="media"><video controls playsinline preload="${p.prev?"none":"metadata"}"${p.prev?` poster="social.php?f=${p.id}&s=1"`:""} src="${esc(videoUrl(p))}"></video></div>`;
+  return `<article class="post" id="po-${p.id}" data-id="${p.id}"><header>${Talk.av(p.by,38)}<div><b>${esc(Talk.name(p.by))}</b><div class="tm">${Talk.ago(p.at)}${p.kind==="video"&&p.dur?" · \u{1F3AC} "+fmtDur(p.dur):""}</div></div>
+    ${mine?`<button class="pill del" data-delpost="${p.id}" aria-label="Delete this post">&#128465;</button>`:""}</header>${m}
+    <div class="b">${p.cap?`<p class="cap">${esc(p.cap)}</p>`:""}<div class="acts"><a class="btn ghost" href="${esc(dlUrl(p))}" download="${esc(dlName(p))}">&#11015;&#65039; Download${p.size?" ("+fmtSize(p.size)+")":""}</a></div>${Talk.bar("po-"+p.id)}</div></article>`}
+function emptyCheck(){const e=$("#empty"),has=!!document.querySelector(".post");if(has&&e)e.remove();if(!has&&!e)$("#feed").insertAdjacentHTML("beforeend",`<div class="empty" id="empty">No posts yet. Share the first photo! &#128247;</div>`)}
+function addPost(p,top){if(document.getElementById("po-"+p.id))return;$("#feed").insertAdjacentHTML(top?"afterbegin":"beforeend",postHTML(p));emptyCheck()}
+async function refresh(first){const r=await fetch("social.php",{credentials:"same-origin"});if(!r.ok)throw new Error("Could not load the feed.");const j=await r.json();
+  view=j.view;media=j.media;
+  if(first){$("#feed").innerHTML=j.posts.map(postHTML).join("");emptyCheck();return}
+  const ids=new Set(j.posts.map(p=>p.id));document.querySelectorAll(".post").forEach(el=>{if(!ids.has(+el.dataset.id))el.remove()});
+  j.posts.slice().reverse().forEach(p=>addPost(p,true));emptyCheck()}
+document.addEventListener("click",async e=>{
+  const z=e.target.closest("[data-zoom]");if(z){e.preventDefault();const d=document.createElement("div");d.className="lb";
+    d.innerHTML=`<button class="pill x">Close ✕</button><img src="social.php?f=${+z.dataset.zoom}" alt="">`;d.onclick=()=>d.remove();document.body.appendChild(d);return}
+  const del=e.target.closest("[data-delpost]");if(del){if(!confirm("Delete this post for everyone?"))return;
+    try{const j=await api({act:"del",id:+del.dataset.delpost});if(j.key)fetch(`${media}/f/${j.key}?t=${j.ticket}`,{method:"DELETE"}).catch(()=>{});
+      const el=$("#po-"+del.dataset.delpost);if(el)el.remove();emptyCheck()}catch(err){RG.toast(err.message)}}});
+
+async function boot(){
+  try{const r=await RG.login();me={id:r.me.id,name:r.me.name,is_admin:+r.me.is_admin===1};
+    if(r.state&&r.state.players)r.state.players.forEach(p=>people[p.id]=p);
+    const w=$("#who");w.hidden=false;w.innerHTML=RG.av(r.me,22)+" "+esc(r.me.name);
+    Talk.setMe(me,people);await Talk.load();await refresh(true);$("#share").hidden=false;
+    try{const c=new AbortController();setTimeout(()=>c.abort(),6000);videoOn=(await fetch(media+"/ping",{signal:c.signal})).ok}catch(e){videoOn=false}
+    $("#vidNote").hidden=videoOn;
+    setInterval(()=>{if(!document.hidden&&!busy)refresh(false).catch(()=>{})},45000);
+  }catch(e){$("#feed").innerHTML=`<div class="empty">Could not load the feed. ${esc(e.message||"")}</div>`}}
+boot();
+})();
+</script>
+</body>
+</html>

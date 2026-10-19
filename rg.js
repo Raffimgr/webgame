@@ -1,5 +1,5 @@
-/* Ridge Games shared helpers: talking to api.php, the login screen, photo shrinking, avatars, periods.
-   Used by scores.html and admin.html. */
+/* Ridge Games shared helpers: talking to api.php, the login screen, photo shrinking, avatars, periods,
+   and the bottom bar (Trip / Games / Feed) on the three main pages. Used by every page that loads it. */
 (function(){
 const CSS=`
 .rg-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(15,17,21,.86);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
@@ -18,8 +18,26 @@ const CSS=`
 .rg-av{display:inline-grid;place-items:center;border-radius:50%;font-weight:800;color:#15181e;overflow:hidden;flex:none;background:var(--x)}
 .rg-av img{width:100%;height:100%;object-fit:cover}
 .rg-toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#eef1f6;color:#15181e;font:700 14px "Inter",system-ui;padding:11px 18px;border-radius:99px;z-index:80;box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:calc(100vw - 32px)}
+.rg-nav{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;justify-content:center;gap:6px;padding:7px max(12px,env(safe-area-inset-right,0px)) calc(7px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));background:rgba(27,29,34,.93);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid rgba(255,255,255,.07)}
+.rg-nav a{flex:1;max-width:150px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 4px;border-radius:14px;color:#9aa3b3;font:600 12px "Inter",system-ui;text-decoration:none}
+.rg-nav a span{font-size:21px;line-height:1.1}
+.rg-nav a.on{color:#15181e;background:#2ec4b6;box-shadow:0 0 14px rgba(46,196,182,.35)}
+html.rg-nav-on body{padding-bottom:calc(68px + env(safe-area-inset-bottom,0px))}
+html.rg-nav-on .toast,html.rg-nav-on .rg-toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 `;
 const st=document.createElement("style");st.textContent=CSS;document.head.appendChild(st);
+
+/* Bottom bar to switch between the Shenandoah Guide (the front page), the games home and the trip feed. Only on those three pages,
+   so it never covers a game while it is being played. */
+(function(){
+  const here={"":"trip","index.html":"trip","games.html":"games","social.html":"feed"}[location.pathname.split("/").pop()];
+  if(!here)return;
+  const items=[["trip","./","\u{1F3D4}\uFE0F","Trip"],["games","games.html","\u{1F3B2}","Games"],["feed","social.html","\u{1F4F8}","Feed"]];
+  const add=()=>{const n=document.createElement("nav");n.className="rg-nav";n.setAttribute("aria-label","Main");
+    n.innerHTML=items.map(([k,href,icon,label])=>`<a href="${href}"${k===here?' class="on" aria-current="page"':""}><span>${icon}</span>${label}</a>`).join("");
+    document.body.appendChild(n);document.documentElement.classList.add("rg-nav-on")};
+  document.body?add():document.addEventListener("DOMContentLoaded",add);
+})();
 
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
