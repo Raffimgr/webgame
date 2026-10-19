@@ -266,6 +266,20 @@ const PLACES=[
 
 /* Home base: Basye, VA (village center only; the street address stays out of this public repo). */
 const CABIN={n:"The cabin (Basye)",ll:[38.8090,-78.7930]};
+/* The exact address comes from cabin.php after login (stored on the server, not in this repo). */
+let cabinInfo={address:null,ll:null},online=false;
+const cabinLL=()=>cabinInfo.ll||CABIN.ll;
+const cabinDirs=()=>"https://www.google.com/maps/dir/?api=1&destination="+(cabinInfo.address?encodeURIComponent(cabinInfo.address):cabinLL().join(","));
+async function cabinEdit(){
+  const a=prompt("Cabin address (only logged-in players can see it):",cabinInfo.address||"");if(a===null)return;
+  const l=prompt("Optional: exact map spot as \"latitude, longitude\" (long-press the cabin in Google Maps to copy it). Leave empty to skip.",cabinInfo.ll?cabinInfo.ll.join(", "):"");
+  const m=(l||"").match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+  try{const r=await fetch("cabin.php",{method:"POST",credentials:"same-origin",headers:{"X-RG":"1","Content-Type":"application/json"},body:JSON.stringify({address:a,ll:m?[+m[1],+m[2]]:null})});
+    const j=await r.json();if(!r.ok)throw new Error(j.error||"Could not save.");cabinInfo=j;toast("Cabin saved \u{1F3E1}");VIEWS[tab]()}catch(e){toast(e.message||"Could not save.")}
+}
+const cabinCard=()=>`<article class="card" style="margin-bottom:16px"><div class="b"><h3>\u{1F3E1} Our cabin</h3>
+  <p>${cabinInfo.address?esc(cabinInfo.address):"Basye, VA, near Bryce Resort"}</p>
+  <div class="acts"><a class="btn" href="${cabinDirs()}" target="_blank" rel="noopener">\u{1F697} Directions to the cabin</a>${online?`<button class="btn ghost" id="cabinEdit">${cabinInfo.address?"Edit address":"Add the address"}</button>`:""}</div></div></article>`;
 const fmtDr=m=>m<60?m+" min":Math.floor(m/60)+" h"+(m%60?" "+m%60+" min":"");
 
 /* Skyline Drive photo gallery */
@@ -407,8 +421,9 @@ VIEWS.places=()=>{
   $("#view").innerHTML=`<h2>Places to visit</h2><p class="sub">Drive times are rough, from the cabin in Basye. Tap Directions to open your maps app.</p>
   <div class="chips" style="margin-top:6px"><button class="chip ${placeSort==="near"?"on":""}" data-sort="near" style="--x:#ff9f43">\u{1F697} Closest first</button><button class="chip ${placeSort==="type"?"on":""}" data-sort="type">\u{1F4CB} By type</button></div>
   <div class="chips" style="margin:6px 0 14px"><button class="chip ${placeFilter==="all"?"on":""}" data-f="all">All</button>${Object.entries(CAT).map(([k,c])=>`<button class="chip ${placeFilter===k?"on":""}" data-f="${k}" style="--x:${c.c}">${c.e} ${c.n}</button>`).join("")}</div>
-  <div class="grid">${list.map(placeCard).join("")}</div>
+  ${cabinCard()}<div class="grid">${list.map(placeCard).join("")}</div>
   <h2 style="margin-top:22px">Quick facts</h2><div class="facts">${FACTS.map(f=>`<div class="fc" style="--x:${f.c}"><b>${f.b}</b><span>${esc(f.t)}</span></div>`).join("")}</div>`;
+  {const ce=$("#cabinEdit");if(ce)ce.onclick=cabinEdit}
   $("#view").querySelectorAll("[data-sort]").forEach(b=>b.onclick=()=>{placeSort=b.dataset.sort;store.set("sort",placeSort);VIEWS.places()});
   $("#view").querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{placeFilter=b.dataset.f;VIEWS.places()});
   $("#view").querySelectorAll("[data-map]").forEach(b=>b.onclick=()=>{focusId=b.dataset.map;go("map")});
@@ -423,14 +438,14 @@ VIEWS.map=()=>{
   const m=L.map("map",{scrollWheelZoom:false}).setView([38.70,-78.55],9);
   L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
   const marks={};
-  L.marker(CABIN.ll,{icon:L.divIcon({className:"",html:`<div class="pin" style="--x:#fff"><i>\u{1F3E1}</i></div>`,iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-28]}),zIndexOffset:1000}).addTo(m).bindPopup(`<b>${esc(CABIN.n)}</b><br><span style="color:#9aa3b3">Home base for the trip</span>`);
+  L.marker(cabinLL(),{icon:L.divIcon({className:"",html:`<div class="pin" style="--x:#fff"><i>\u{1F3E1}</i></div>`,iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-28]}),zIndexOffset:1000}).addTo(m).bindPopup(`<b>${esc(CABIN.n)}</b><br><span style="color:#9aa3b3">Home base for the trip</span><br><a href="${cabinDirs()}" target="_blank" rel="noopener">\u{1F697} Directions to the cabin</a>`);
   PLACES.forEach(pl=>{const c=CAT[pl.cat],p=P[pl.p];
     const ic=L.divIcon({className:"",html:`<div class="pin" style="--x:${c.c}"><i>${c.e}</i></div>`,iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-28]});
     marks[pl.id]=L.marker(pl.ll,{icon:ic}).addTo(m).bindPopup(`<img src="${img(p.f,400)}" alt="" style="width:100%;border-radius:10px;margin-bottom:6px" onerror="this.remove()"><b>${esc(pl.n)}</b><br><span style="color:#9aa3b3">\u{1F697} ${fmtDr(pl.dr)} from the cabin · ${esc(pl.time)}</span><br><a href="${dirs(pl.ll)}" target="_blank" rel="noopener">Directions</a> · <a href="#" data-card="${pl.id}">Read more</a>`,{maxWidth:240});
   });
   m.on("popupopen",e=>{const a=e.popup.getElement().querySelector("[data-card]");if(a)a.onclick=ev=>{ev.preventDefault();placeFilter="all";go("places");setTimeout(()=>{const el=document.getElementById("pl-"+a.dataset.card);if(el)el.scrollIntoView({behavior:"smooth",block:"center"})},50)}});
   if(focusId&&marks[focusId]){m.setView(marks[focusId].getLatLng(),12);marks[focusId].openPopup();focusId=null}
-  else m.fitBounds(L.latLngBounds([CABIN.ll,...PLACES.map(p=>p.ll)]),{padding:[24,24]});
+  else m.fitBounds(L.latLngBounds([cabinLL(),...PLACES.map(p=>p.ll)]),{padding:[24,24]});
 };
 
 /* ---------- Skyline Drive gallery ---------- */
@@ -565,7 +580,9 @@ async function boot(){
     me={name:r.me.name,color:r.me.color};
     if(r.state&&r.state.players)roster=r.state.players.map(p=>({name:p.name,color:p.color}));
     const w=$("#who");w.hidden=false;w.innerHTML=RG.av(r.me,22)+" "+esc(r.me.name);
-    if(tab==="quiz"&&!quiz.state)VIEWS.quiz();
+    online=true;
+    try{const c=await fetch("cabin.php",{credentials:"same-origin"});if(c.ok)cabinInfo=await c.json()}catch(e){}
+    if(tab!=="quiz"||!quiz.state)VIEWS[tab]();
   }catch(e){/* no game server (file or preview): the guide still works */}
 }
 boot();
