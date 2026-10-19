@@ -85,18 +85,21 @@ function draw(){
   const p=P(who),mine=who===me.id;
   document.title=mine?"My profile":p.name;
   $("#ppl").innerHTML=players.map(x=>`<a href="?id=${encodeURIComponent(x.id)}" data-who="${esc(x.id)}" class="${x.id===who?"on":""}">${RG.av(x,46)}${esc(x.id===me.id?"Me":x.name)}</a>`).join("");
-  const myPosts=posts.filter(x=>x.by===who),myItems=items.filter(i=>i.who===who),open=myItems.filter(i=>!i.done);
+  const myPosts=posts.filter(x=>x.by===who),tagged=posts.filter(x=>(x.tags||[]).includes(who)),myItems=items.filter(i=>i.who===who),open=myItems.filter(i=>!i.done);
   const res=events.flatMap(e=>e.results.filter(r=>r.player_id===who).map(r=>({e,r})));
   const coins=res.reduce((a,x)=>a+(+x.r.coins||0),0),wins=res.filter(x=>x.r.place===1).length;
   $("#top").innerHTML=`${RG.av(p,84)}<div style="min-width:0"><h1>${esc(p.name)}</h1><div class="tag">${p.is_admin?"\u{1F451} Admin · ":""}${res.length} game${res.length===1?"":"s"} played</div></div>`;
   $("#stats").innerHTML=[[myPosts.length,"Posts"],[coins,"Coins"],[wins,"Wins"],[open.length,"To-dos"]].map(([n,l])=>`<div><b>${n}</b><span>${l}</span></div>`).join("");
   $("#btns").innerHTML=mine?`<button class="btn" id="edit">✏️ Edit profile</button>${me.is_admin?`<a class="btn" href="admin.html">\u{1F6E0}️ Admin</a>`:""}<button class="btn" id="out">Log out</button>`
     :`<a class="btn main" href="chat.html">\u{1F4AC} Message in the group chat</a>`;
-  const T=[["posts","\u{1F4F8} Posts"],["todo","\u{1F4CB} To-dos"],["games","\u{1F3C6} Games"]];
+  const T=[["posts","\u{1F4F8} Posts"],["tagged","\u{1F465} Tagged"],["todo","\u{1F4CB} To-dos"],["games","\u{1F3C6} Games"]];
   $("#tabs").innerHTML=T.map(([k,l])=>`<button data-tab="${k}" class="${tab===k?"on":""}">${l}</button>`).join("");
   let h="";
-  if(tab==="posts")h=myPosts.length?`<div class="grid">${myPosts.map(x=>`<a href="social.html#po-${x.id}" aria-label="${esc(x.cap||(x.kind==="video"?"Video":"Photo"))}">${x.kind==="photo"||x.prev?`<img loading="lazy" src="social.php?f=${x.id}&s=1" alt="">`:"\u{1F3AC}"}${x.kind==="video"?`<span class="v">▶️</span>`:""}</a>`).join("")}</div>`
+  /* a post's first photo stands for it; ⧉ marks posts with more than one */
+  const grid=list=>`<div class="grid">${list.map(x=>{const f=x.items[0];return `<a href="social.html#po-${x.id}" aria-label="${esc(x.cap||(f.kind==="video"?"Video":"Photo"))}">${f.kind==="photo"||f.prev?`<img loading="lazy" src="social.php?f=${f.id}&s=1" alt="">`:"\u{1F3AC}"}${x.items.length>1?`<span class="v">⧉</span>`:f.kind==="video"?`<span class="v">▶️</span>`:""}</a>`}).join("")}</div>`;
+  if(tab==="posts")h=myPosts.length?grid(myPosts)
     :`<div class="empty">${mine?`No posts yet. <a href="social.html" style="color:var(--teal)">Share a photo or video</a>`:"No posts yet."}</div>`;
+  if(tab==="tagged")h=tagged.length?grid(tagged):`<div class="empty">No one has tagged ${mine?"you":esc(p.name)} in a post yet.</div>`;
   if(tab==="todo"){const done=myItems.length-open.length;
     h=open.length?`<div class="list">${open.sort((a,b)=>(a.due||"9")<(b.due||"9")?-1:1).map(i=>`<a class="row" href="plan.html"><span style="font-size:22px">${KINDS[i.kind]||"✅"}</span><div class="t"><b>${esc(i.title)}</b><span>${i.due?"By "+new Date(i.due+"T12:00").toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"}):"No date"}</span></div></a>`).join("")}</div>`
       :`<div class="empty">Nothing on ${mine?"your":"their"} list right now.</div>`;

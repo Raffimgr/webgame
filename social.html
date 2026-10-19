@@ -6,7 +6,8 @@
 <title>Trip Feed</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
 <style>
-/* Trip Feed: everyone shares photos and videos from the trip, likes them, comments and downloads them.
+/* Trip Feed: everyone shares photos and videos from the trip, likes them, comments, tags people, downloads and shares them.
+   A post can hold several photos and videos, swiped through like Instagram. Whoever shared a post can edit or delete it; the admin can for any post.
    Photos live on this server (social.php), videos in Raffi's Cloudflare storage (cloudflare/media-worker.js). Logged-in players only. */
 :root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--ink:#15181e;--well:#202328;
   --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
@@ -29,34 +30,62 @@ h1{margin:0;font:700 34px/1.1 var(--play)}
 .btn.big{padding:14px 20px;font-size:15.5px;border-radius:16px;justify-content:center}
 .btn:disabled{opacity:.5;cursor:default}
 .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.note{font-size:13px;color:var(--mut);margin:10px 0 0}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hd .btn{padding:9px 15px;border-radius:99px;font-size:14px;cursor:pointer;flex:none}
 /* the share box */
-.picks{display:flex;flex-direction:column;gap:10px;margin-top:4px}
-.pk{display:flex;gap:10px;align-items:center;font-size:14px}
-.pk .th{width:56px;height:56px;border-radius:12px;background:#15181e center/cover;flex:none;display:grid;place-items:center;font-size:24px}
-.pk .nm{flex:1;min-width:0}
-.pk .nm div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pk .st{font-size:12.5px;color:var(--mut)}
-.pk .st.bad{color:var(--red)}
-.pk .bar{height:6px;border-radius:99px;background:#15181e;margin-top:5px;overflow:hidden}
+.picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px}
+.pk{position:relative;aspect-ratio:1;border-radius:12px;background:#15181e center/cover;display:grid;place-items:center;font-size:26px;overflow:hidden;color:var(--mut)}
+.pk.bad{box-shadow:inset 0 0 0 2.5px var(--red)}
+.pk.gone{opacity:.3}
+.pk.more{cursor:pointer;background:#2b2f37;box-shadow:var(--in-sh);font-size:13px;font-weight:600;text-align:center;line-height:1.3}
+.pk.more b{display:block;font-size:24px;font-weight:500}
+.pk .x{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.7);color:#fff;font-size:12px;cursor:pointer;display:grid;place-items:center;padding:0}
+.pk .ok{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.45);font-size:24px}
+.pk .bar{position:absolute;left:6px;right:6px;bottom:6px;height:5px;border-radius:99px;background:rgba(0,0,0,.6);overflow:hidden}
 .pk .bar i{display:block;height:100%;width:0;background:var(--teal);transition:width .3s}
-textarea{width:100%;border:0;border-radius:14px;padding:11px 13px;background:var(--well);color:var(--fg);font:16px/1.4 var(--font);box-shadow:var(--in-sh);resize:vertical;min-height:70px;margin:12px 0 10px}
+.pst{font-size:13px;color:var(--mut);margin:8px 0 0}
+.pst.bad{color:var(--red)}
+textarea{width:100%;border:0;border-radius:14px;padding:11px 13px;background:var(--well);color:var(--fg);font:16px/1.4 var(--font);box-shadow:var(--in-sh);resize:vertical;min-height:70px;margin:12px 0 0}
+.tagl{font-size:13px;color:var(--mut);margin:12px 0 7px;font-weight:600}
+.tagr{display:flex;gap:6px;flex-wrap:wrap}
+.tagr button{display:inline-flex;align-items:center;gap:6px;border:0;cursor:pointer;background:#2b2f37;color:var(--fg);font:600 13px var(--font);padding:4px 11px 4px 4px;border-radius:99px;box-shadow:var(--in-sh)}
+.tagr button.on{background:rgba(46,196,182,.2);color:#8ff0e6;box-shadow:inset 0 0 0 1.5px var(--teal)}
 /* posts */
 #feed{display:flex;flex-direction:column;gap:18px}
 .post{border-radius:24px;background:var(--raise);box-shadow:var(--raise-sh);overflow:hidden}
 .post header{display:flex;align-items:center;gap:10px;padding:12px 14px}
 .post header .tm{color:var(--mut);font-size:12.5px}
 .post header .byl{display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none;min-width:0}
-.post header .del{margin-left:auto;padding:7px 11px}
-.post .media{display:block;background:#0e0f12}
-.post .media img{display:block;width:100%;height:auto;max-height:80vh;object-fit:contain;cursor:zoom-in}
-.post video{display:block;width:100%;max-height:80vh;background:#000}
+/* photos and videos of a post: swipe sideways (scroll snapping), like Instagram */
+.car{position:relative;background:#0e0f12;max-height:78vh}
+.trk{display:flex;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
+.trk::-webkit-scrollbar{display:none}
+.sl{flex:0 0 100%;height:100%;scroll-snap-align:center;scroll-snap-stop:always;display:grid;place-items:center;min-width:0}
+.sl img{width:100%;height:100%;object-fit:contain;display:block;cursor:zoom-in}
+.sl video{width:100%;height:100%;background:#000;display:block}
+.cnt{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.62);color:#fff;font:600 12px var(--font);padding:3px 9px;border-radius:99px;pointer-events:none}
+.nav{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;border:0;background:rgba(255,255,255,.85);color:#15181e;font:700 18px var(--font);cursor:pointer;display:none;place-items:center;padding:0}
+@media (hover:hover){.car:hover .nav{display:grid}}
+.nav.pv{left:10px}.nav.nx{right:10px}
+.dots{display:flex;justify-content:center;gap:5px;padding:10px 0 0}
+.dots b{width:6px;height:6px;border-radius:50%;background:#4a505b;transition:background .2s}
+.dots b.on{background:var(--teal)}
+.ico{display:flex;gap:6px}
+.ico button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:#2b2f37;color:var(--fg);font:600 11.5px var(--font);padding:8px 2px 7px;border-radius:14px;cursor:pointer;box-shadow:var(--in-sh);min-width:0}
+.ico button i{font-style:normal;font-size:19px;line-height:1.1}
+.ico .rd{color:#ff9aa8}
 .post .b{padding:12px 14px 14px;display:flex;flex-direction:column;gap:10px}
 .post .cap{margin:0;color:#d6dbe4;white-space:pre-wrap;overflow-wrap:anywhere}
+.post .tags{margin:0;font-size:13.5px;color:var(--mut)}
+.post .tags a{color:#8ff0e6;font-weight:600;text-decoration:none}
+.ed textarea{margin-top:0}
 .empty{text-align:center;color:var(--mut);padding:30px 10px}
-.lb{position:fixed;inset:0;z-index:60;background:rgba(10,11,14,.95);display:grid;place-items:center;padding:16px}
-.lb img{max-width:100%;max-height:88vh;border-radius:12px}
-.lb .x{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:16px}
+.lb{position:fixed;inset:0;z-index:60;background:rgba(10,11,14,.96)}
+.lb .sl{padding:calc(60px + env(safe-area-inset-top,0px)) 10px calc(24px + env(safe-area-inset-bottom,0px))}
+.lb .sl img{width:auto;height:auto;max-width:100%;max-height:100%;border-radius:10px;cursor:default}
+.lb .sl video{height:auto;max-height:100%}
+.lb .x{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:16px;z-index:2}
+.lb .cnt{top:calc(22px + env(safe-area-inset-top,0px));left:16px;right:auto}
 /* likes and comments (talk.js) */
 .talk{display:flex;flex-direction:column;gap:8px;border-top:1px solid rgba(255,255,255,.07);padding-top:10px}
 .talk .tb{display:flex;gap:8px;flex-wrap:wrap}
@@ -80,18 +109,16 @@ textarea{width:100%;border:0;border-radius:14px;padding:11px 13px;background:var
     <a class="pill" href="./">&larr; Shenandoah Guide</a>
     <span class="pill" id="who" hidden></span>
   </div>
-  <div>
+  <div class="hd">
     <h1>&#128248; Trip Feed</h1>
-    <p class="sub">Share photos and videos from the trip. Everyone here can like them, comment, and download them.</p>
+    <label class="btn" id="shareBtn" hidden>&#10133; Share<input type="file" id="pick" accept="image/*,video/*" multiple hidden></label>
   </div>
   <div class="panel" id="share" hidden>
-    <div id="pickRow"><label class="btn big" style="width:100%">&#10133; Share photos or videos<input type="file" id="pick" accept="image/*,video/*" multiple hidden></label>
-      <p class="note" id="vidNote" hidden>Video sharing is still being switched on. Photos work now.</p></div>
-    <div id="compose" hidden>
-      <div class="picks" id="picks"></div>
-      <textarea id="cap" maxlength="500" placeholder="Say something about it (optional)"></textarea>
-      <div class="acts"><button class="btn big" id="post" style="flex:1">Post</button><button class="btn big ghost" id="cancel">Cancel</button></div>
-    </div>
+    <div class="picks" id="picks"></div>
+    <p class="pst" id="pst"></p>
+    <textarea id="cap" maxlength="500" placeholder="Write a caption (optional)"></textarea>
+    <div class="tagl">&#128101; Tag people</div><div class="tagr" id="tagr"></div>
+    <div class="acts" style="margin-top:14px"><button class="btn big" id="post" style="flex:1">Post</button><button class="btn big ghost" id="cancel">Cancel</button></div>
   </div>
   <div id="feed"></div>
 </div>
@@ -102,13 +129,16 @@ textarea{width:100%;border:0;border-radius:14px;padding:11px 13px;background:var
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const PART=50*1048576; /* videos go up in 50 MB pieces (a Cloudflare request can carry about 100 MB) */
-let me=null,people={},view="",media="",videoOn=false,picked=[],busy=false;
+let me=null,people={},view="",media="",videoOn=false,picked=[],busy=false,curGrp=0;
+const POSTS={},editing=new Set(),shareCache={};
 
 const fmtSize=b=>b>=1073741824?(b/1073741824).toFixed(1)+" GB":b>=1048576?Math.round(b/1048576)+" MB":Math.max(1,Math.round(b/1024))+" KB";
 const fmtDur=s=>{s=Math.round(s);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
-const videoUrl=p=>`${media}/f/${p.key}?v=${view}`;
-const dlName=p=>p.kind==="photo"?p.name.replace(/\.[A-Za-z0-9]+$/,"")+".jpg":p.name;
-const dlUrl=p=>p.kind==="photo"?`social.php?f=${p.id}&dl=1`:`${videoUrl(p)}&dl=${encodeURIComponent(dlName(p))}`;
+const fmtWhen=t=>{const d=new Date(t*1000);return d.toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"})+" at "+d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})};
+/* it = one photo or video of a post */
+const videoUrl=it=>`${media}/f/${it.key}?v=${view}`;
+const dlName=it=>it.kind==="photo"?it.name.replace(/\.[A-Za-z0-9]+$/,"")+".jpg":it.name;
+const dlUrl=it=>it.kind==="photo"?`social.php?f=${it.id}&dl=1`:`${videoUrl(it)}&dl=${encodeURIComponent(dlName(it))}`;
 
 async function api(body){const r=await fetch("social.php",{method:"POST",credentials:"same-origin",headers:{"X-RG":"1","Content-Type":"application/json"},body:JSON.stringify(body)});
   const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Something went wrong. Try again.");return j}
@@ -157,77 +187,146 @@ async function sendVideo(key,blob,ticket,onp){const q=`t=${ticket}`;
     if(!f.ok)throw new Error("Could not finish the upload.")}
   catch(e){fetch(base,{method:"DELETE"}).catch(()=>{});throw e}}
 
-async function shareOne(it,cap,onp){
+/* One photo or video of a post goes up and waits (hold) until the whole post is published, so nobody sees half a post. */
+async function shareOne(it,meta,onp){
   if(it.kind==="photo"){
     const d=await prepPhoto(it.file),total=d.main.size+d.prev.size;
-    const s=await api({act:"start",kind:"photo",name:it.file.name,cap});
+    const s=await api({act:"start",kind:"photo",name:it.file.name,...meta});
     try{await send("POST",`social.php?up=main&id=${s.id}`,d.main,l=>onp(l/total),true);
       await send("POST",`social.php?up=prev&id=${s.id}`,d.prev,l=>onp((d.main.size+l)/total),true);
-      return (await api({act:"done",id:s.id})).post}
-    catch(e){api({act:"del",id:s.id}).catch(()=>{});throw e}}
+      await api({act:"done",id:s.id,hold:1});return s}
+    catch(e){api({act:"drop",id:s.id}).catch(()=>{});throw e}}
   const info=await videoInfo(it.file),file=await stripVideoLocation(it.file);
-  const s=await api({act:"start",kind:"video",name:it.file.name,size:file.size,type:file.type,w:info.w,h:info.h,dur:info.dur,cap});
+  const s=await api({act:"start",kind:"video",name:it.file.name,size:file.size,type:file.type,w:info.w,h:info.h,dur:info.dur,...meta});
   try{if(info.poster)await send("POST",`social.php?up=prev&id=${s.id}`,info.poster,null,true).catch(()=>{});
     await sendVideo(s.key,file,s.ticket,l=>onp(l/file.size));
-    return (await api({act:"done",id:s.id})).post}
-  catch(e){api({act:"del",id:s.id}).catch(()=>{});throw e}}
+    await api({act:"done",id:s.id,hold:1});return s}
+  catch(e){api({act:"drop",id:s.id}).catch(()=>{});throw e}}
+/* videos taken out of a post are deleted from the Worker too */
+const dropVids=vids=>(vids||[]).forEach(v=>fetch(`${media}/f/${v.key}?t=${v.ticket}`,{method:"DELETE"}).catch(()=>{}));
+
+/* tag people: everyone but whoever shared the post */
+const tagChips=(sel,owner)=>Object.values(people).filter(p=>p.id!==owner).map(p=>`<button type="button" data-tag="${esc(p.id)}" class="${sel.includes(p.id)?"on":""}">${RG.av(p,24)} ${esc(p.name)}</button>`).join("");
+const selTags=el=>[...el.querySelectorAll("[data-tag].on")].map(b=>b.dataset.tag);
 
 /* ---------- the share box ---------- */
-function drawPicks(){$("#picks").innerHTML=picked.map((it,i)=>`<div class="pk" id="pk${i}"><div class="th" style="${it.thumb?`background-image:url(${it.thumb})`:""}">${it.thumb?"":"&#127916;"}</div>
-  <div class="nm"><div>${esc(it.file.name)}</div><div class="st${it.blocked||it.failed?" bad":""}">${esc(it.msg||(it.kind==="video"?"Video":"Photo")+" · "+fmtSize(it.file.size))}</div>${it.prog!=null?`<div class="bar"><i style="width:${Math.round(it.prog*100)}%"></i></div>`:""}</div></div>`).join("");
-  $("#compose").hidden=!picked.length;$("#pickRow").hidden=!!picked.length}
-function setPick(i,patch){Object.assign(picked[i],patch);const el=$("#pk"+i);if(!el)return;
-  const st=el.querySelector(".st");if(patch.msg!=null){st.textContent=patch.msg;st.classList.toggle("bad",!!(picked[i].blocked||picked[i].failed))}
-  if(patch.prog!=null){let bar=el.querySelector(".bar i");if(!bar){el.querySelector(".nm").insertAdjacentHTML("beforeend",`<div class="bar"><i></i></div>`);bar=el.querySelector(".bar i")}bar.style.width=Math.round(patch.prog*100)+"%"}}
-function clearPicks(){picked.forEach(it=>it.thumb&&URL.revokeObjectURL(it.thumb));picked=[];$("#cap").value="";$("#post").textContent="Post";drawPicks()}
+/* Everything picked at once becomes one post. */
+function pst(msg,bad){const el=$("#pst");el.textContent=msg||"";el.classList.toggle("bad",!!bad)}
+function pickSummary(){const ok=picked.filter(it=>!it.blocked),ph=ok.filter(it=>it.kind==="photo").length,vd=ok.length-ph;
+  const parts=[ph?`${ph} photo${ph>1?"s":""}`:"",vd?`${vd} video${vd>1?"s":""}`:""].filter(Boolean).join(" and ");
+  const bl=picked.some(it=>it.blocked)?" Videos can't be shared yet, so they'll be left out.":"";
+  pst(ok.length>1?`${parts} in one post. People swipe to see them all.${bl}`:ok.length?`${parts}.${bl}`:bl.trim(),!!bl&&!ok.length)}
+function tileHTML(it,i){return `<div class="pk${it.failed||it.blocked?" bad":""}" id="pk${i}" style="${it.thumb?`background-image:url(${it.thumb})`:""}">${it.thumb?"":"&#127916;"}
+  ${it.done?`<span class="ok">✔</span>`:it.prog!=null?`<div class="bar"><i style="width:${Math.round(it.prog*100)}%"></i></div>`:""}
+  ${busy||it.done?"":`<button class="x" data-rm="${i}" aria-label="Take this one out">✕</button>`}</div>`}
+function drawPicks(){$("#picks").innerHTML=picked.map(tileHTML).join("")+(busy||picked.length>=20?"":`<label class="pk more" for="pick"><span><b>+</b>Add more</span></label>`);
+  $("#share").hidden=!picked.length;if(!busy)pickSummary()}
+function setPick(i,patch){Object.assign(picked[i],patch);const el=$("#pk"+i);if(el)el.outerHTML=tileHTML(picked[i],i)}
+function clearPicks(){picked.forEach(it=>it.thumb&&URL.revokeObjectURL(it.thumb));picked=[];curGrp=0;$("#cap").value="";$("#post").textContent="Post";
+  $("#tagr").querySelectorAll(".on").forEach(b=>b.classList.remove("on"));drawPicks()}
 $("#pick").onchange=e=>{const files=[...e.target.files];e.target.value="";
-  for(const f of files){const kind=f.type.startsWith("video/")||/\.(mov|mp4|m4v|webm|3gp|mkv)$/i.test(f.name)?"video":"photo";
+  if(busy){RG.toast("Wait for this post to finish first.");return}
+  for(const f of files){if(picked.length>=20){RG.toast("A post can have up to 20 photos and videos.");break}
+    const kind=f.type.startsWith("video/")||/\.(mov|mp4|m4v|webm|3gp|mkv)$/i.test(f.name)?"video":"photo";
     const it={file:f,kind,thumb:kind==="photo"?URL.createObjectURL(f):null};
-    if(kind==="video"&&!videoOn){it.blocked=true;it.msg="Video sharing isn't switched on yet."}
+    if(kind==="video"&&!videoOn)it.blocked=true;
     picked.push(it)}
-  drawPicks()};
+  drawPicks();scrollTo({top:0,behavior:"smooth"})};
 $("#cancel").onclick=()=>{if(!busy)clearPicks()};
 $("#post").onclick=async()=>{if(busy)return;const todo=picked.map((it,i)=>i).filter(i=>!picked[i].blocked&&!picked[i].done);if(!todo.length){clearPicks();return}
-  busy=true;$("#post").disabled=$("#cancel").disabled=true;const cap=$("#cap").value.trim();let ok=0;
-  for(const i of todo){setPick(i,{failed:false,msg:"Getting it ready…",prog:0});
-    try{const post=await shareOne(picked[i],cap,f=>setPick(i,{msg:`Uploading… ${Math.round(f*100)}%`,prog:f}));
-      setPick(i,{done:true,msg:"Shared ✔",prog:1});ok++;addPost(post,true)}
-    catch(err){setPick(i,{failed:true,msg:err.message||"Could not share this one."})}}
+  busy=true;$("#post").disabled=$("#cancel").disabled=true;drawPicks();
+  const meta={cap:$("#cap").value.trim(),tags:selTags($("#tagr"))},errs=[];let n=0;
+  for(const i of todo){n++;pst(`Uploading ${n} of ${todo.length}…`);setPick(i,{failed:false,prog:0});
+    try{const s=await shareOne(picked[i],{...meta,grp:curGrp},f=>setPick(i,{prog:f}));curGrp=s.grp;setPick(i,{done:true,prog:1})}
+    catch(err){setPick(i,{failed:true,prog:null});errs.push(err.message||"Could not share one of them.")}}
+  let post=null;
+  if(curGrp&&picked.some(it=>it.done&&!it.live)){try{post=(await api({act:"publish",grp:curGrp})).post;picked.forEach(it=>{if(it.done)it.live=true});showPost(post,true)}
+    catch(err){errs.push(err.message)}}
   busy=false;$("#post").disabled=$("#cancel").disabled=false;
-  if(picked.every(it=>it.done||it.blocked)){if(ok)RG.toast(ok>1?`${ok} posts shared \u{1F389}`:"Shared \u{1F389}");clearPicks()}
-  else $("#post").textContent="Try again"};
+  if(!errs.length&&picked.every(it=>it.done||it.blocked)){RG.toast("Shared \u{1F389}");clearPicks();return}
+  drawPicks();$("#post").textContent="Try again";pst(`${errs.length} didn't upload: ${errs[0]}`,true)};
 
 /* ---------- the feed ---------- */
-function postHTML(p){const mine=me&&(me.id===p.by||me.is_admin);
-  const m=p.kind==="photo"
-    ?`<a class="media" href="social.php?f=${p.id}" data-zoom="${p.id}"><img loading="lazy" src="social.php?f=${p.id}&s=1" alt="${esc(p.cap||"Photo")}"${p.w&&p.h?` width="${p.w}" height="${p.h}"`:""}></a>`
-    :`<div class="media"><video controls playsinline preload="${p.prev?"none":"metadata"}"${p.prev?` poster="social.php?f=${p.id}&s=1"`:""} src="${esc(videoUrl(p))}"></video></div>`;
-  return `<article class="post" id="po-${p.id}" data-id="${p.id}"><header><a class="byl" href="profile.html?id=${encodeURIComponent(p.by)}">${Talk.av(p.by,38)}<div><b>${esc(Talk.name(p.by))}</b><div class="tm">${Talk.ago(p.at)}${p.kind==="video"&&p.dur?" · \u{1F3AC} "+fmtDur(p.dur):""}</div></div></a>
-    ${mine?`<button class="pill del" data-delpost="${p.id}" aria-label="Delete this post">&#128465;</button>`:""}</header>${m}
-    <div class="b">${p.cap?`<p class="cap">${esc(p.cap)}</p>`:""}<div class="acts"><a class="btn ghost" href="${esc(dlUrl(p))}" download="${esc(dlName(p))}">&#11015;&#65039; Download${p.size?" ("+fmtSize(p.size)+")":""}</a></div>${Talk.bar("po-"+p.id)}</div></article>`}
-function emptyCheck(){const e=$("#empty"),has=!!document.querySelector(".post");if(has&&e)e.remove();if(!has&&!e)$("#feed").insertAdjacentHTML("beforeend",`<div class="empty" id="empty">No posts yet. Share the first photo! &#128247;</div>`)}
-function addPost(p,top){if(document.getElementById("po-"+p.id))return;$("#feed").insertAdjacentHTML(top?"afterbegin":"beforeend",postHTML(p));emptyCheck()}
+function postHTML(p){const can=me&&(me.id===p.by||me.is_admin),n=p.items.length,f=p.items[0];
+  const ar=f.w&&f.h?Math.min(1.91,Math.max(.8,f.w/f.h)):1;
+  const slides=p.items.map((it,i)=>`<div class="sl">${it.kind==="photo"
+    ?`<img loading="lazy" src="social.php?f=${it.id}&s=1" alt="${esc(p.cap||"Photo")}" data-zoom="${i}">`
+    :`<video controls playsinline preload="${it.prev?"none":"metadata"}"${it.prev?` poster="social.php?f=${it.id}&s=1"`:""} src="${esc(videoUrl(it))}"></video>`}</div>`).join("");
+  const tags=(p.tags||[]).filter(t=>people[t]);
+  return `<article class="post" id="po-${p.id}" data-id="${p.id}"><header><a class="byl" href="profile.html?id=${encodeURIComponent(p.by)}">${Talk.av(p.by,38)}<div><b>${esc(Talk.name(p.by))}</b><div class="tm">${fmtWhen(p.at)}</div></div></a></header>
+    <div class="car" style="aspect-ratio:${ar}"><div class="trk" data-i="0">${slides}</div>${n>1?`<span class="cnt">1/${n}</span><button class="nav pv" data-nav="-1" aria-label="Previous">‹</button><button class="nav nx" data-nav="1" aria-label="Next">›</button>`:""}</div>
+    ${n>1?`<div class="dots">${p.items.map((x,i)=>`<b class="${i?"":"on"}"></b>`).join("")}</div>`:""}
+    <div class="b"><div class="ico">${can?`<button class="rd" data-act="del"><i>\u{1F5D1}️</i>Delete</button><button data-act="edit"><i>✏️</i>Edit</button>`:""}<button data-act="dl"><i>⬇️</i>Download</button><button data-act="share"><i>\u{1F4E4}</i>Share</button></div>
+    ${p.cap?`<p class="cap">${esc(p.cap)}</p>`:""}${tags.length?`<p class="tags">\u{1F465} with ${tags.map(t=>`<a href="profile.html?id=${encodeURIComponent(t)}">${esc(people[t].name)}</a>`).join(", ")}</p>`:""}${Talk.bar("po-"+p.id)}</div></article>`}
+function editHTML(p){return `<div class="ed"><textarea class="ecap" maxlength="500" placeholder="Write a caption (optional)">${esc(p.cap)}</textarea>
+  <div class="tagl">\u{1F465} Tag people</div><div class="tagr">${tagChips(p.tags||[],p.by)}</div>
+  ${p.items.length>1?`<div class="tagl">Tap ✕ to take a photo out of this post</div><div class="picks">${p.items.map(it=>`<div class="pk" style="${it.kind==="photo"||it.prev?`background-image:url(social.php?f=${it.id}&s=1)`:""}">${it.kind==="photo"||it.prev?"":"&#127916;"}<button class="x" data-drop="${it.id}" aria-label="Take it out">✕</button></div>`).join("")}</div>`:""}
+  <div class="acts" style="margin-top:14px"><button class="btn big" data-save style="flex:1">Save</button><button class="btn big ghost" data-cancel>Cancel</button></div></div>`}
+function emptyCheck(){const e=$("#empty"),has=!!document.querySelector(".post");if(has&&e)e.remove();if(!has&&!e)$("#feed").insertAdjacentHTML("beforeend",`<div class="empty" id="empty">No posts yet. Tap ➕ Share to post the first photos! &#128247;</div>`)}
+/* adds a post, or redraws it if it changed (unless someone is editing it here) */
+function showPost(p,top){const old=POSTS[p.id];POSTS[p.id]=p;const el=document.getElementById("po-"+p.id);
+  if(el){if(!editing.has(p.id)&&JSON.stringify(old)!==JSON.stringify(p))el.outerHTML=postHTML(p);return}
+  $("#feed").insertAdjacentHTML(top?"afterbegin":"beforeend",postHTML(p));emptyCheck()}
+function dropPost(id){delete POSTS[id];editing.delete(id);const el=$("#po-"+id);if(el)el.remove();emptyCheck()}
 async function refresh(first){const r=await fetch("social.php",{credentials:"same-origin"});if(!r.ok)throw new Error("Could not load the feed.");const j=await r.json();
   view=j.view;media=j.media;
-  if(first){$("#feed").innerHTML=j.posts.map(postHTML).join("");emptyCheck();
+  if(first){j.posts.forEach(p=>POSTS[p.id]=p);$("#feed").innerHTML=j.posts.map(postHTML).join("");emptyCheck();
     /* opened from a profile grid: jump to that post */
     const go=/^#po-\d+$/.test(location.hash)&&document.querySelector(location.hash);if(go)setTimeout(()=>go.scrollIntoView({block:"start"}),50);return}
-  const ids=new Set(j.posts.map(p=>p.id));document.querySelectorAll(".post").forEach(el=>{if(!ids.has(+el.dataset.id))el.remove()});
-  j.posts.slice().reverse().forEach(p=>addPost(p,true));emptyCheck()}
+  const ids=new Set(j.posts.map(p=>p.id));Object.keys(POSTS).forEach(id=>{if(!ids.has(+id))dropPost(+id)});
+  j.posts.slice().reverse().forEach(p=>showPost(p,true))}
+
+/* swiping: keep the 2/5 counter and dots in step, and pause a video that was swiped away */
+function onTrk(t){const i=Math.round(t.scrollLeft/Math.max(1,t.clientWidth));if(+t.dataset.i===i)return;t.dataset.i=i;
+  const n=t.children.length,c=t.parentElement.querySelector(".cnt");if(c)c.textContent=`${i+1}/${n}`;
+  const post=t.closest(".post");if(post&&!t.closest(".lb"))post.querySelectorAll(".dots b").forEach((d,j)=>d.classList.toggle("on",j===i));
+  t.querySelectorAll("video").forEach((v,j)=>{if(v.closest(".sl")!==t.children[i]&&!v.paused)v.pause()})}
+document.addEventListener("scroll",e=>{const t=e.target;if(t.classList&&t.classList.contains("trk"))onTrk(t)},true);
+const curItem=(el,p)=>p.items[Math.min(p.items.length-1,+el.querySelector(".trk").dataset.i||0)];
+function lightbox(p,i){const d=document.createElement("div");d.className="lb";
+  d.innerHTML=`<button class="pill x">Close ✕</button>${p.items.length>1?`<span class="cnt">${i+1}/${p.items.length}</span>`:""}<div class="trk" data-i="${i}">${p.items.map(it=>`<div class="sl">${it.kind==="photo"?`<img src="social.php?f=${it.id}" alt="">`:`<video controls playsinline preload="none"${it.prev?` poster="social.php?f=${it.id}&s=1"`:""} src="${esc(videoUrl(it))}"></video>`}</div>`).join("")}</div>`;
+  const close=()=>{d.remove();removeEventListener("keydown",key)},key=e=>{if(e.key==="Escape")close()};
+  d.querySelector(".x").onclick=close;addEventListener("keydown",key);document.body.appendChild(d);
+  const t=d.querySelector(".trk");t.scrollLeft=i*t.clientWidth}
+function download(it){const a=document.createElement("a");a.href=dlUrl(it);a.download=dlName(it);document.body.appendChild(a);a.click();a.remove()}
+/* Share sends the photo itself (to Messages, WhatsApp...) where the phone allows it, otherwise a link to the post (it opens for anyone logged in). */
+async function share(p,it){const url=new URL("social.html#po-"+p.id,location.href).href,text=p.cap||"From our Shenandoah trip";
+  if(it.kind==="photo"&&navigator.canShare){try{
+    const b=shareCache[it.id]||(shareCache[it.id]=await (await fetch(`social.php?f=${it.id}`,{credentials:"same-origin"})).blob());
+    const file=new File([b],dlName(it),{type:"image/jpeg"});
+    if(navigator.canShare({files:[file]})){await navigator.share({files:[file],text});return}}
+    catch(e){if(e.name==="AbortError")return;if(e.name==="NotAllowedError"){RG.toast("The photo is ready. Tap Share again to send it.");return}}}
+  if(navigator.share){try{await navigator.share({title:"Trip Feed",text,url})}catch(e){}return}
+  try{await navigator.clipboard.writeText(url);RG.toast("Link copied. It opens for anyone logged in.")}catch(e){prompt("Copy this link:",url)}}
+
 document.addEventListener("click",async e=>{
-  const z=e.target.closest("[data-zoom]");if(z){e.preventDefault();const d=document.createElement("div");d.className="lb";
-    d.innerHTML=`<button class="pill x">Close ✕</button><img src="social.php?f=${+z.dataset.zoom}" alt="">`;d.onclick=()=>d.remove();document.body.appendChild(d);return}
-  const del=e.target.closest("[data-delpost]");if(del){if(!confirm("Delete this post for everyone?"))return;
-    try{const j=await api({act:"del",id:+del.dataset.delpost});if(j.key)fetch(`${media}/f/${j.key}?t=${j.ticket}`,{method:"DELETE"}).catch(()=>{});
-      const el=$("#po-"+del.dataset.delpost);if(el)el.remove();emptyCheck()}catch(err){RG.toast(err.message)}}});
+  const t=e.target;
+  const rm=t.closest("[data-rm]");if(rm){if(busy)return;const i=+rm.dataset.rm,it=picked[i];if(it.thumb)URL.revokeObjectURL(it.thumb);picked.splice(i,1);if(!picked.length)clearPicks();else drawPicks();return}
+  const tg=t.closest("[data-tag]");if(tg){tg.classList.toggle("on");return}
+  const post=t.closest(".post");if(!post)return;const id=+post.dataset.id,p=POSTS[id];if(!p)return;
+  const z=t.closest("[data-zoom]");if(z){lightbox(p,+z.dataset.zoom);return}
+  const nv=t.closest("[data-nav]");if(nv){const k=post.querySelector(".trk");k.scrollTo({left:(+k.dataset.i+ +nv.dataset.nav)*k.clientWidth,behavior:"smooth"});return}
+  const dp=t.closest("[data-drop]");if(dp){const tile=dp.closest(".pk"),all=post.querySelectorAll("[data-drop]");
+    if(!tile.classList.contains("gone")&&post.querySelectorAll(".pk.gone").length>=all.length-1){RG.toast("A post needs at least one photo. To remove them all, delete the post.");return}
+    tile.classList.toggle("gone");dp.textContent=tile.classList.contains("gone")?"↩":"✕";return}
+  if(t.closest("[data-cancel]")){editing.delete(id);post.outerHTML=postHTML(p);return}
+  const sv=t.closest("[data-save]");if(sv){sv.disabled=true;
+    try{const j=await api({act:"edit",id,cap:post.querySelector(".ecap").value.trim(),tags:selTags(post),drop:[...post.querySelectorAll(".pk.gone [data-drop]")].map(b=>+b.dataset.drop)});
+      dropVids(j.vids);editing.delete(id);POSTS[id]=j.post;post.outerHTML=postHTML(j.post);RG.toast("Saved ✔")}
+    catch(err){sv.disabled=false;RG.toast(err.message)}return}
+  const a=t.closest("[data-act]");if(!a)return;
+  if(a.dataset.act==="dl")download(curItem(post,p));
+  if(a.dataset.act==="share")share(p,curItem(post,p));
+  if(a.dataset.act==="edit"){editing.add(id);post.querySelector(".b").innerHTML=editHTML(p);post.querySelector(".ecap").focus()}
+  if(a.dataset.act==="del"){if(!confirm(p.items.length>1?`Delete this post and its ${p.items.length} photos for everyone?`:"Delete this post for everyone?"))return;
+    try{const j=await api({act:"del",id});dropVids(j.vids);dropPost(id)}catch(err){RG.toast(err.message)}}});
 
 async function boot(){
   try{const r=await RG.login();me={id:r.me.id,name:r.me.name,is_admin:+r.me.is_admin===1};
     if(r.state&&r.state.players)r.state.players.forEach(p=>people[p.id]=p);
     const w=$("#who");w.hidden=false;w.innerHTML=RG.av(r.me,22)+" "+esc(r.me.name);
-    Talk.setMe(me,people);await Talk.load();await refresh(true);$("#share").hidden=false;
+    Talk.setMe(me,people);await Talk.load();await refresh(true);$("#shareBtn").hidden=false;$("#tagr").innerHTML=tagChips([],me.id);
     try{const c=new AbortController();setTimeout(()=>c.abort(),6000);videoOn=(await fetch(media+"/ping?deep=1",{signal:c.signal})).ok}catch(e){videoOn=false}
-    $("#vidNote").hidden=videoOn;
     setInterval(()=>{if(!document.hidden&&!busy)refresh(false).catch(()=>{})},45000);
   }catch(e){$("#feed").innerHTML=`<div class="empty">Could not load the feed. ${esc(e.message||"")}</div>`}}
 boot();

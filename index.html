@@ -76,6 +76,18 @@ h2{margin:6px 0 2px;font:600 26px var(--play)}
 .ph.art svg{position:absolute;inset:0;width:100%;height:100%}
 .ph.art .em{position:relative;font-size:56px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.35))}
 .pick{position:relative;margin:8px 0 14px}
+.phd{display:flex;align-items:center;justify-content:space-between;gap:6px 10px;flex-wrap:wrap;margin:4px 0 14px}
+.phd h2{margin:0}
+.phd .pick{margin:0}
+.phd .pickb{padding:9px 13px;font-size:14px}
+.phd .pickm{left:auto;right:0}
+.card.cabin{overflow:visible}
+.cabin .b{position:relative}
+.cabin h3{padding-right:40px}
+.dots3{position:absolute;top:8px;right:8px}
+.dots3>button{width:36px;height:36px;border-radius:50%;border:0;background:none;color:var(--fg);font:700 22px/1 var(--font);cursor:pointer;display:grid;place-items:center}
+.dots3>button:hover{background:rgba(255,255,255,.07)}
+.dots3 .pickm{left:auto;right:0;top:calc(100% + 4px);width:220px}
 .pickb{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;padding:11px 16px;border-radius:99px;font:700 15px var(--font);color:var(--ink);background:#ff9f43;box-shadow:0 0 16px rgba(255,159,67,.3)}
 .pickb .car{font-size:12px}
 .pickm{position:absolute;left:0;top:calc(100% + 8px);z-index:25;width:min(320px,calc(100vw - 32px));max-height:70vh;overflow:auto;background:#2a2e35;border-radius:18px;box-shadow:0 18px 44px rgba(0,0,0,.65);padding:6px;display:flex;flex-direction:column}
@@ -336,9 +348,13 @@ async function cabinEdit(){
   try{const r=await fetch("cabin.php",{method:"POST",credentials:"same-origin",headers:{"X-RG":"1","Content-Type":"application/json"},body:JSON.stringify({address:a,ll:m?[+m[1],+m[2]]:null})});
     const j=await r.json();if(!r.ok)throw new Error(j.error||"Could not save.");cabinInfo=j;toast("Cabin saved \u{1F3E1}");VIEWS[tab]()}catch(e){toast(e.message||"Could not save.")}
 }
-const cabinCard=()=>`<article class="card" style="margin-bottom:16px"><div class="b"><h3>\u{1F3E1} Our cabin</h3>
+/* the address is changed from the ⋯ menu at the top right of the card */
+const cabinCard=()=>`<article class="card cabin" style="margin-bottom:16px"><div class="b"><h3>\u{1F3E1} Our cabin</h3>
+  ${online?`<div class="dots3"><button id="cabinMore" aria-label="More" aria-haspopup="true">⋯</button><div class="pickm" id="cabinMenu" hidden>
+    <button id="cabinEdit"><span class="e">✏️</span><span><b>${cabinInfo.address?"Edit address":"Add the address"}</b></span></button>
+    ${cabinInfo.address?`<button id="cabinCopy"><span class="e">\u{1F4CB}</span><span><b>Copy address</b></span></button>`:""}</div></div>`:""}
   <p>${cabinInfo.address?esc(cabinInfo.address):"Basye, VA, near Bryce Resort"}</p>
-  <div class="acts"><a class="btn" href="${cabinDirs()}" target="_blank" rel="noopener">\u{1F697} Directions to the cabin</a>${online?`<button class="btn ghost" id="cabinEdit">${cabinInfo.address?"Edit address":"Add the address"}</button>`:""}</div></div></article>`;
+  <div class="acts"><a class="btn" href="${cabinDirs()}" target="_blank" rel="noopener">\u{1F697} Directions to the cabin</a></div></div></article>`;
 const fmtDr=m=>m<60?m+" min":Math.floor(m/60)+" h"+(m%60?" "+m%60+" min":"");
 
 /* Skyline Drive photo gallery */
@@ -436,7 +452,7 @@ const dirs=ll=>`https://www.google.com/maps/dir/?api=1&destination=${ll[0]},${ll
 })();
 
 /* ---------- tabs ---------- */
-const TABS=[["places","\u{1F4CD} Places","#2ec4b6"],["map","\u{1F5FA}️ Map","#5cc8ee"],["history","\u{1F4DC} History","#ff7b6b"],["eat","\u{1F37D}\uFE0F Eat","#ff9f43"]];
+const TABS=[["places","\u{1F4CD} Places","#2ec4b6"],["map","\u{1F5FA}️ Map","#5cc8ee"],["eat","\u{1F37D}\uFE0F Eat","#ff9f43"],["history","\u{1F4DC} History","#ff7b6b"]];
 let tab=store.get("tab","places");if(!TABS.some(t=>t[0]===tab))tab="places";
 function drawTabs(){$("#tabs").innerHTML=TABS.map(([k,l,c])=>`<button data-k="${k}" class="${k===tab?"on":""}" style="--x:${c}">${l}</button>`).join("");
   $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>go(b.dataset.k))}
@@ -487,18 +503,20 @@ function placePicker(){
     ...Object.entries(CAT).map(([k,c])=>{const n=PLACES.filter(p=>p.cat===k).length;return [`near:${k}`,c.e,c.n,`${n} place${n===1?"":"s"}, closest first`]}),
     ["eat:","\u{1F37D}\uFE0F","Restaurants","Opens the Eat list"],["type:all","\u{1F4CB}","Everything by type",""]];
   const cur=`${placeSort}:${placeFilter}`,o=opts.find(x=>x[0]===cur)||opts[0];
-  const label=cur==="near:all"?`${o[1]} ${o[2]}`:placeSort==="type"?`${o[1]} By type`:`${o[1]} ${o[2]} \u00B7 closest first`;
+  const label=placeSort==="type"?`${o[1]} By type`:`${o[1]} ${o[2]}`;
   return `<div class="pick"><button class="pickb" id="pickBtn" aria-haspopup="true" aria-expanded="false">${label} <span class="car">\u25BE</span></button>
     <div class="pickm" id="pickMenu" hidden>${opts.map(([k,e,n,d])=>`<button data-pick="${k}" class="${k===cur?"on":""}"><span class="e">${e}</span><span><b>${esc(n)}</b>${d?`<small>${esc(d)}</small>`:""}</span></button>`).join("")}</div></div>`}
-document.addEventListener("click",e=>{const m=$("#pickMenu");if(m&&!m.hidden&&!e.target.closest(".pick"))m.hidden=true});
+document.addEventListener("click",e=>{const m=$("#pickMenu");if(m&&!m.hidden&&!e.target.closest(".pick"))m.hidden=true;
+  const c=$("#cabinMenu");if(c&&!c.hidden&&!e.target.closest(".dots3"))c.hidden=true});
 const VIEWS={};
 VIEWS.places=()=>{
   const list=PLACES.filter(p=>placeFilter==="all"||p.cat===placeFilter).slice();if(placeSort==="near")list.sort((a,b)=>a.dr-b.dr);
-  $("#view").innerHTML=`${talkFeed()}<h2>Places to visit</h2><p class="sub">Drive times are rough, from the cabin in Basye. Tap Directions to open your maps app.</p>
-  ${placePicker()}
-  ${cabinCard()}<div class="grid">${list.map(placeCard).join("")}</div>
+  $("#view").innerHTML=`${cabinCard()}${talkFeed()}<div class="phd"><h2>Places to visit</h2>${placePicker()}</div>
+  <div class="grid">${list.map(placeCard).join("")}</div>
   <h2 style="margin-top:22px">Quick facts</h2><div class="facts">${FACTS.map(f=>`<div class="fc" style="--x:${f.c}"><b>${f.b}</b><span>${esc(f.t)}</span></div>`).join("")}</div>`;
-  {const ce=$("#cabinEdit");if(ce)ce.onclick=cabinEdit}
+  {const mo=$("#cabinMore");if(mo){mo.onclick=e=>{e.stopPropagation();const m=$("#cabinMenu");m.hidden=!m.hidden};
+    $("#cabinEdit").onclick=()=>{$("#cabinMenu").hidden=true;cabinEdit()};
+    const cp=$("#cabinCopy");if(cp)cp.onclick=async()=>{$("#cabinMenu").hidden=true;try{await navigator.clipboard.writeText(cabinInfo.address);toast("Address copied")}catch(e){prompt("Cabin address:",cabinInfo.address)}}}}
   $("#pickBtn").onclick=e=>{e.stopPropagation();const m=$("#pickMenu");m.hidden=!m.hidden;$("#pickBtn").setAttribute("aria-expanded",!m.hidden)};
   $("#pickMenu").querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{const [s,f]=b.dataset.pick.split(":");
     if(s==="eat"){eatFilter="all";go("eat");return}placeSort=s;placeFilter=f;VIEWS.places()});

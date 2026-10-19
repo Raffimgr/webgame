@@ -1,15 +1,21 @@
 <?php
 /* The trip feed (social.html): photos and videos everyone shares. Photos (and video cover pictures) are kept in ridge-data/social,
    videos in Raffi's Cloudflare R2 bucket through the ridge-media Worker (cloudflare/media-worker.js). The list of posts is
-   ridge-data/social.sqlite. Likes and comments go through talk.php (key po-<id>). Nothing here is in this public repo.
+   ridge-data/social.sqlite. Likes and comments go through talk.php (key po-<post id>). Nothing here is in this public repo.
+   A post holds one or more photos or videos (swiped through like Instagram): each one is a row, and the rows of a post share
+   its id in grp (the first row's id). The caption and tagged players are kept on every row of the post.
 
    Logged in:
-     GET  social.php                    -> {posts:[...], view, media}
+     GET  social.php                    -> {posts:[{id, by, at, cap, tags, items:[{id, kind, key, name, size, w, h, dur, prev}]}], view, media}
      GET  social.php?f=ID[&s=1][&dl=1]  -> a photo (s=1: its smaller copy, or a video's cover picture); dl=1 downloads it
-     POST {act:"start", kind:"photo"|"video", name, size, type, w, h, dur, cap} -> {id, key?, ticket?} (video: the Worker key and an upload ticket)
+     POST {act:"start", kind:"photo"|"video", name, size, type, w, h, dur, cap, tags, grp?} -> {id, grp, key?, ticket?} (video: the Worker key and an upload ticket)
      POST social.php?up=main|prev&id=ID with a JPEG body -> the photo, or the smaller copy / video cover picture
-     POST {act:"done", id}              -> the post shows in the feed
-     POST {act:"del", id}               -> removes a post (whoever shared it, or the admin); for a video, also {key, ticket} to delete it from the Worker
+     POST {act:"done", id, hold?}       -> the photo or video is ready; without hold it shows in the feed at once
+     POST {act:"publish", grp}          -> every ready photo and video of the post shows in the feed together
+     POST {act:"edit", id, cap, tags, drop?:[item ids]} -> changes the caption and tags, and can take photos out of the post
+     POST {act:"drop", id}              -> removes one photo or video (an upload that failed)
+     POST {act:"del", id}               -> removes a whole post
+   Edit, drop and del are for whoever shared it, or the admin. They answer with vids:[{key, ticket}] for videos to delete from the Worker.
    Asked by the Worker, no login (answers only yes or no):
      GET  ?check=TICKET&key=KEY -> {ok:1, op:"put"|"del"}     GET ?view=TOKEN -> {ok:1, op:"view"} */
 
@@ -26,7 +32,12 @@ function social_db(): PDO {
   $pdo->exec('PRAGMA busy_timeout=4000');
   $pdo->exec("CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, pid TEXT NOT NULL, kind TEXT NOT NULL, vkey TEXT,
     name TEXT NOT NULL, size INTEGER NOT NULL DEFAULT 0, w INTEGER, h INTEGER, dur REAL, cap TEXT NOT NULL DEFAULT '', prev INTEGER NOT NULL DEFAULT 0,
-    state TEXT NOT NULL DEFAULT 'up', at INTEGER NOT NULL)");
+    state TEXT NOT NULL DEFAULT 'up', at INTEGER NOT NULL, grp INTEGER, tags TEXT NOT NULL DEFAULT '')");
+  /* posts from before photos could be grouped: each one is a post of its own */
+  $cols = array_column($pdo->query('PRAGMA table_info(posts)')->fetchAll(), 'name');
+  if (!in_array('grp', $cols, true)) $pdo->exec('ALTER TABLE posts ADD COLUMN grp INTEGER');
+  if (!in_array('tags', $cols, true)) $pdo->exec("ALTER TABLE posts ADD COLUMN tags TEXT NOT NULL DEFAULT ''");
+  $pdo->exec('UPDATE posts SET grp=id WHERE grp IS NULL');
   $pdo->exec('CREATE TABLE IF NOT EXISTS tickets (t TEXT PRIMARY KEY, vkey TEXT NOT NULL, op TEXT NOT NULL, exp INTEGER NOT NULL)');
   $pdo->exec('CREATE TABLE IF NOT EXISTS views (t TEXT PRIMARY KEY, pid TEXT NOT NULL, exp INTEGER NOT NULL)');
   @chmod($f, 0600);
@@ -39,17 +50,64 @@ function ticket(PDO $db, string $vkey, string $op): string {
   $db->prepare('INSERT INTO tickets (t, vkey, op, exp) VALUES (?, ?, ?, ?)')->execute([$t, $vkey, $op, time() + 12 * 3600]);
   return $t;
 }
-function post_row(array $r): array {
-  return ['id' => (int)$r['id'], 'by' => $r['pid'], 'kind' => $r['kind'], 'key' => $r['vkey'], 'name' => $r['name'], 'size' => (int)$r['size'],
+function item_row(array $r): array {
+  return ['id' => (int)$r['id'], 'kind' => $r['kind'], 'key' => $r['vkey'], 'name' => $r['name'], 'size' => (int)$r['size'],
     'w' => $r['w'] === null ? null : (int)$r['w'], 'h' => $r['h'] === null ? null : (int)$r['h'], 'dur' => $r['dur'] === null ? null : (float)$r['dur'],
-    'cap' => $r['cap'], 'prev' => (int)$r['prev'], 'at' => (int)$r['at']];
+    'prev' => (int)$r['prev']];
+}
+/* live rows (oldest first within a post) -> posts, newest first */
+function group_posts(array $rows): array {
+  $posts = [];
+  foreach ($rows as $r) {
+    $g = (int)$r['grp'];
+    if (!isset($posts[$g])) $posts[$g] = ['id' => $g, 'by' => $r['pid'], 'at' => (int)$r['at'], 'cap' => $r['cap'],
+      'tags' => $r['tags'] === '' ? [] : explode(',', $r['tags']), 'items' => []];
+    $posts[$g]['items'][] = item_row($r);
+  }
+  return array_values($posts);
+}
+function one_post(PDO $db, int $grp): ?array {
+  $s = $db->prepare("SELECT * FROM posts WHERE grp=? AND state='live' ORDER BY id"); $s->execute([$grp]);
+  return group_posts($s->fetchAll())[0] ?? null;
+}
+function can_change(string $owner, string $pid): void {
+  if ($owner !== $pid && !guide_is_admin($pid)) fail('Only the person who shared it (or the admin) can do that.', 403);
 }
 function own_post(PDO $db, int $id, string $pid): array {
   $s = $db->prepare("SELECT * FROM posts WHERE id=? AND state != 'gone'"); $s->execute([$id]);
   $r = $s->fetch();
   if (!$r) fail('That post is gone.', 404);
-  if ($r['pid'] !== $pid && !guide_is_admin($pid)) fail('Only the person who shared it (or the admin) can do that.', 403);
+  can_change($r['pid'], $pid);
   return $r;
+}
+/* all rows of a post that are still there */
+function own_group(PDO $db, int $grp, string $pid): array {
+  $s = $db->prepare("SELECT * FROM posts WHERE grp=? AND state != 'gone' ORDER BY id"); $s->execute([$grp]);
+  $rows = $s->fetchAll();
+  if (!$rows) fail('That post is gone.', 404);
+  can_change($rows[0]['pid'], $pid);
+  return $rows;
+}
+/* takes rows out: their files go, and videos get a ticket so the browser can delete them from the Worker */
+function remove_rows(PDO $db, array $rows): array {
+  $vids = [];
+  foreach ($rows as $r) {
+    $db->prepare("UPDATE posts SET state='gone' WHERE id=?")->execute([$r['id']]);
+    @unlink(social_dir() . '/' . $r['id'] . '.jpg');
+    @unlink(social_dir() . '/' . $r['id'] . '-s.jpg');
+    if ($r['kind'] === 'video' && $r['vkey']) $vids[] = ['key' => $r['vkey'], 'ticket' => ticket($db, $r['vkey'], 'del')];
+  }
+  return $vids;
+}
+function clean_cap($v): string {
+  return mb_substr(trim(preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', (string)$v) ?? ''), 0, 500);
+}
+/* tagged players: active player ids only, each once */
+function clean_tags($v): string {
+  if (!is_array($v)) return '';
+  $pdo = new PDO('sqlite:' . data_dir() . '/ridge.sqlite', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+  $ids = $pdo->query('SELECT id FROM players WHERE active=1')->fetchAll(PDO::FETCH_COLUMN);
+  return implode(',', array_slice(array_values(array_unique(array_filter(array_map('strval', $v), fn($t) => in_array($t, $ids, true)))), 0, 20));
 }
 function clean_name(string $s): string {
   $s = preg_replace('/[^A-Za-z0-9._-]+/', '_', basename($s)) ?? '';
@@ -96,7 +154,7 @@ try {
       $db->prepare('DELETE FROM views WHERE exp < ?')->execute([time()]);
       $db->prepare('INSERT INTO views (t, pid, exp) VALUES (?, ?, ?)')->execute([$view, $pid, time() + 30 * 86400]);
     }
-    $posts = array_map('post_row', $db->query("SELECT * FROM posts WHERE state='live' ORDER BY id DESC")->fetchAll());
+    $posts = group_posts($db->query("SELECT * FROM posts WHERE state='live' ORDER BY grp DESC, id ASC")->fetchAll());
     out(['posts' => $posts, 'view' => $view, 'media' => MEDIA_URL]);
   }
 
@@ -127,7 +185,16 @@ try {
     $size = (int)($b['size'] ?? 0);
     if ($kind === 'video' && ($size <= 0 || $size > VIDEO_MAX)) fail('Videos can be up to 4 GB.');
     $name = clean_name((string)($b['name'] ?? ''));
-    $cap = mb_substr(trim(preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', (string)($b['cap'] ?? '')) ?? ''), 0, 500);
+    $cap = clean_cap($b['cap'] ?? '');
+    $tags = clean_tags($b['tags'] ?? null);
+    /* the second, third... photo of a post joins the first one's post */
+    $grp = (int)($b['grp'] ?? 0);
+    if ($grp) {
+      $s = $db->prepare('SELECT pid FROM posts WHERE grp=? LIMIT 1'); $s->execute([$grp]);
+      if ($s->fetchColumn() !== $pid) fail('Bad request.');
+      $s = $db->prepare("SELECT COUNT(*) FROM posts WHERE grp=? AND state != 'gone'"); $s->execute([$grp]);
+      if ((int)$s->fetchColumn() >= 20) fail('A post can have up to 20 photos and videos.');
+    }
     $vkey = null;
     if ($kind === 'video') {
       $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
@@ -135,24 +202,44 @@ try {
       $vkey = 'v/' . bin2hex(random_bytes(12)) . '.' . $ext;
     }
     $num = fn($k) => isset($b[$k]) && is_numeric($b[$k]) ? $b[$k] + 0 : null;
-    $db->prepare('INSERT INTO posts (pid, kind, vkey, name, size, w, h, dur, cap, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-       ->execute([$pid, $kind, $vkey, $name, $size, $num('w'), $num('h'), $num('dur'), $cap, time()]);
+    $db->prepare('INSERT INTO posts (pid, kind, vkey, name, size, w, h, dur, cap, tags, grp, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+       ->execute([$pid, $kind, $vkey, $name, $size, $num('w'), $num('h'), $num('dur'), $cap, $tags, $grp ?: null, time()]);
     $id = (int)$db->lastInsertId();
-    out($kind === 'video' ? ['id' => $id, 'key' => $vkey, 'ticket' => ticket($db, $vkey, 'put')] : ['id' => $id]);
+    if (!$grp) { $grp = $id; $db->prepare('UPDATE posts SET grp=? WHERE id=?')->execute([$id, $id]); }
+    out($kind === 'video' ? ['id' => $id, 'grp' => $grp, 'key' => $vkey, 'ticket' => ticket($db, $vkey, 'put')] : ['id' => $id, 'grp' => $grp]);
   }
   if ($act === 'done') {
     $r = own_post($db, (int)($b['id'] ?? 0), $pid);
     if ($r['kind'] === 'photo' && !is_file(social_dir() . '/' . $r['id'] . '.jpg')) fail('The photo did not upload. Try again.');
+    if (!empty($b['hold'])) { $db->prepare("UPDATE posts SET state='ready' WHERE id=? AND state='up'")->execute([$r['id']]); out(['ok' => 1]); }
     $db->prepare("UPDATE posts SET state='live' WHERE id=?")->execute([$r['id']]);
-    $s = $db->prepare('SELECT * FROM posts WHERE id=?'); $s->execute([$r['id']]);
-    out(['post' => post_row($s->fetch())]);
+    out(['post' => one_post($db, (int)$r['grp'])]);
+  }
+  if ($act === 'publish') {
+    $grp = (int)($b['grp'] ?? 0);
+    own_group($db, $grp, $pid);
+    $db->prepare("UPDATE posts SET state='live' WHERE grp=? AND state='ready'")->execute([$grp]);
+    $post = one_post($db, $grp);
+    if (!$post) fail('None of the photos uploaded. Try again.');
+    out(['post' => $post]);
+  }
+  if ($act === 'edit') {
+    $grp = (int)($b['id'] ?? 0);
+    $rows = array_values(array_filter(own_group($db, $grp, $pid), fn($r) => $r['state'] === 'live'));
+    $drop = array_map('intval', is_array($b['drop'] ?? null) ? $b['drop'] : []);
+    $gone = array_values(array_filter($rows, fn($r) => in_array((int)$r['id'], $drop, true)));
+    if ($rows && count($gone) === count($rows)) fail('A post needs at least one photo. To remove all of them, delete the post.');
+    $db->prepare('UPDATE posts SET cap=?, tags=? WHERE grp=?')->execute([clean_cap($b['cap'] ?? ''), clean_tags($b['tags'] ?? null), $grp]);
+    $vids = remove_rows($db, $gone);
+    out(['post' => one_post($db, $grp), 'vids' => $vids]);
+  }
+  if ($act === 'drop') {
+    $r = own_post($db, (int)($b['id'] ?? 0), $pid);
+    out(['ok' => 1, 'vids' => remove_rows($db, [$r])]);
   }
   if ($act === 'del') {
-    $r = own_post($db, (int)($b['id'] ?? 0), $pid);
-    $db->prepare("UPDATE posts SET state='gone' WHERE id=?")->execute([$r['id']]);
-    @unlink(social_dir() . '/' . $r['id'] . '.jpg');
-    @unlink(social_dir() . '/' . $r['id'] . '-s.jpg');
-    out($r['kind'] === 'video' ? ['ok' => 1, 'key' => $r['vkey'], 'ticket' => ticket($db, $r['vkey'], 'del')] : ['ok' => 1]);
+    $rows = own_group($db, (int)($b['id'] ?? 0), $pid);
+    out(['ok' => 1, 'vids' => remove_rows($db, $rows)]);
   }
   fail('Bad request.');
 } catch (Throwable $e) {
