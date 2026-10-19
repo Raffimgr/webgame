@@ -65,7 +65,7 @@ async function login({admin=false}={}){
         ${needSetup?`<input class="rg-in" type="password" name="password2" placeholder="Type it again" autocomplete="new-password" required>`:""}
         <div class="rg-err"></div>
         <button class="rg-btn" type="submit">${needSetup?"Set password and enter":"Enter"}</button>`:""}
-        ${/\/(index\.html)?$/.test(location.pathname)?"":`<a href="./" style="color:#9aa3b3;font-size:13px;text-align:center;padding:8px">Back home</a>`}
+        ${/\/(index\.html|games\.html)?$/.test(location.pathname)?"":`<a href="games.html" style="color:#9aa3b3;font-size:13px;text-align:center;padding:8px">Back home</a>`}
       </form>`;
       const f=g.querySelector("form");
       g.querySelectorAll(".rg-who button").forEach(b=>b.onclick=()=>{pick=list.find(p=>p.id===b.dataset.id);draw();const i=g.querySelector("input[name=password]");if(i)i.focus()});

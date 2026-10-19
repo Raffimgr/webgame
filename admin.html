@@ -82,7 +82,7 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><h1>Admin <small>Record games, players, passwords and settings</small></h1><span class="pill" id="who"></span><a class="pill" href="scores.html">Dashboard</a><a class="pill" href="./">Home</a></div>
+  <div class="top"><h1>Admin <small>Record games, players, passwords and settings</small></h1><span class="pill" id="who"></span><a class="pill" href="scores.html">Dashboard</a><a class="pill" href="games.html">Home</a></div>
   <div class="tabs" id="tabs"><button data-t="rec" class="on">Record</button><button data-t="ev">Games</button><button data-t="pl">Players</button><button data-t="set">Settings</button></div>
   <section id="t-rec"></section>
   <section id="t-ev" hidden></section>
@@ -96,7 +96,7 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 const {api,av,esc,toast}=RG;
 const COLORS=["#d4f09a","#f7b8d2","#aab7ff","#ffe08a","#ffbf99","#ff9fb8","#7ee8f0","#9df0c8","#d8c39a","#c9a7ff","#7be08a","#ff8f70"];
 let me,players=[],events=[],coins=[];
-try{({me}=await RG.login({admin:true}))}catch(e){document.querySelector(".wrap").innerHTML=`<div class="panel"><h2>Can't reach the server</h2><p class="hint">${esc(e.message)} The admin page only works on the website itself.</p><a class="btn" href="./">Home</a></div>`;return}
+try{({me}=await RG.login({admin:true}))}catch(e){document.querySelector(".wrap").innerHTML=`<div class="panel"><h2>Can't reach the server</h2><p class="hint">${esc(e.message)} The admin page only works on the website itself.</p><a class="btn" href="games.html">Home</a></div>`;return}
 document.getElementById("who").innerHTML=`${av(me,22)} ${esc(me.name)} · <button id="out" style="color:#9aa3b3;font-weight:600">Log out</button>`;
 document.getElementById("out").onclick=async()=>{try{await api("logout",{})}catch(x){}location.reload()};
 

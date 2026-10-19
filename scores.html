@@ -91,7 +91,7 @@ button:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid var(
 </head>
 <body>
 <div class="wrap" id="app">
-  <div class="top"><h1>Scoreboard <small>Average coins per game. 1st place wins the most coins.</small></h1><span id="user"></span><a class="pill t" href="admin.html" id="adm" hidden>Admin</a><a class="pill t" href="./">Home</a></div>
+  <div class="top"><h1>Scoreboard <small>Average coins per game. 1st place wins the most coins.</small></h1><span id="user"></span><a class="pill t" href="admin.html" id="adm" hidden>Admin</a><a class="pill t" href="games.html">Home</a></div>
   <div class="bar"><div class="per" id="per"></div><select class="sel" id="gf" aria-label="Which game"></select></div>
   <div class="grid2">
     <div class="panel"><h2>Top players <small id="pod-sub"></small></h2><div class="podium" id="podium"></div></div>
@@ -109,7 +109,7 @@ button:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid var(
 const {api,av,esc}=RG;
 const CAM=`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
 let me,events=[],players=[],coins=[10],period="all",game="";
-const offline=e=>{document.getElementById("app").innerHTML=`<div class="panel"><h2>Can't reach the server</h2><p style="color:#9aa3b3;margin:0">${esc(e.message)} The scoreboard is saved online, so it only works on the Ridge Games website.</p><a class="btn" href="./">Home</a></div>`};
+const offline=e=>{document.getElementById("app").innerHTML=`<div class="panel"><h2>Can't reach the server</h2><p style="color:#9aa3b3;margin:0">${esc(e.message)} The scoreboard is saved online, so it only works on the Ridge Games website.</p><a class="btn" href="games.html">Home</a></div>`};
 try{({me}=await RG.login())}catch(e){offline(e);return}
 try{period=localStorage.getItem("rg_period")||"all"}catch(e){}
 if(!RG.PERIODS.some(p=>p[0]===period))period="all";

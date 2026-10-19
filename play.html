@@ -130,7 +130,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--teal);outline-offse
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><h1 id="ttl">Play together <small>Everyone plays on their own phone</small></h1><a class="pill" id="back" href="./">Home</a></div>
+  <div class="top"><h1 id="ttl">Play together <small>Everyone plays on their own phone</small></h1><a class="pill" id="back" href="games.html">Home</a></div>
   <div id="app"><div class="empty">Loading…</div></div>
   <div id="stage" hidden></div>
 </div>
@@ -200,7 +200,7 @@ function openRoom(id){
 function draw(){
   if(!me)return;
   const bk=$("#back");
-  if(mode==="hub"){bk.textContent="Home";bk.href="./";bk.onclick=null}
+  if(mode==="hub"){bk.textContent="Home";bk.href="games.html";bk.onclick=null}
   else{bk.textContent="All games";bk.href="play.html";bk.onclick=e=>{e.preventDefault();if(race&&race.live&&!confirm("Leave the race? You'll get no place."))return;openRoom(null)}}
   if(mode==="hub")return drawHub();
   if(mode==="new")return drawNew();
