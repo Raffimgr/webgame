@@ -1,5 +1,5 @@
 /* Ridge Games shared helpers: talking to api.php, the login screen, photo shrinking, avatars, periods,
-   and the bottom bar (Trip / Games / Feed) on the three main pages. Used by every page that loads it. */
+   and the bottom bar (Trip / Games / Feed / To-do) on the main pages. Used by every page that loads it. */
 (function(){
 const CSS=`
 .rg-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(15,17,21,.86);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
@@ -30,9 +30,9 @@ const st=document.createElement("style");st.textContent=CSS;document.head.append
 /* Bottom bar to switch between the Shenandoah Guide (the front page), the games home and the trip feed. Only on those three pages,
    so it never covers a game while it is being played. */
 (function(){
-  const here={"":"trip","index.html":"trip","games.html":"games","social.html":"feed"}[location.pathname.split("/").pop()];
+  const here={"":"trip","index.html":"trip","games.html":"games","social.html":"feed","plan.html":"plan"}[location.pathname.split("/").pop()];
   if(!here)return;
-  const items=[["trip","./","\u{1F3D4}\uFE0F","Trip"],["games","games.html","\u{1F3B2}","Games"],["feed","social.html","\u{1F4F8}","Feed"]];
+  const items=[["trip","./","\u{1F3D4}\uFE0F","Trip"],["games","games.html","\u{1F3B2}","Games"],["feed","social.html","\u{1F4F8}","Feed"],["plan","plan.html","\u{1F4CB}","To-do"]];
   const add=()=>{const n=document.createElement("nav");n.className="rg-nav";n.setAttribute("aria-label","Main");
     n.innerHTML=items.map(([k,href,icon,label])=>`<a href="${href}"${k===here?' class="on" aria-current="page"':""}><span>${icon}</span>${label}</a>`).join("");
     document.body.appendChild(n);document.documentElement.classList.add("rg-nav-on")};

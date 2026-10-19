@@ -3,6 +3,7 @@
    social.php to logged-in players; the Worker asks social.php (CHECK_URL) whether they are good and remembers the answer for a while.
 
    GET  /ping                                   -> "ok" (the feed uses it to see whether video sharing is switched on)
+   GET  /ping?deep=1                            -> "ok" only when social.php answers too; the result is also saved as _status.json in the bucket
    GET  /f/<key>?v=<view token>[&dl=<name>]      -> the video (range requests work, so players can seek); dl= makes it a download
    PUT  /up/<key>?t=<ticket>                     -> stores a video up to 90 MB in one go
    POST /mp/<key>?t=<ticket>&action=create&type= -> starts a big upload in parts: {uploadId}
@@ -31,6 +32,15 @@ async function verify(env, query) {
   return op;
 }
 
+/* Can the Worker reach social.php? A made-up viewing token must come back as a JSON "no" (403). */
+async function deepCheck(env) {
+  let status = 0, type = "";
+  try { const r = await fetch(env.CHECK_URL + "?view=" + "0".repeat(32), { headers: { "User-Agent": "ridge-media-worker" } }); status = r.status; type = r.headers.get("Content-Type") || ""; } catch (e) { type = String(e); }
+  const ok = status === 403 && type.includes("json");
+  await env.BUCKET.put("_status.json", JSON.stringify({ at: new Date().toISOString(), ok, status, type }), { httpMetadata: { contentType: "application/json" } });
+  return ok;
+}
+
 function corsHeaders(env, req) {
   const origin = req.headers.get("Origin") || "";
   const ok = (env.ORIGINS || "").split(",").map(s => s.trim()).includes(origin);
@@ -44,7 +54,10 @@ export default {
     const fail = (msg, status) => json({ error: msg }, status, cors);
 
     if (method === "OPTIONS") return new Response(null, { status: 204, headers: { ...cors, "Access-Control-Allow-Methods": "GET, HEAD, PUT, POST, DELETE", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400" } });
-    if (path === "/ping") return new Response("ok", { headers: { ...cors, "Cache-Control": "no-store" } });
+    if (path === "/ping") {
+      const ok = !url.searchParams.has("deep") || await deepCheck(env);
+      return new Response(ok ? "ok" : "social.php can't be reached", { status: ok ? 200 : 503, headers: { ...cors, "Cache-Control": "no-store" } });
+    }
 
     const m = /^\/(f|up|mp)\/(.+)$/.exec(path);
     if (!m || !KEY_RE.test(m[2])) return fail("Not found.", 404);
@@ -118,5 +131,6 @@ export default {
       if (method === "DELETE") { await up.abort(); return json({ ok: 1 }, 200, cors); }
     }
     return fail("Not found.", 404);
-  }
+  },
+  async scheduled(event, env) { await deepCheck(env); }
 };

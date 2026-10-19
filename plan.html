@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Trip To-do</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* To-do: what the group needs to buy, book and do for a trip or event, who is on it, and notes (plan.php). Logged-in players only. */
+:root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--ink:#15181e;--well:#202328;
+  --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
+  --in-sh:inset 3px 3px 8px rgba(0,0,0,.5);
+  --teal:#2ec4b6;--gold:#ffd23f;--green:#6fc04a;--red:#ff7b6b;--blue:#5cc8ee;--purple:#b392f0;--orange:#ff9f43;
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--play:"Fredoka","Inter",system-ui,sans-serif}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;background:linear-gradient(170deg,#2c3037 0%,#22252b 55%,#1b1d22 100%) fixed;color:var(--fg);font:15px/1.55 var(--font);min-height:100vh;-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+.wrap{max-width:720px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(40px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pill{display:inline-flex;align-items:center;gap:6px;color:var(--fg);font-size:13px;font-weight:600;text-decoration:none;padding:9px 14px;border-radius:99px;background:var(--raise);box-shadow:var(--raise-sh);border:0;cursor:pointer;font-family:var(--font)}
+h1{margin:0;font:700 34px/1.1 var(--play)}
+.sub{margin:4px 0 0;color:var(--mut)}
+.panel{border-radius:24px;background:var(--raise);box-shadow:var(--raise-sh);padding:16px}
+.btn{border:0;cursor:pointer;padding:10px 14px;border-radius:14px;font:700 13.5px var(--font);background:var(--teal);color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.ghost{background:#353a43;color:var(--fg)}
+.btn.big{padding:14px 20px;font-size:15.5px;border-radius:16px}
+.btn.red{background:#4a2b2e;color:#ffb3b3}
+.btn:disabled{opacity:.5;cursor:default}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 6px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:0;cursor:pointer;padding:8px 13px;border-radius:99px;font:600 13.5px var(--font);color:var(--mut);background:var(--raise);box-shadow:var(--raise-sh)}
+.chip.on{color:var(--ink);background:var(--x,var(--teal))}
+.prog{display:flex;align-items:center;gap:12px}
+.prog .bar{flex:1;height:10px;border-radius:99px;background:#15181e;box-shadow:var(--in-sh);overflow:hidden}
+.prog .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--green));transition:width .4s}
+.prog b{font:600 15px var(--play);white-space:nowrap}
+/* add / edit form */
+.form{display:flex;flex-direction:column;gap:10px}
+.form label{font-size:12.5px;color:var(--mut);font-weight:600;display:flex;flex-direction:column;gap:5px}
+.in{width:100%;border:0;border-radius:12px;padding:11px 13px;background:var(--well);color:var(--fg);font:16px var(--font);box-shadow:var(--in-sh)}
+textarea.in{resize:vertical;min-height:64px;line-height:1.4}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1;min-width:140px}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;border:0;cursor:pointer;padding:10px 6px;border-radius:12px;font:600 13.5px var(--font);color:var(--mut);background:#2b2f37;box-shadow:var(--in-sh)}
+.seg button.on{color:var(--ink);background:var(--x)}
+/* items */
+.items{display:flex;flex-direction:column;gap:10px}
+.it{border-radius:20px;background:var(--raise);box-shadow:var(--raise-sh);padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
+.it .ck{flex:none;width:32px;height:32px;border-radius:50%;border:2px solid #4a505b;background:#1d2025;cursor:pointer;display:grid;place-items:center;font-size:17px;color:var(--ink);margin-top:2px}
+.it.done .ck{background:var(--green);border-color:var(--green)}
+.it .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.it h3{margin:0;font:600 17px/1.3 var(--play);overflow-wrap:anywhere}
+.it.done h3{text-decoration:line-through;color:var(--mut)}
+.it .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px}
+.it .meta span{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;background:#2b2f37;color:#c9cfda}
+.it .meta .k{color:var(--ink);background:var(--x)}
+.it .meta .late{background:#4a2b2e;color:#ffb3b3}
+.it .notes{margin:0;color:#c9cfda;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.it .acts{display:flex;gap:6px;flex-wrap:wrap}
+.it .acts .btn{padding:7px 11px;font-size:12.5px;border-radius:11px}
+.it .edit{flex:none;border:0;background:none;color:var(--mut);cursor:pointer;font-size:16px;padding:4px}
+.lbl{font:600 13px var(--font);color:var(--mut);text-transform:uppercase;letter-spacing:.6px;margin:8px 0 0}
+.empty{text-align:center;color:var(--mut);padding:24px 10px}
+.sug{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.ihd{width:100%;display:flex;justify-content:space-between;align-items:center;border:0;background:none;color:var(--fg);font:600 16px var(--play);cursor:pointer;padding:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="pill" href="./">&larr; Shenandoah Guide</a>
+    <span class="pill" id="who" hidden></span>
+  </div>
+  <div>
+    <h1>&#128203; To-do</h1>
+    <p class="sub">What we need to buy, book and do, who's on it, and notes.</p>
+  </div>
+  <div id="app" hidden>
+    <div class="chips" id="lists"></div>
+    <div class="panel prog" id="prog" style="margin:8px 0 14px"></div>
+    <button class="btn big" id="addBtn" style="width:100%">&#10133; Add something</button>
+    <div class="panel" id="addBox" hidden style="margin-top:4px"></div>
+    <div class="chips" id="filters" style="margin-top:14px"></div>
+    <div id="list"></div>
+  </div>
+</div>
+<script src="rg.js"></script>
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const KINDS={buy:{e:"\u{1F6D2}",n:"Buy",c:"#ffd23f"},book:{e:"\u{1F4C5}",n:"Book",c:"#5cc8ee"},do:{e:"✅",n:"Do",c:"#b392f0"}};
+/* starter ideas for the Shenandoah trip; nothing is added until someone taps them */
+const IDEAS=[
+  {kind:"buy",title:"Park entrance pass",notes:"One per car at the gate, or an America the Beautiful pass covers it."},
+  {kind:"book",title:"Table for the big group dinner",notes:"Pick a place from the Eat tab in the guide and ask for one long table."},
+  {kind:"book",title:"Luray Caverns tickets",notes:"Buy online ahead for a set entry time."},
+  {kind:"buy",title:"Groceries for the cabin",notes:"Breakfasts, snacks, drinks, coffee."},
+  {kind:"buy",title:"Firewood and s'mores",notes:""},
+  {kind:"do",title:"Download offline maps on every phone",notes:"Cell signal is spotty on Skyline Drive."},
+  {kind:"do",title:"Pack the games",notes:"Cards, cornhole, frisbee."},
+  {kind:"do",title:"Pack warm layers and rain jackets",notes:"It's colder up on the ridge."}];
+let me=null,people={},roster=[],lists=[],items=[],cur=+(localStorage.getItem("rg-plan-list")||0),filter="all",editing=null,adding=false,ideasOpen=false;
+
+async function api(body){const r=await fetch("plan.php",{method:"POST",credentials:"same-origin",headers:{"X-RG":"1","Content-Type":"application/json"},body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Something went wrong. Try again.");return j}
+const name=id=>(people[id]||{}).name||"Someone";
+const fmtDue=d=>{const t=new Date(d+"T12:00");return t.toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"})};
+const today=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
+
+function formHTML(it){it=it||{kind:"buy",title:"",notes:"",who:"",due:""};
+  return `<form class="form" data-form="${it.id||""}">
+    <div class="seg">${Object.entries(KINDS).map(([k,v])=>`<button type="button" data-kind="${k}" class="${it.kind===k?"on":""}" style="--x:${v.c}">${v.e} ${v.n}</button>`).join("")}</div>
+    <input class="in" name="title" maxlength="120" placeholder="What needs doing? e.g. Buy firewood" value="${esc(it.title)}" required>
+    <div class="row"><label>Who's on it<select class="in" name="who"><option value="">Anyone</option>${roster.map(p=>`<option value="${esc(p.id)}" ${it.who===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select></label>
+      <label>By when (optional)<input class="in" type="date" name="due" value="${esc(it.due)}"></label></div>
+    <label>Notes<textarea class="in" name="notes" maxlength="1000" placeholder="Details, links, how many, who to call…">${esc(it.notes)}</textarea></label>
+    <div class="row" style="align-items:center"><button class="btn big">${it.id?"Save":"Add to the list"}</button><button type="button" class="btn big ghost" data-cancel>Cancel</button>
+      ${it.id&&(me.id===it.by||me.is_admin)?`<button type="button" class="btn big red" data-del="${it.id}">Delete</button>`:""}</div></form>`}
+
+function itemHTML(it){
+  if(editing===it.id)return `<div class="panel" id="it-${it.id}">${formHTML(it)}</div>`;
+  const k=KINDS[it.kind]||KINDS.do,late=!it.done&&it.due&&it.due<today();
+  return `<div class="it ${it.done?"done":""}" id="it-${it.id}"><button class="ck" data-done="${it.id}" aria-label="${it.done?"Mark not done":"Mark done"}">${it.done?"✔":""}</button>
+    <div class="bd"><h3>${esc(it.title)}</h3>
+      <div class="meta"><span class="k" style="--x:${k.c}">${k.e} ${k.n}</span>${it.who?`<span>${people[it.who]?RG.av(people[it.who],18):""}${esc(name(it.who))}</span>`:`<span>\u{1F64B} Anyone</span>`}
+        ${it.due?`<span class="${late?"late":""}">\u{1F4C6} ${fmtDue(it.due)}</span>`:""}</div>
+      ${it.notes?`<p class="notes">${esc(it.notes)}</p>`:""}
+      ${it.done?`<div class="meta"><span>✔ Done by ${esc(name(it.done_by))}</span></div>`:!it.who?`<div class="acts"><button class="btn" data-take="${it.id}">\u{1F64B} I'll do it</button></div>`:""}</div>
+    <button class="edit" data-edit="${it.id}" aria-label="Edit">✏️</button></div>`}
+
+function draw(){
+  if(!lists.some(l=>l.id===cur))cur=lists.length?lists[0].id:0;
+  $("#lists").innerHTML=lists.map(l=>`<button class="chip ${l.id===cur?"on":""}" data-list="${l.id}">${esc(l.name)}</button>`).join("")+`<button class="chip" data-newlist>➕ New list</button>`;
+  const mine=items.filter(i=>i.list===cur),done=mine.filter(i=>i.done).length;
+  $("#prog").innerHTML=mine.length?`<div class="bar"><i style="width:${Math.round(done/mine.length*100)}%"></i></div><b>${done} of ${mine.length} done</b>`:`<b>Nothing on this list yet</b>`;
+  $("#addBox").hidden=!adding;$("#addBtn").hidden=adding;if(adding&&!$("#addBox form"))$("#addBox").innerHTML=formHTML();
+  const F=[["all","All"],["mine","\u{1F464} Mine"],["open","\u{1F64B} Needs someone"],...Object.entries(KINDS).map(([k,v])=>[k,v.e+" "+v.n])];
+  $("#filters").innerHTML=F.map(([k,l])=>`<button class="chip ${filter===k?"on":""}" data-filter="${k}">${l}</button>`).join("");
+  const show=mine.filter(i=>filter==="all"||(filter==="mine"?i.who===me.id:filter==="open"?!i.who&&!i.done:i.kind===filter));
+  const todo=show.filter(i=>!i.done).sort((a,b)=>(a.due||"9999")<(b.due||"9999")?-1:(a.due||"9999")>(b.due||"9999")?1:a.id-b.id),fin=show.filter(i=>i.done).sort((a,b)=>b.done_at-a.done_at);
+  $("#list").innerHTML=(todo.length?`<div class="items">${todo.map(itemHTML).join("")}</div>`:mine.length?`<div class="empty">Nothing left here \u{1F389}</div>`:"")
+    +(fin.length?`<div class="lbl">Done (${fin.length})</div><div class="items" style="margin-top:8px">${fin.map(itemHTML).join("")}</div>`:"")
+    +ideasHTML(mine);
+}
+/* the starter ideas belong to the Shenandoah list; ones already on it are left out */
+function ideasHTML(mine){
+  const l=lists.find(x=>x.id===cur);if(!l||!/shenandoah/i.test(l.name))return "";
+  const have=new Set(mine.map(i=>i.title.toLowerCase())),left=IDEAS.map((s,n)=>[s,n]).filter(([s])=>!have.has(s.title.toLowerCase()));
+  if(!left.length)return "";const open=ideasOpen||!mine.length;
+  return `<div class="panel" style="margin-top:14px"><button class="ihd" data-ideas>\u{1F4A1} Ideas to add (${left.length}) <span>${open?"▴":"▾"}</span></button>
+    ${open?`<p class="sub" style="margin:2px 0 0">Tap any to put it on the list.</p><div class="sug">${left.map(([s,n])=>`<button class="btn ghost" data-idea="${n}" style="justify-content:flex-start;text-align:left">${KINDS[s.kind].e} ${esc(s.title)}</button>`).join("")}</div>`:""}</div>`;
+}
+function readForm(f){const on=f.querySelector(".seg .on");return {kind:on?on.dataset.kind:"do",title:f.title.value.trim(),who:f.who.value,due:f.due.value,notes:f.notes.value.trim()}}
+function put(it){const i=items.findIndex(x=>x.id===it.id);if(i>=0)items[i]=it;else items.push(it)}
+
+document.addEventListener("click",async e=>{const t=e.target.closest("button");if(!t)return;
+  try{
+    if(t.dataset.kind){t.parentNode.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b===t));return}
+    if(t.dataset.list){cur=+t.dataset.list;localStorage.setItem("rg-plan-list",cur);editing=null;draw();return}
+    if("newlist" in t.dataset){const n=prompt("Name the new list, like “Thanksgiving” or “Beach weekend”:");if(!n||!n.trim())return;
+      const j=await api({act:"list",name:n.trim()});lists.push(j.list);cur=j.list.id;localStorage.setItem("rg-plan-list",cur);draw();return}
+    if(t.dataset.filter){filter=t.dataset.filter;draw();return}
+    if("ideas" in t.dataset){ideasOpen=!ideasOpen;draw();return}
+    if(t.id==="addBtn"){adding=true;editing=null;draw();$("#addBox [name=title]").focus();return}
+    if("cancel" in t.dataset){adding=false;editing=null;$("#addBox").innerHTML="";draw();return}
+    if(t.dataset.edit){editing=+t.dataset.edit;adding=false;$("#addBox").innerHTML="";draw();return}
+    if(t.dataset.done){const it=items.find(x=>x.id===+t.dataset.done);put((await api({act:"done",id:it.id,done:!it.done})).item);draw();return}
+    if(t.dataset.take){const it=items.find(x=>x.id===+t.dataset.take);put((await api({act:"save",id:it.id,title:it.title,kind:it.kind,notes:it.notes,who:me.id,due:it.due})).item);draw();return}
+    if(t.dataset.idea){const s=IDEAS[+t.dataset.idea];ideasOpen=true;put((await api({act:"save",list:cur,...s,who:"",due:""})).item);draw();return}
+    if(t.dataset.del){if(!confirm("Delete this item?"))return;await api({act:"del",id:+t.dataset.del});items=items.filter(x=>x.id!==+t.dataset.del);editing=null;draw();return}
+  }catch(err){RG.toast(err.message)}});
+document.addEventListener("submit",async e=>{const f=e.target.closest("[data-form]");if(!f)return;e.preventDefault();const d=readForm(f);if(!d.title)return;
+  const btn=f.querySelector("button:not([type])");btn.disabled=true;
+  try{const id=+f.dataset.form||0;put((await api({act:"save",...d,...(id?{id}:{list:cur})})).item);adding=false;editing=null;$("#addBox").innerHTML="";draw();if(!id)RG.toast("Added ✔")}
+  catch(err){RG.toast(err.message);btn.disabled=false}});
+
+async function load(){const r=await fetch("plan.php",{credentials:"same-origin"});if(!r.ok)throw new Error("Could not load the list.");const j=await r.json();lists=j.lists;items=j.items}
+async function boot(){
+  try{const r=await RG.login();me={id:r.me.id,name:r.me.name,is_admin:+r.me.is_admin===1};
+    if(r.state&&r.state.players){roster=r.state.players;roster.forEach(p=>people[p.id]=p)}
+    const w=$("#who");w.hidden=false;w.innerHTML=RG.av(r.me,22)+" "+esc(r.me.name);
+    await load();$("#app").hidden=false;draw();
+    /* pick up everyone else's changes, unless someone is typing in a form */
+    setInterval(async()=>{if(document.hidden||adding||editing)return;try{await load();draw()}catch(e){}},30000);
+  }catch(e){$(".wrap").insertAdjacentHTML("beforeend",`<div class="empty">Could not load the list. ${esc(e.message||"")}</div>`)}}
+boot();
+})();
+</script>
+</body>
+</html>
