@@ -199,6 +199,9 @@ const P={
   meemsInside:{u:"img/meems-inside.jpg",by:"Shared by Sako",cap:"Inside the covered bridge",src:"img/meems-inside.jpg"},
   meemsPlaque:{u:"img/meems-plaque.jpg",by:"Shared by Sako",cap:"The plaque: Virginia's longest covered bridge, built 1892-93",src:"img/meems-plaque.jpg"},
   stonySunset:{u:"img/stony-man-sunset.jpg",by:"Shared by Sako",cap:"Stony Man glowing at sunset, from Skyline Drive",src:"img/stony-man-sunset.jpg"},
+  sunsetRocks:{u:"img/sunset-rocks.jpg",by:"Shared by Sako",cap:"Fall sunset from a rocky overlook",src:"img/sunset-rocks.jpg"},
+  valleySunset:{u:"img/valley-sunset.jpg",by:"Shared by Sako",cap:"Sunset over the Shenandoah Valley and river",src:"img/valley-sunset.jpg"},
+  blueRidges:{u:"img/blue-ridges.jpg",by:"Shared by Sako",cap:"Blue ridges fading into the evening",src:"img/blue-ridges.jpg"},
   skyCurve:{u:"img/skyline-curve.jpg",by:"Shared by Sako",cap:"A stone wall curve on Skyline Drive in fall",src:"img/skyline-curve.jpg"},
   skyAerial:{u:"img/skyline-aerial.jpg",by:"Shared by Sako",cap:"The drive winding through fall color",src:"img/skyline-aerial.jpg"},
   skyTrees:{u:"img/skyline-trees.jpg",by:"Shared by Sako",cap:"Driving under a tunnel of fall leaves",src:"img/skyline-trees.jpg"},
@@ -391,7 +394,7 @@ const GALLERY_GROUPS=[
   ["Driving Skyline Drive",["skyCurve","skyAerial","skyTrees","sky0303","skyBend","skySummer"]],
   ["Overlooks along the drive",["hogwallow","rangeView","pinnacles","franklin","crescent","hogback","thePoint","hazeltop","sandy","hensley","rockytop","hazel","thorofare","ragFromSD"]],
   ["Fall colors",["fallTile","fallFalls","fallPoplar","banner","whiteoakFall","sd2005"]],
-  ["Sunrise, sunset and stars",["sunrise","blackrockSunset","stars","peaks","rockyOvl"]],
+  ["Sunrise, sunset and stars",["sunsetRocks","valleySunset","blueRidges","sunrise","blackrockSunset","stars","peaks","rockyOvl"]],
   ["Summits and waterfalls",["stonyMan","hawksbillUpper","marysSummit","stonyHiker","whiteoakLow","meadowsView"]],
   ["Wildlife and wildflowers",["bearRoad","bearWet","deer","bear","ladyslipper","hepatica"]],
   ["Every season",["winter","marysTunnelC"]]
@@ -557,7 +560,7 @@ const dirs=ll=>`https://www.google.com/maps/dir/?api=1&destination=${ll[0]},${ll
 
 /* ---------- hero slideshow ---------- */
 (function(){
-  const h=$("#hero"),keys=["stonySunset","fallStraight","skyBend","fallTile","hogwallow","sunrise","rangeView","blackrockSunset","franklin"];let i=0;
+  const h=$("#hero"),keys=["stonySunset","sunsetRocks","valleySunset","blueRidges"];let i=0;
   const im=document.createElement("img"),cr=document.createElement("a");cr.className="cr";cr.target="_blank";cr.rel="noopener";
   im.alt="Skyline Drive";im.onerror=()=>{im.style.opacity=0};h.prepend(im);h.appendChild(cr);
   const show=()=>{const p=P[keys[i%keys.length]];im.style.opacity=0;setTimeout(()=>{im.src=img(p,1400);cr.href=page(p);cr.innerHTML="&#128247; "+esc(p.by||"Wikimedia Commons")},350);im.onload=()=>{im.style.opacity=1}};
