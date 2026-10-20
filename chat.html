@@ -163,6 +163,7 @@ addEventListener("resize",place);
 
 async function boot(){
   try{const r=await RG.login();me={id:r.me.id,name:r.me.name,is_admin:+r.me.is_admin===1};
+    if(!RG.canChat()){$("#msgs").innerHTML=`<div class="empty"><span class="rg-soon">${RG.SOON}</span><br><br>The chat isn't open for you yet.</div>`;return} // Admin > Access
     roster=(r.state&&r.state.players)||[];roster.forEach(p=>people[p.id]=p);
     $("#stack").innerHTML=roster.slice(0,5).map(p=>RG.av(p,28)).join("");
     $("#sub").textContent=`Everyone on the trip · ${roster.length} people`;

@@ -119,13 +119,13 @@ function coins_for(int $place): int { $t = coins_table(); return $place >= 1 && 
 const DEFAULT_BONUS_PER = 10; // timed games: 1 extra coin for every this many seconds left (0 = off)
 function bonus_per(): int { return max(0, (int)setting('bonus_per', DEFAULT_BONUS_PER)); }
 
-/* Admin > Settings > Access. nofeed: players who can't open the trip feed. nogames: players who can only play the games in open
+/* Admin > Settings > Access. nofeed / nochat: players who can't open the trip feed / the group chat. nogames: players who can only play the games in open
    (ids like play:imposter, mind:liquidsort, cards:blackjack, crown); every other game shows them "Coming soon". Admins can always do everything. */
 function access_conf(): array {
   $a = setting('access', []);
   $a = is_array($a) ? $a : [];
   $list = fn($k) => array_values(array_filter((array)($a[$k] ?? []), 'is_string'));
-  return ['nofeed' => $list('nofeed'), 'nogames' => $list('nogames'), 'open' => $list('open')];
+  return ['nofeed' => $list('nofeed'), 'nochat' => $list('nochat'), 'nogames' => $list('nogames'), 'open' => $list('open')];
 }
 function can_play(array $p, string $gid): bool {
   if ((int)($p['is_admin'] ?? 0)) return true;
@@ -516,7 +516,7 @@ case 'settings_save':
     $ids = array_column(players_public(true), 'id');
     $who = fn($k) => array_values(array_unique(array_filter((array)($b['access'][$k] ?? []), fn($x) => is_string($x) && in_array($x, $ids, true))));
     $open = array_values(array_unique(array_filter((array)($b['access']['open'] ?? []), fn($x) => is_string($x) && preg_match('/^(crown|(play|mind|cards):[a-z]{2,20})$/', $x))));
-    db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['access', json_encode(['nofeed' => $who('nofeed'), 'nogames' => $who('nogames'), 'open' => array_slice($open, 0, 200)])]);
+    db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['access', json_encode(['nofeed' => $who('nofeed'), 'nochat' => $who('nochat'), 'nogames' => $who('nogames'), 'open' => array_slice($open, 0, 200)])]);
   }
   out(['ok' => 1, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'front' => front_on(), 'access' => access_conf()]);
 

@@ -43,10 +43,11 @@ function msg_row(array $r, array $hearts): array {
 try {
   $pid = guide_login();
   $db = chat_db();
+  $can = guide_can_chat($pid);
   if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     if (isset($_GET['badge'])) {
       $s = $db->prepare('SELECT COUNT(*) FROM msgs WHERE pid<>? AND id > COALESCE((SELECT mid FROM seen WHERE pid=?), 0)'); $s->execute([$pid, $pid]);
-      $res = ['n' => (int)$s->fetchColumn()];
+      $res = ['n' => $can ? (int)$s->fetchColumn() : 0];
       if (isset($_GET['me'])) {
         $pdo = new PDO('sqlite:' . data_dir() . '/ridge.sqlite', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
         $s = $pdo->prepare('SELECT id, name, short, color, avatar FROM players WHERE id=?'); $s->execute([$pid]);
@@ -54,6 +55,7 @@ try {
       }
       out($res);
     }
+    if (!$can) fail('Coming soon: the chat isn\'t open for you yet.', 403);
     $rev = rev($db);
     $seen = [];
     foreach ($db->query('SELECT pid, mid FROM seen')->fetchAll() as $r) $seen[$r['pid']] = (int)$r['mid'];
@@ -66,6 +68,7 @@ try {
     }
     out(['rev' => $rev, 'msgs' => array_map(fn($r) => msg_row($r, $hearts), $rows), 'seen' => (object)$seen]);
   }
+  if (!$can) fail('Coming soon: the chat isn\'t open for you yet.', 403);
   $b = json_decode(file_get_contents('php://input') ?: '', true);
   if (!is_array($b)) fail('Bad request.');
   $act = (string)($b['act'] ?? '');

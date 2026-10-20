@@ -81,10 +81,10 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 html.rg-nav-on .sheet{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))}
 #t-set{display:flex;flex-direction:column;gap:16px}
 .alist{display:flex;flex-direction:column;gap:8px}
-.ar{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:8px 12px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh)}
+.ar{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:8px;align-items:center;padding:8px 12px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh)}
 .ar b{font-weight:650;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.ar b small{display:block;font-weight:500;color:var(--mut);font-size:12px;white-space:nowrap}
-.tg{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:56px;font-size:11.5px;font-weight:700;color:var(--mut)}
+.ar b small{display:block;font-weight:500;color:var(--mut);font-size:12px}
+.tg{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:50px;font-size:11.5px;font-weight:700;color:var(--mut)}
 .tg:disabled{opacity:.45;cursor:default}
 .sw{position:relative;width:48px;height:28px;border-radius:99px;background:#3a3f48;transition:background .2s}
 .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#eef1f6;transition:transform .2s}
@@ -116,8 +116,8 @@ html.rg-nav-on .sheet{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)
 (async function(){
 const {api,av,esc,toast}=RG;
 const COLORS=["#d4f09a","#f7b8d2","#aab7ff","#ffe08a","#ffbf99","#ff9fb8","#7ee8f0","#9df0c8","#d8c39a","#c9a7ff","#7be08a","#ff8f70"];
-let me,players=[],events=[],coins=[],access={nofeed:[],nogames:[],open:[]};
-try{const r=await RG.login({admin:true});me=r.me;if(r.state.access)access=r.state.access}catch(e){document.querySelector(".wrap").innerHTML=`<div class="panel"><h2>Can't reach the server</h2><p class="hint">${esc(e.message)} The admin page only works on the website itself.</p><a class="btn" href="games.html">Home</a></div>`;return}
+let me,players=[],events=[],coins=[],access={nofeed:[],nochat:[],nogames:[],open:[]};
+try{const r=await RG.login({admin:true});me=r.me;if(r.state.access)access=Object.assign(access,r.state.access)}catch(e){document.querySelector(".wrap").innerHTML=`<div class="panel"><h2>Can't reach the server</h2><p class="hint">${esc(e.message)} The admin page only works on the website itself.</p><a class="btn" href="games.html">Home</a></div>`;return}
 document.getElementById("who").innerHTML=`${av(me,22)} ${esc(me.name)} · <button id="out" style="color:#9aa3b3;font-weight:600">Log out</button>`;
 document.getElementById("out").onclick=async()=>{try{await api("logout",{})}catch(x){}location.reload()};
 
@@ -292,18 +292,18 @@ function editPlayer(p){
   draw();document.body.appendChild(s);
 }
 
-/* ---------- access: who can use the Feed and the Games ----------
-   Feed off: the Trip Feed says Coming soon. Games off: every game still shows, but only the games ticked under
+/* ---------- access: who can use the Feed, the Chat and the Games ----------
+   Feed or Chat off: that page says Coming soon. Games off: every game still shows, but only the games ticked under
    "Games open to everyone" can be played; the rest say Coming soon. Admins always have everything. */
 function accessHTML(){
-  if(!RG.ACCESS_GAMES)return `<div class="panel"><h2>Who can use the Feed and the Games</h2><p class="hint">This page is out of date. Close it and open Admin again.</p></div>`;
+  if(!RG.ACCESS_GAMES)return `<div class="panel"><h2>Who can use the Feed, Chat and Games</h2><p class="hint">This page is out of date. Close it and open Admin again.</p></div>`;
   const sw=(p,k,label)=>{const adm=!!p.is_admin,on=adm||!access[k].includes(p.id);
     return `<button class="tg" data-acc="${k}" data-p="${esc(p.id)}" aria-pressed="${on}" aria-label="${label} for ${esc(p.name)}" ${adm?"disabled":""}><span class="sw${on?" on":""}"></span>${label}</button>`};
   const off=players.filter(p=>p.active&&!p.is_admin&&access.nogames.includes(p.id)).map(p=>p.name);
   const all=RG.ACCESS_GAMES.flatMap(([,l])=>l.map(([id])=>id)),open=all.filter(id=>access.open.includes(id)).length;
   const note=p=>p.is_admin?"Admin, always on":access.nogames.includes(p.id)?`Plays ${open} of ${all.length} games`:"";
-  return `<div class="panel"><h2>Who can use the Feed and the Games</h2><p class="hint">Turn Games off and that person still sees every game, but can only play the games ticked below. The rest say Coming soon. Admins always have everything.</p>
-    <div class="alist">${players.filter(p=>p.active).map(p=>`<div class="ar">${av(p,36)}<b>${esc(p.name)}${note(p)?`<small>${note(p)}</small>`:""}</b>${sw(p,"nofeed","Feed")}${sw(p,"nogames","Games")}</div>`).join("")}</div></div>
+  return `<div class="panel"><h2>Who can use the Feed, Chat and Games</h2><p class="hint">Feed or Chat off: that page says Coming soon. Turn Games off and that person still sees every game, but can only play the games ticked below. The rest say Coming soon. Admins always have everything.</p>
+    <div class="alist">${players.filter(p=>p.active).map(p=>`<div class="ar">${av(p,36)}<b>${esc(p.name)}${note(p)?`<small>${note(p)}</small>`:""}</b>${sw(p,"nofeed","Feed")}${sw(p,"nochat","Chat")}${sw(p,"nogames","Games")}</div>`).join("")}</div></div>
   <div class="panel"><h2>Games open to everyone</h2>
     <div class="cnt"><div><b>${all.length}</b><span>games in the list</span></div><div><b style="color:var(--acc)">${open}</b><span>playable</span></div></div><p class="hint">${off.length?`Games off for ${esc(off.join(", ").replace(/, ([^,]*)$/," and $1"))}: they can play only what's ticked here.`:"Nobody has Games off right now. What you tick here stays playable for anyone you turn Games off for."}</p>
     ${RG.ACCESS_GAMES.map(([grp,list])=>`<div class="lab">${esc(grp)}<span class="n">${list.filter(([id])=>access.open.includes(id)).length} of ${list.length}</span></div><div class="og">${list.map(([id,name])=>{const on=access.open.includes(id);return `<button class="ogi${on?" on":""}" data-open="${id}" aria-pressed="${on}"><span class="chk">✓</span>${esc(name)}</button>`}).join("")}</div>`).join("")}</div>`;

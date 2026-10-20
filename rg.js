@@ -197,12 +197,13 @@ const ACCESS_GAMES=[
   ["The grand game",[["crown","The Road to the Crown"]]]];
 let acc=null,accMe=null;const accPeople={};
 function setAccess(s){acc=s.access||null;accMe=s.me||null;(s.players||[]).forEach(p=>accPeople[p.id]=p)}
-function locked(pid,list){const p=pid?accPeople[pid]:accMe;return !!(acc&&p&&!+p.is_admin&&acc[list].includes(p.id))}
+function locked(pid,list){const p=pid?accPeople[pid]:accMe;return !!(acc&&p&&!+p.is_admin&&(acc[list]||[]).includes(p.id))}
 const canPlay=(gid,pid)=>!locked(pid,"nogames")||acc.open.includes(gid);
 const canFeed=pid=>!locked(pid,"nofeed");
+const canChat=pid=>!locked(pid,"nochat");
 const canAny=prefix=>!locked(null,"nogames")||acc.open.some(g=>g.startsWith(prefix)); // e.g. "mind:": at least one mind game
 const SOON="Coming soon";
 const playing=on=>document.documentElement.classList.toggle("rg-playing",!!on); // hides the bottom bar during a game
 
-window.RG={api,av,esc,toast,login,playing,canPlay,canFeed,canAny,ACCESS_GAMES,SOON,shrinkPhoto,shrinkAvatar,PERIODS,inPeriod,parseLocal,nowLocal,fmtDate,ordinal,GAMES};
+window.RG={api,av,esc,toast,login,playing,canPlay,canFeed,canChat,canAny,ACCESS_GAMES,SOON,shrinkPhoto,shrinkAvatar,PERIODS,inPeriod,parseLocal,nowLocal,fmtDate,ordinal,GAMES};
 })();

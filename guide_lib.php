@@ -48,12 +48,15 @@ function guide_is_admin(string $pid): bool {
   return (int)$s->fetchColumn() === 1;
 }
 
-/* Admin > Settings > Access: false when the admin turned the trip feed off for this player. Admins always see it. */
-function guide_can_feed(string $pid): bool {
+/* Admin > Settings > Access: false when the admin turned the trip feed (nofeed) or the group chat (nochat) off for this player.
+   Admins always have both. */
+function guide_can_feed(string $pid): bool { return guide_can($pid, 'nofeed'); }
+function guide_can_chat(string $pid): bool { return guide_can($pid, 'nochat'); }
+function guide_can(string $pid, string $list): bool {
   try {
     $pdo = new PDO('sqlite:' . data_dir() . '/ridge.sqlite', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
     $s = $pdo->prepare("SELECT v FROM settings WHERE k='access'"); $s->execute();
     $a = json_decode((string)$s->fetchColumn(), true);
   } catch (Throwable $e) { return true; }
-  return !is_array($a) || !in_array($pid, (array)($a['nofeed'] ?? []), true) || guide_is_admin($pid);
+  return !is_array($a) || !in_array($pid, (array)($a[$list] ?? []), true) || guide_is_admin($pid);
 }
