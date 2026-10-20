@@ -12,7 +12,7 @@
    DELETE /mp/<key>?t=<ticket>&uploadId=        -> gives up on a big upload
    DELETE /f/<key>?t=<delete ticket>             -> removes a video after its post is deleted
 
-   Bindings: BUCKET (R2 bucket ridge-media), CHECK_URL (https://raffaelco.com/ridge-games/social.php), ORIGINS (comma list of pages allowed to upload). */
+   Bindings: BUCKET (R2 bucket ridge-media), CHECK_URL (https://raffaelco.com/DM/social.php; was /ridge-games/ before the move), ORIGINS (comma list of pages allowed to upload). */
 
 const KEY_RE = /^v\/[a-f0-9]{24}\.[a-z0-9]{1,5}$/;
 const TOKEN_RE = /^[a-f0-9]{32}$/;
