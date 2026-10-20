@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+<defs><linearGradient id="ev" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b2a4a"/><stop offset="1" stop-color="#2ec4b6"/></linearGradient></defs>
+<rect width="1024" height="1024" fill="url(#ev)"/><circle cx="780" cy="230" r="90" fill="#fff3c4"/><circle cx="745" cy="205" r="80" fill="#1d3150"/>
+<path d="M0 620 L220 430 L400 560 L600 380 L800 540 L1024 420 V1024 H0Z" fill="#1f3f63"/>
+<path d="M0 800 C250 740 700 760 1024 720 V1024 H0Z" fill="#152c46"/>
+<path d="M110 590 L170 760 H50Z" fill="#0f2236"/><path d="M880 530 L940 700 H820Z" fill="#0f2236"/><path d="M960 570 L1020 740 H900Z" fill="#0f2236"/>
+<g transform="translate(512 760)"><path d="M-230 -150 L0 -330 L230 -150Z" fill="#a8523a"/><rect x="-190" y="-160" width="380" height="230" fill="#6b3a2a"/>
+<rect x="-130" y="-110" width="90" height="80" rx="8" fill="#ffd23f"/><rect x="40" y="-110" width="90" height="80" rx="8" fill="#ffd23f"/><rect x="-40" y="-60" width="80" height="130" rx="8" fill="#3d2018"/><rect x="110" y="-300" width="50" height="110" fill="#5a2e22"/></g></svg>
