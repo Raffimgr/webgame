@@ -85,6 +85,7 @@ textarea.in{resize:vertical;min-height:64px;line-height:1.4}
 .sortr button.on{color:var(--ink);background:var(--fg)}
 .ghd{display:flex;align-items:center;gap:9px;font:600 21px var(--play);margin:22px 0 9px;padding:2px;width:100%;border:0;background:none;color:var(--fg);cursor:pointer;text-align:left}
 .ghd small{font:600 13px var(--font);color:var(--mut)}
+.ghd .sd{flex:none;width:12px;height:12px;border-radius:50%;background:var(--c);box-shadow:0 0 10px color-mix(in srgb,var(--c) 45%,transparent);margin:0 2px 0 4px}
 .ghd .car{margin-left:auto;color:var(--mut);font-size:13px;transition:transform .2s}
 .ghd.shut .car{transform:rotate(-90deg)}
 .ghd.shut{margin-bottom:0}
@@ -204,7 +205,7 @@ function draw(){
     show.slice().sort((a,b)=>a.id-b.id).forEach(i=>{const g=sortBy==="grp"?i.grp:i.who;if(!groups.has(g))groups.set(g,[]);groups.get(g).push(i)});
     let keys=[...groups.keys()];
     if(sortBy==="who")keys.sort((a,b)=>!a?1:!b?-1:roster.findIndex(p=>p.id===a)-roster.findIndex(p=>p.id===b));else keys=keys.filter(Boolean).concat(groups.has("")?[""]:[]);
-    h=keys.map(g=>{const list=groups.get(g),t=sortBy==="grp"?(g?"\u{1F5C2}\uFE0F "+esc(g):"Other"):(g?`${people[g]?RG.av(people[g],24):""} ${esc(name(g))}`:"\u{1F64B} Nobody yet");const k=`${cur}:${sortBy}:${g}`;return head(t,list,k)+(shut.has(k)?"":block(list,tint(g)))}).join("")}
+    h=keys.map(g=>{const list=groups.get(g),t=sortBy==="grp"?`<i class="sd" style="--c:${tint(g)||"#59606c"}"></i>${g?esc(g):"Other"}`:(g?`${people[g]?RG.av(people[g],24):""} ${esc(name(g))}`:"\u{1F64B} Nobody yet");const k=`${cur}:${sortBy}:${g}`;return head(t,list,k)+(shut.has(k)?"":block(list,tint(g)))}).join("")}
   $("#list").innerHTML=(show.length?h:mine.length?`<div class="empty">Nothing here \u{1F389}</div>`:"")
     +ideasHTML(mine);
 }
