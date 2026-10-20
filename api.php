@@ -65,6 +65,10 @@ function db(): PDO {
   $pdo->exec("UPDATE players SET name='Jacob' WHERE id='jakob' AND name='Jakob'"); // spelling fix asked by the owner
   $cols = array_column($pdo->query('PRAGMA table_info(results)')->fetchAll(), 'name');
   if (!in_array('bonus', $cols, true)) $pdo->exec('ALTER TABLE results ADD COLUMN bonus INTEGER NOT NULL DEFAULT 0'); // extra coins for seconds left
+  $ecols = array_column($pdo->query('PRAGMA table_info(events)')->fetchAll(), 'name');
+  // Game log: hidden = kept but off the scoreboard (practice); deleted_at = in the Deleted list, can be restored.
+  if (!in_array('hidden', $ecols, true)) $pdo->exec('ALTER TABLE events ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0');
+  if (!in_array('deleted_at', $ecols, true)) $pdo->exec('ALTER TABLE events ADD COLUMN deleted_at TEXT');
   return $pdo;
 }
 
@@ -174,7 +178,7 @@ function event_full(int $id): ?array {
   $r = db()->prepare('SELECT player_id,team,place,coins,score,bonus FROM results WHERE event_id=? ORDER BY place IS NULL, place, player_id'); $r->execute([$id]);
   $e['results'] = $r->fetchAll();
   foreach ($e['results'] as &$x) { $x['place'] = $x['place'] === null ? null : (int)$x['place']; $x['coins'] = (int)$x['coins']; $x['score'] = $x['score'] === null ? null : (float)$x['score']; }
-  $e['id'] = (int)$e['id']; $e['has_photo'] = $e['photo'] ? 1 : 0; unset($e['photo']);
+  $e['id'] = (int)$e['id']; $e['hidden'] = (int)$e['hidden']; $e['has_photo'] = $e['photo'] ? 1 : 0; unset($e['photo']);
   return $e;
 }
 
@@ -429,8 +433,8 @@ case 'player_save':
 
 /* ---------- events ---------- */
 case 'events': // everything the dashboard needs
-  need_login();
-  $ids = db()->query("SELECT id FROM events ORDER BY played_at DESC, id DESC")->fetchAll(PDO::FETCH_COLUMN);
+  $m = need_login(); // deleted games only reach the admin's Game log
+  $ids = db()->query('SELECT id FROM events' . ((int)$m['is_admin'] ? '' : ' WHERE deleted_at IS NULL') . ' ORDER BY played_at DESC, id DESC')->fetchAll(PDO::FETCH_COLUMN);
   $list = array_map(fn($i) => event_full((int)$i), $ids);
   out(['events' => $list, 'players' => players_public(true), 'coins' => coins_table(), 'bonus_per' => bonus_per()]);
 
@@ -453,16 +457,26 @@ case 'event_save': // create or edit; status 'done' records it on the dashboard
       ->execute([$game, clean_text($b['category'] ?? '', 30), $mode, $when, $status, clean_text($b['note'] ?? '', 500), $adm['id'], $dir]);
     $id = (int)db()->lastInsertId();
   }
+  if (isset($b['hidden'])) db()->prepare('UPDATE events SET hidden=? WHERE id=?')->execute([empty($b['hidden']) ? 0 : 1, $id]); // "Practice" on the Record form
   save_results($id, $mode, is_array($b['results'] ?? null) ? $b['results'] : []);
   db()->commit();
   out(['ok' => 1, 'event' => event_full($id)]);
 
-case 'event_delete':
+/* Game log actions take one id or a list (ids). Delete moves games to the Deleted list; only "forever" erases them. */
+case 'event_hide': case 'event_delete': case 'event_restore': case 'event_forever':
   if (!$post) fail('Use POST.');
-  need_admin(); $id = (int)(body()['id'] ?? 0);
-  $s = db()->prepare('SELECT photo FROM events WHERE id=?'); $s->execute([$id]); $ph = $s->fetchColumn();
-  if ($ph) @unlink(data_dir() . '/photos/' . basename($ph));
-  db()->prepare('DELETE FROM events WHERE id=?')->execute([$id]);
+  need_admin(); $b = body();
+  $ids = array_values(array_filter(array_map('intval', is_array($b['ids'] ?? null) ? array_slice($b['ids'], 0, 500) : [$b['id'] ?? 0])));
+  if (!$ids) fail('Pick a game first.');
+  $in = implode(',', $ids); // ints only
+  if ($a === 'event_hide') db()->prepare("UPDATE events SET hidden=? WHERE id IN ($in)")->execute([empty($b['hidden']) ? 0 : 1]);
+  elseif ($a === 'event_delete') db()->prepare("UPDATE events SET deleted_at=? WHERE deleted_at IS NULL AND id IN ($in)")->execute([date('Y-m-d\TH:i')]);
+  elseif ($a === 'event_restore') db()->exec("UPDATE events SET deleted_at=NULL WHERE id IN ($in)");
+  else {
+    $ph = db()->query("SELECT photo FROM events WHERE deleted_at IS NOT NULL AND photo IS NOT NULL AND id IN ($in)")->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($ph as $f) @unlink(data_dir() . '/photos/' . basename($f));
+    db()->exec("DELETE FROM events WHERE deleted_at IS NOT NULL AND id IN ($in)");
+  }
   out(['ok' => 1]);
 
 /* ---------- photos: the browser shrinks them; the server checks size and type again ---------- */

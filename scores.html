@@ -116,7 +116,7 @@ const offline=e=>{document.getElementById("app").innerHTML=`<div class="panel"><
 try{({me}=await RG.login())}catch(e){offline(e);return}
 try{period=localStorage.getItem("rg_period")||"all"}catch(e){}
 if(!RG.PERIODS.some(p=>p[0]===period))period="all";
-async function load(){const r=await api("events");events=r.events.filter(e=>e.status==="done");players=r.players;coins=r.coins}
+async function load(){const r=await api("events");events=r.events.filter(e=>e.status==="done"&&!e.hidden&&!e.deleted_at);players=r.players;coins=r.coins}
 try{await load()}catch(e){offline(e);return}
 const P=id=>players.find(p=>p.id===id)||{id,name:id,short:"?",color:"#9aa3b3"};
 

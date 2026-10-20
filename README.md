@@ -12,5 +12,6 @@ Party games for the Shenandoah trip: the Road to the Crown map, 18 mind games, c
 - Bottom bar (in `rg.js`): Trip / Games / Feed / Chat / To-do / Me on those main pages only, never inside a game. Pages load `rg.js?v=N`; bump N when rg.js changes, and `.htaccess` makes phones check for new copies of pages and scripts.
 - Static pages + `api.php` (PHP 8, SQLite). Hosted at raffaelco.com/DM/ (Hostinger pulls this repo into public_html/DM). The old public_html/ridge-games copy stays only so its .php files keep answering (the media Worker checks logins at ridge-games/social.php); its pages forward to /DM/.
 - Data (database, photos, sessions) lives outside the web folder in `domains/raffaelco.com/ridge-data/`, never in this repo.
+- Game log (Admin > Game log): every game played, by day and time. The admin can hide a game (practice: kept, but off the scoreboard and profiles), delete it (it waits under Deleted and can be restored) or delete it forever; Select does several at once. The Record form has a Practice switch. Stored as `events.hidden` and `events.deleted_at`; deleted games only reach the admin.
 - First visit to `admin.html`: the admin (Raffael) picks his password, then sets each player's password.
 - Local test: `RG_DATA=/tmp/rgdata php -S 127.0.0.1:8099`

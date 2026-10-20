@@ -69,6 +69,18 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 .ev .meta{color:var(--mut);font-size:13px}
 .ev .tag{white-space:nowrap;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:99px;background:#4a3d1c;color:#ffd23f;margin-left:6px;vertical-align:middle}
 .ev .btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+/* Game log: day headings, hidden (practice) games dimmed, a select mode for cleaning up several at once. */
+.ev .tag.hid{background:#33303f;color:#c9b8ff}
+.ev.off>div:first-child{opacity:.6}
+#t-ev .ev{grid-template-columns:1fr}
+#t-ev .ev .btns{justify-content:flex-start}
+#t-ev .ev.pick{grid-template-columns:auto 1fr;cursor:pointer}
+#lf button{white-space:nowrap;padding:8px 11px}
+.ev .ck{width:22px;height:22px;border-radius:7px;border:2px solid var(--mut);display:grid;place-items:center;font-size:14px;font-weight:900;color:var(--ink)}
+.ev.sel{outline:2px solid var(--acc)}
+.ev.sel .ck{background:var(--acc);border-color:var(--acc)}
+.day{display:flex;justify-content:space-between;color:var(--mut);font-size:12.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin:10px 4px 0}
+.logbar{position:sticky;top:8px;z-index:5;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 12px;border-radius:16px;background:#2b3038;box-shadow:var(--raise-sh)}
 .pp{display:grid;grid-template-columns:auto minmax(0,1fr) auto;overflow-wrap:anywhere;gap:10px;align-items:center;padding:10px 12px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh)}
 .pp .sub{color:var(--mut);font-size:12.5px}
 .coins-ed{display:flex;flex-wrap:wrap;gap:8px}
@@ -107,7 +119,7 @@ html.rg-nav-on .sheet{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)
 <body>
 <div class="wrap">
   <div class="top"><h1>Admin <small>Record games, members, passwords and settings</small></h1><span class="pill" id="who"></span><a class="pill" href="scores.html">Dashboard</a><a class="pill" href="games.html">Home</a></div>
-  <div class="tabs" id="tabs"><button data-t="rec" class="on">Record</button><button data-t="ev">Games</button><button data-t="pl">Members</button><button data-t="set">Settings</button></div>
+  <div class="tabs" id="tabs"><button data-t="rec" class="on">Record</button><button data-t="ev">Game log</button><button data-t="pl">Members</button><button data-t="set">Settings</button></div>
   <section id="t-rec"></section>
   <section id="t-ev" hidden></section>
   <section id="t-pl" hidden></section>
@@ -136,9 +148,9 @@ tabs.onclick=e=>{const b=e.target.closest("button");if(b)show(b.dataset.t)};
 
 /* ---------- record form ---------- */
 let F=null; // the form being edited
-function blank(){if(F&&F.photo)URL.revokeObjectURL(F.photo);return {id:0,game:"",category:"",mode:"solo",played_at:RG.nowLocal(),score_dir:"high",note:"",status:"open",teams:["Team 1","Team 2"],teamPlace:{},rows:{},photo:null,photoBlob:null,has_photo:0,photoV:Date.now()}}
+function blank(){if(F&&F.photo)URL.revokeObjectURL(F.photo);return {id:0,game:"",category:"",mode:"solo",played_at:RG.nowLocal(),score_dir:"high",note:"",status:"open",hidden:0,teams:["Team 1","Team 2"],teamPlace:{},rows:{},photo:null,photoBlob:null,has_photo:0,photoV:Date.now()}}
 function fromEvent(e){
-  const f=blank();Object.assign(f,{id:e.id,game:e.game,category:e.category,mode:e.mode,played_at:e.played_at,score_dir:e.score_dir,note:e.note,status:e.status,has_photo:e.has_photo});
+  const f=blank();Object.assign(f,{id:e.id,game:e.game,category:e.category,mode:e.mode,played_at:e.played_at,score_dir:e.score_dir,note:e.note,status:e.status,hidden:e.hidden,has_photo:e.has_photo});
   const tn=[...new Set(e.results.map(r=>r.team).filter(Boolean))];if(tn.length)f.teams=tn;
   e.results.forEach(r=>{f.rows[r.player_id]={on:true,place:r.place??"",score:r.score??"",team:r.team||f.teams[0]};if(r.team&&r.place)f.teamPlace[r.team]=r.place});
   return f;
@@ -193,6 +205,7 @@ function drawRec(){
       </div>
     </div>
     <label style="display:flex;flex-direction:column;gap:6px"><span class="lab">Note</span><input class="in" id="f-note" value="${esc(F.note)}" placeholder="Optional, like who brought the snacks"></label>
+    <button class="tg" id="f-prac" aria-pressed="${!!F.hidden}" style="flex-direction:row;gap:10px;font-size:14px;color:var(--fg);align-self:flex-start"><span class="sw${F.hidden?" on":""}"></span>Practice: keep it off the scoreboard</button>
     <div class="actions">
       ${F.id?`<button class="btn" id="cancel">Cancel</button>`:`<button class="btn" id="clear">Clear</button>`}
       <button class="btn" id="saveopen">Save, still playing</button>
@@ -204,6 +217,7 @@ function drawRec(){
   $("#f-cat").onchange=e=>F.category=e.target.value;
   $("#f-when").onchange=e=>F.played_at=e.target.value;
   $("#f-note").oninput=e=>F.note=e.target.value;
+  $("#f-prac").onclick=e=>{F.hidden=F.hidden?0:1;e.currentTarget.setAttribute("aria-pressed",!!F.hidden);e.currentTarget.firstChild.classList.toggle("on",!!F.hidden)};
   $("#f-mode").onclick=e=>{const b=e.target.closest("button");if(!b)return;F.mode=b.dataset.m;drawRec()};
   $("#f-dir").onclick=e=>{const b=e.target.closest("button");if(!b)return;F.score_dir=b.dataset.d;drawRec()};
   el.querySelectorAll("[data-tog]").forEach(b=>b.onclick=()=>{const id=b.dataset.tog;const r=F.rows[id]||(F.rows[id]={place:"",score:"",team:F.teams[0]});r.on=!r.on;drawRec()});
@@ -238,27 +252,71 @@ async function save(status){
   if(status==="done"&&results.some(r=>!r.place))return toast(F.mode==="teams"?"Give every team a place.":"Give every player a place (or use Places from scores).");
   const btns=document.querySelectorAll("#t-rec .actions .btn");btns.forEach(b=>b.disabled=true);
   try{
-    const r=await api("event_save",{id:F.id,game:F.game.trim(),category:F.category,mode:F.mode,played_at:F.played_at,status,note:F.note,score_dir:F.score_dir,results});
+    const r=await api("event_save",{id:F.id,game:F.game.trim(),category:F.category,mode:F.mode,played_at:F.played_at,status,note:F.note,score_dir:F.score_dir,hidden:F.hidden,results});
     F.id=r.event.id;F.status=status; // saved: a retry now edits this game instead of making a second one
     if(F.photoBlob){
       try{await api("photo_upload",F.photoBlob,{q:"&event="+r.event.id})}
       catch(x){await load().catch(()=>{});drawRec();toast("The game is saved, but the photo didn't upload ("+x.message+"). Press save again to retry.");return}
     }
     await load();
-    toast(status==="done"?"Recorded on the dashboard.":"Saved. Finish it from Games when it's over.");
+    toast(status!=="done"?"Saved. Finish it from the Game log when it's over.":F.hidden?"Saved as practice, off the scoreboard.":"Recorded on the dashboard.");
     F=blank();show(status==="done"?"ev":"rec");
   }catch(x){toast(x.message);btns.forEach(b=>b.disabled=false)}
 }
 
-/* ---------- games list ---------- */
+/* ---------- game log ---------- */
+let logF="all",sel=null; // sel: the ticked games while selecting, else null
 function drawEvents(){
   const el=document.getElementById("t-ev");
-  el.innerHTML=`<div class="panel"><h2>Games played</h2>${events.length?events.map(e=>{
-    const top=e.results.filter(r=>r.place===1).map(r=>P(r.player_id).name);
-    return `<div class="ev"><div><b>${esc(e.game)}</b>${e.status==="open"?`<span class="tag">Still playing</span>`:""}<div class="meta">${RG.fmtDate(e.played_at)} · ${e.results.length} players${top.length?" · Won by "+esc(top.join(", ")):""}${e.has_photo?" · photo":""}</div></div>
-    <div class="btns">${e.status==="open"?`<button class="btn sm main" data-fin="${e.id}">Finish</button>`:""}<button class="btn sm" data-ed="${e.id}">Edit</button><button class="btn sm warn" data-del="${e.id}">Delete</button></div></div>`}).join(""):`<p class="empty">No games yet. Record one from the Record tab.</p>`}</div>`;
-  el.querySelectorAll("[data-ed],[data-fin]").forEach(b=>b.onclick=()=>{F=fromEvent(events.find(e=>e.id===+(b.dataset.ed||b.dataset.fin)));show("rec");scrollTo(0,0)});
-  el.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{const e=events.find(x=>x.id===+b.dataset.del);if(!confirm(`Delete ${e.game} from ${RG.fmtDate(e.played_at)}? Its scores and photo go too.`))return;try{await api("event_delete",{id:e.id});if(F.id===e.id)F=blank();await load();drawEvents();toast("Deleted.")}catch(x){toast(x.message)}});
+  const live=events.filter(e=>!e.deleted_at),gone=events.filter(e=>e.deleted_at);
+  const views={all:["All",live],on:["On board",live.filter(e=>!e.hidden)],hid:["Hidden",live.filter(e=>e.hidden)],del:["Deleted",gone]};
+  const list=views[logF][1];
+  if(sel)[...sel].forEach(id=>{if(!list.some(e=>e.id===id))sel.delete(id)});
+  const day=e=>{const d=RG.parseLocal(e.played_at);return isNaN(d)?"No date":d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})};
+  const time=e=>{const d=RG.parseLocal(e.played_at);return isNaN(d)?"":d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})};
+  const groups=[];list.forEach(e=>{const k=day(e);if(!groups.length||groups[groups.length-1][0]!==k)groups.push([k,[]]);groups[groups.length-1][1].push(e)});
+  const row=e=>{
+    const top=e.results.filter(r=>r.place===1).map(r=>P(r.player_id).name),by=e.created_by?P(e.created_by).name:"";
+    const how=/^Played together/.test(e.note||"")?"on phones":"";
+    const meta=[time(e),e.results.length+" players",top.length?"Won by "+top.join(", "):"",by?(how?"On phones, host "+by:"Recorded by "+by):"",e.has_photo?"photo":"",e.deleted_at?"Deleted "+RG.fmtDate(e.deleted_at):""].filter(Boolean);
+    const btns=sel?"":e.deleted_at?`<button class="btn sm" data-res="${e.id}">Restore</button><button class="btn sm warn" data-gone="${e.id}">Delete forever</button>`
+      :`${e.status==="open"?`<button class="btn sm main" data-fin="${e.id}">Finish</button>`:""}<button class="btn sm" data-hide="${e.id}">${e.hidden?"Show on board":"Hide"}</button><button class="btn sm" data-ed="${e.id}">Edit</button><button class="btn sm warn" data-del="${e.id}">Delete</button>`;
+    return `<div class="ev${e.hidden||e.deleted_at?" off":""}${sel?" pick":""}${sel&&sel.has(e.id)?" sel":""}" data-row="${e.id}">${sel?`<span class="ck">${sel.has(e.id)?"✓":""}</span>`:""}<div><b>${esc(e.game)}</b>${e.status==="open"?`<span class="tag">Still playing</span>`:""}${e.hidden?`<span class="tag hid">Hidden</span>`:""}<div class="meta">${esc(meta.join(" · "))}</div></div>${btns?`<div class="btns">${btns}</div>`:""}</div>`};
+  const n=sel?sel.size:0;
+  const bar=!sel?"":`<div class="logbar"><b style="flex:1;min-width:110px">${n} selected</b><button class="btn sm" id="l-all">${n===list.length&&n?"None":"All"}</button>${logF==="del"
+    ?`<button class="btn sm" id="l-res" ${n?"":"disabled"}>Restore</button><button class="btn sm warn" id="l-gone" ${n?"":"disabled"}>Delete forever</button>`
+    :`<button class="btn sm" id="l-hide" ${n?"":"disabled"}>Hide</button><button class="btn sm" id="l-show" ${n?"":"disabled"}>Show</button><button class="btn sm warn" id="l-del" ${n?"":"disabled"}>Delete</button>`}<button class="btn sm main" id="l-done">Done</button></div>`;
+  el.innerHTML=`<div class="panel"><h2>Game log</h2>
+    <p class="hint">Every game played, with its date and time. Hide practice games to keep them off the scoreboard. Deleted games wait under Deleted until you restore them or delete them forever.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><div class="seg" id="lf" style="max-width:100%;overflow-x:auto">${Object.entries(views).map(([k,[t,l]])=>`<button data-f="${k}" class="${k===logF?"on":""}">${t} ${l.length}</button>`).join("")}</div>${sel||!list.length?"":`<button class="btn sm" id="l-sel">Select</button>`}</div>
+    ${bar}
+    ${groups.length?groups.map(([k,l])=>`<div class="day"><span>${esc(k)}</span><span>${l.length} game${l.length>1?"s":""}</span></div>${l.map(row).join("")}`).join("")
+      :`<p class="empty">${logF==="del"?"Nothing deleted.":logF==="hid"?"No hidden games. Hide a practice game to keep it off the scoreboard.":"No games yet. Record one from the Record tab."}</p>`}</div>`;
+  const $=x=>el.querySelector(x),find=id=>events.find(e=>e.id===+id);
+  const act=async(a,ids,body,msg)=>{try{await api(a,Object.assign({ids},body));if(ids.includes(F.id)&&a!=="event_hide")F=blank();await load();if(sel)sel.clear();drawEvents();toast(msg)}catch(x){toast(x.message)}};
+  const plural=k=>k+" game"+(k>1?"s":"");
+  $("#lf").onclick=e=>{const b=e.target.closest("button");if(b){logF=b.dataset.f;if(sel)sel.clear();drawEvents()}};
+  if($("#l-sel"))$("#l-sel").onclick=()=>{sel=new Set();drawEvents()};
+  if(sel){
+    el.querySelectorAll("[data-row]").forEach(r=>r.onclick=()=>{const id=+r.dataset.row;sel.has(id)?sel.delete(id):sel.add(id);drawEvents()});
+    $("#l-all").onclick=()=>{if(sel.size===list.length)sel.clear();else list.forEach(e=>sel.add(e.id));drawEvents()};
+    $("#l-done").onclick=()=>{sel=null;drawEvents()};
+    const ids=()=>[...sel];
+    if($("#l-hide")){
+      $("#l-hide").onclick=()=>act("event_hide",ids(),{hidden:1},plural(n)+" hidden from the scoreboard.");
+      $("#l-show").onclick=()=>act("event_hide",ids(),{hidden:0},plural(n)+" back on the scoreboard.");
+      $("#l-del").onclick=()=>{if(confirm(`Delete ${plural(n)}? They go to Deleted, where you can restore them.`))act("event_delete",ids(),{},"Moved to Deleted.")};
+    }else{
+      $("#l-res").onclick=()=>act("event_restore",ids(),{},plural(n)+" restored.");
+      $("#l-gone").onclick=()=>{if(confirm(`Delete ${plural(n)} forever? Their scores and photos can't be brought back.`))act("event_forever",ids(),{},"Deleted forever.")};
+    }
+    return;
+  }
+  el.querySelectorAll("[data-ed],[data-fin]").forEach(b=>b.onclick=()=>{F=fromEvent(find(b.dataset.ed||b.dataset.fin));show("rec");scrollTo(0,0)});
+  el.querySelectorAll("[data-hide]").forEach(b=>b.onclick=()=>{const e=find(b.dataset.hide);act("event_hide",[e.id],{hidden:e.hidden?0:1},e.hidden?"Back on the scoreboard.":"Hidden from the scoreboard.")});
+  el.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const e=find(b.dataset.del);if(confirm(`Delete ${e.game} from ${RG.fmtDate(e.played_at)}? It goes to Deleted, where you can restore it.`))act("event_delete",[e.id],{},"Moved to Deleted.")});
+  el.querySelectorAll("[data-res]").forEach(b=>b.onclick=()=>act("event_restore",[+b.dataset.res],{},"Restored."));
+  el.querySelectorAll("[data-gone]").forEach(b=>b.onclick=()=>{const e=find(b.dataset.gone);if(confirm(`Delete ${e.game} from ${RG.fmtDate(e.played_at)} forever? Its scores and photo can't be brought back.`))act("event_forever",[e.id],{},"Deleted forever.")});
 }
 
 /* ---------- players ---------- */

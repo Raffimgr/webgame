@@ -154,7 +154,7 @@ async function boot(){
   try{const r=await RG.login();me={...r.me,is_admin:+r.me.is_admin===1};players=(r.state&&r.state.players)||[];
     const want=new URLSearchParams(location.search).get("id");who=players.some(p=>p.id===want)?want:me.id;
     const [s,pl,ev]=await Promise.all([get("social.php").catch(()=>({posts:[]})),get("plan.php").catch(()=>({items:[]})),RG.api("events").catch(()=>({events:[]}))]);
-    posts=s.posts||[];items=pl.items||[];events=(ev.events||[]).filter(e=>e.status==="done");
+    posts=s.posts||[];items=pl.items||[];events=(ev.events||[]).filter(e=>e.status==="done"&&!e.hidden&&!e.deleted_at);
     $("#app").hidden=false;draw();
   }catch(e){$(".wrap").insertAdjacentHTML("beforeend",`<div class="empty">Could not load the profile. ${esc(e.message||"")}</div>`)}}
 boot();
