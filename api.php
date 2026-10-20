@@ -407,7 +407,7 @@ case 'player_save':
     db()->prepare('INSERT INTO players(id,name,short,color,sort) VALUES(?,?,?,?,?)')->execute([$id, $name, $short, clean_color((string)($b['color'] ?? '')), $sort]);
   } else {
     $chk = db()->prepare('SELECT 1 FROM players WHERE id=?'); $chk->execute([$id]);
-    if (!$chk->fetchColumn()) fail('That player was not found.', 404);
+    if (!$chk->fetchColumn()) fail('That member was not found.', 404);
   }
   if (!empty($b['password']) && mb_strlen((string)$b['password']) < 4) fail('Use at least 4 characters.');
   $isAdmin = !empty($b['is_admin']) ? 1 : 0; $active = array_key_exists('active', $b) ? (!empty($b['active']) ? 1 : 0) : 1;

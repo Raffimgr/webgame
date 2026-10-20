@@ -6,7 +6,8 @@
 <title>Ridge Admin</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap">
 <style>
-/* Layout: top bar, four tabs (Record, Games, Players, Settings), one column of raised panels. */
+/* Layout: top bar, four tabs (Record, Games, Members, Settings), one column of raised panels.
+   Outside the games the family are "members" (Sako, 2026-10-20); the Record and Games tabs still say players, since there they played a game. */
 :root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--dim:#6b7383;--ink:#15181e;--sheet:#2a2e35;--acc:#2ec4b6;
   --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
   --well:#202328;--well-sh:inset 4px 4px 10px rgba(0,0,0,.55),inset -3px -3px 8px rgba(255,255,255,.035);
@@ -103,8 +104,8 @@ html.rg-nav-on .sheet{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><h1>Admin <small>Record games, players, passwords and settings</small></h1><span class="pill" id="who"></span><a class="pill" href="scores.html">Dashboard</a><a class="pill" href="games.html">Home</a></div>
-  <div class="tabs" id="tabs"><button data-t="rec" class="on">Record</button><button data-t="ev">Games</button><button data-t="pl">Players</button><button data-t="set">Settings</button></div>
+  <div class="top"><h1>Admin <small>Record games, members, passwords and settings</small></h1><span class="pill" id="who"></span><a class="pill" href="scores.html">Dashboard</a><a class="pill" href="games.html">Home</a></div>
+  <div class="tabs" id="tabs"><button data-t="rec" class="on">Record</button><button data-t="ev">Games</button><button data-t="pl">Members</button><button data-t="set">Settings</button></div>
   <section id="t-rec"></section>
   <section id="t-ev" hidden></section>
   <section id="t-pl" hidden></section>
@@ -261,17 +262,17 @@ function drawEvents(){
 /* ---------- players ---------- */
 function drawPlayers(){
   const el=document.getElementById("t-pl");
-  el.innerHTML=`<div class="panel"><h2>Players and passwords</h2><p class="hint">Each player logs in with their own password. Players without a password can't log in yet.</p>
+  el.innerHTML=`<div class="panel"><h2>Members and passwords</h2><p class="hint">Each member logs in with their own password. Members without a password can't log in yet.</p>
   ${players.map(p=>`<div class="pp" style="${p.active?"":"opacity:.5"}">${av(p,40)}<div><b>${esc(p.name)}</b> ${p.is_admin?`<span class="tag" style="font-size:11px;font-weight:800;padding:2px 7px;border-radius:99px;background:#1d3d3a;color:#7ee8f0">ADMIN</span>`:""}<div class="sub">${p.has_pass?"Has a password":"No password yet"}${p.active?"":" · hidden"}</div></div><button class="btn sm" data-pe="${p.id}">Edit</button></div>`).join("")}
-  <div class="actions"><button class="btn" id="allpw">Same password for everyone</button><button class="btn main" id="addp">＋ Add player</button></div></div>`;
-  el.querySelector("#allpw").onclick=async()=>{const pw=prompt("One password for every player (admins keep their own):");if(pw==null)return;try{const r=await api("password_all",{password:pw});players=r.players;drawPlayers();toast(`Set for ${r.changed} players.`)}catch(x){toast(x.message)}};
+  <div class="actions"><button class="btn" id="allpw">Same password for everyone</button><button class="btn main" id="addp">＋ Add member</button></div></div>`;
+  el.querySelector("#allpw").onclick=async()=>{const pw=prompt("One password for every member (admins keep their own):");if(pw==null)return;try{const r=await api("password_all",{password:pw});players=r.players;drawPlayers();toast(`Set for ${r.changed} members.`)}catch(x){toast(x.message)}};
   el.querySelectorAll("[data-pe]").forEach(b=>b.onclick=()=>editPlayer(players.find(p=>p.id===b.dataset.pe)));
   el.querySelector("#addp").onclick=()=>editPlayer(null);
 }
 function editPlayer(p){
   const d=p?{...p}:{id:"",name:"",short:"",color:COLORS[players.length%COLORS.length],avatar:null,is_admin:0,active:1};
   const s=document.createElement("div");s.className="sheet";
-  const draw=()=>{s.innerHTML=`<div class="panel"><h2>${p?"Edit "+esc(p.name):"New player"}</h2>
+  const draw=()=>{s.innerHTML=`<div class="panel"><h2>${p?"Edit "+esc(p.name):"New member"}</h2>
     <div style="display:flex;gap:14px;align-items:center">${av(d,64)}<div style="display:flex;flex-direction:column;gap:6px"><label class="btn sm">Photo<input type="file" accept="image/*" id="pa" hidden></label>${d.avatar?`<button class="btn sm" id="pan">Use letters</button>`:""}</div></div>
     <div class="row"><label><span class="lab">Name</span><input class="in" id="pn" value="${esc(d.name)}" maxlength="30"></label><label style="max-width:120px;min-width:90px"><span class="lab">Letters</span><input class="in" id="ps" value="${esc(d.short)}" maxlength="3"></label></div>
     <div><div class="lab" style="margin-bottom:6px">Color</div><div class="colors">${COLORS.map(c=>`<button style="--x:${c}" data-c="${c}" class="${c===d.color?"on":""}" aria-label="${c}"></button>`).join("")}</div></div>
@@ -323,7 +324,7 @@ function drawSettings(){
   el.innerHTML=`<div id="acc" style="display:flex;flex-direction:column;gap:16px"></div><div class="panel"><h2>Coins for each place</h2><p class="hint">Every game gives coins by place. Places past the last box get nothing. Changing this re-counts every game already recorded.</p>
     <div class="coins-ed" id="ce">${coins.map((c,i)=>`<label>${RG.ordinal(i+1)}<input class="in" type="number" min="0" inputmode="numeric" value="${c}"></label>`).join("")}</div>
     <div class="actions" style="justify-content:flex-start"><button class="btn sm" id="cadd">＋ Place</button><button class="btn sm" id="cdel">− Place</button><span style="flex:1"></span><button class="btn main" id="csave">Save coins</button></div></div>
-  <div class="panel"><h2>Backup</h2><p class="hint">Download every player, game and score as one file (photos stay on the server).</p><div class="actions" style="justify-content:flex-start"><a class="btn" href="api.php?a=export" download>Download backup</a></div></div>
+  <div class="panel"><h2>Backup</h2><p class="hint">Download every member, game and score as one file (photos stay on the server).</p><div class="actions" style="justify-content:flex-start"><a class="btn" href="api.php?a=export" download>Download backup</a></div></div>
   <div class="panel"><h2>Front page</h2><p class="hint" id="fr-h">Checking…</p><div class="actions" style="justify-content:flex-start"><button class="btn" id="fr" hidden></button></div></div>`;
   (async()=>{const h=el.querySelector("#fr-h"),b=el.querySelector("#fr");
     const paint=on=>{h.textContent=on?"raffaelco.com sends visitors straight to the games.":"raffaelco.com does not open the games. Use raffaelco.com/ridge-games/.";b.textContent=on?"Stop sending raffaelco.com here":"Make raffaelco.com open the games";b.hidden=false;b.onclick=async()=>{b.disabled=true;try{const r=await api("settings_save",{front:!on});paint(r.front);toast("Saved.")}catch(x){toast(x.message)}b.disabled=false}};

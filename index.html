@@ -342,7 +342,7 @@ let cabinInfo={address:null,ll:null},online=false;
 const cabinLL=()=>cabinInfo.ll||CABIN.ll;
 const cabinDirs=()=>"https://www.google.com/maps/dir/?api=1&destination="+(cabinInfo.address?encodeURIComponent(cabinInfo.address):cabinLL().join(","));
 async function cabinEdit(){
-  const a=prompt("Cabin address (only logged-in players can see it):",cabinInfo.address||"");if(a===null)return;
+  const a=prompt("Cabin address (only logged-in members can see it):",cabinInfo.address||"");if(a===null)return;
   const l=prompt("Optional: exact map spot as \"latitude, longitude\" (long-press the cabin in Google Maps to copy it). Leave empty to skip.",cabinInfo.ll?cabinInfo.ll.join(", "):"");
   const m=(l||"").match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
   try{const r=await fetch("cabin.php",{method:"POST",credentials:"same-origin",headers:{"X-RG":"1","Content-Type":"application/json"},body:JSON.stringify({address:a,ll:m?[+m[1],+m[2]]:null})});
