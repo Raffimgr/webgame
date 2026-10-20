@@ -94,7 +94,7 @@ const PAL=["#ff5d6c","#ffd23f","#4f8dff","#3ccf6e","#a66bff","#ff9a3c","#ff7ad9"
 const svg=(k,c,rot)=>`<svg viewBox="0 0 100 100" width="100%" height="100%" style="display:block${rot?`;transform:rotate(${rot}deg)`:""}" aria-hidden="true"><g fill="${c}">${SH[k]}</g></svg>`;
 
 // Liquid Lab: tubes are arrays bottom → top of color numbers; 4 units per tube
-const LQ=["#ff5d6c","#4f8dff","#3ccf6e","#ffd23f","#a66bff","#ff9a3c","#ff7ad9"];
+const LQ=["#ff5d6c","#4f8dff","#3ccf6e","#ffd23f","#a66bff","#ff9a3c","#ff7ad9","#39d5e6","#9a6233","#eef1f6","#b8f04a","#5b5fe0"];
 function lqPour(t,i,j,cap){const a=t[i],b=t[j];if(i===j||!a.length||b.length>=cap)return 0;const c=a[a.length-1];if(b.length&&b[b.length-1]!==c)return 0;let n=0;while(a.length&&a[a.length-1]===c&&b.length<cap){b.push(a.pop());n++}return n}
 function lqDone(t,cap){return t.every(x=>!x.length||(x.length===cap&&x.every(v=>v===x[0])))}
 // depth-first solver with memory; returns the number of states looked at, or -1 when no solution was found within the limit
@@ -104,11 +104,15 @@ function lqSolve(start,cap,limit){const seen=new Set();let nodes=0;const key=t=>
       for(let j=0;j<t.length;j++){if(i===j)continue;const b=t[j];if(b.length>=cap||(b.length&&b[b.length-1]!==a[a.length-1])||(!b.length&&uni))continue;
         const c=t.map(x=>x.slice());lqPour(c,i,j,cap);if(dfs(c))return true}}return false};
   return dfs(start.map(x=>x.slice()))?nodes:-1}
-// level 1: 3 colors in 5 tubes … level 5: 7 colors in 9 tubes (always 2 empty tubes); only puzzles the solver can finish are used
-function liquidPuzzle(L){const c=[3,4,5,6,7][L-1],cap=4;let t;
-  for(let g=0;g<300;g++){const u=shuffle([].concat(...[...Array(c).keys()].map(i=>Array(cap).fill(i))));t=[...Array(c)].map((_,i)=>u.slice(i*cap,i*cap+cap));t.push([],[]);
-    if(t.some(x=>x.length===cap&&x.every(v=>v===x[0])))continue;if(lqSolve(t,cap,80000)>=0)return t}
-  return t}
+// level 1: 5 colors in 7 tubes … level 5: 12 colors in 14 tubes (always 2 empty tubes; Sako found the old 3-7 colors too easy).
+// Harder puzzles have few same-color pairs already touching, so the mixes are tighter; only puzzles the solver can finish are used.
+function liquidPuzzle(L){const c=[5,7,9,10,12][L-1],cap=4,maxPairs=[2,2,2,2,3][L-1];let t,fallback=null;
+  const pairs=t=>t.reduce((n,x)=>n+x.filter((v,i)=>i&&v===x[i-1]).length,0);
+  for(let g=0;g<400;g++){const u=shuffle([].concat(...[...Array(c).keys()].map(i=>Array(cap).fill(i))));t=[...Array(c)].map((_,i)=>u.slice(i*cap,i*cap+cap));t.push([],[]);
+    if(t.some(x=>x.length===cap&&x.every(v=>v===x[0])))continue;
+    const tight=pairs(t)<=maxPairs;if(!tight&&fallback)continue;
+    if(lqSolve(t,cap,60000)>=0){if(tight)return t;fallback=t}}
+  return fallback||t}
 
 // Turn Twin: little shapes made of squares, as lists of [x,y]
 const DIRS=[[1,0],[-1,0],[0,1],[0,-1]];
@@ -221,7 +225,7 @@ gridrecall:{name:"Grid Recall",skill:"Visual memory",how:"Some squares light up 
 
 // ---------- twelve more games (V2) ----------
 liquidsort:{name:"Liquid Lab",skill:"Logic",how:"Tap a tube, then tap another to pour. Liquid only pours onto the same color or into an empty tube. Get one color in every tube. Undo is free.",
-  time:L=>[120,150,180,240,300][L-1],target:L=>1,goal:()=>"Sort every tube before the timer runs out to win.",
+  time:L=>[150,210,270,330,420][L-1],target:L=>1,goal:()=>"Sort every tube before the timer runs out to win.",
   setup(api){const L=api.level,cap=4;let t=liquidPuzzle(L);const start=t.map(x=>x.slice());let hist=[],sel=-1,moves=0,done=false;const n=t.length;
     const S=api.size();let best={w:0,r:1};for(let r=1;r<=3;r++){const k=Math.ceil(n/r),w=Math.min(64,(S.w-(k-1)*10-4)/k,(S.h-120-(r-1)*28-18)/(r*4.4));if(w>best.w+2)best={w,r}}
     const w=Math.floor(best.w),per=Math.ceil(n/best.r);
