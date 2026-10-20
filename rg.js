@@ -191,7 +191,7 @@ if(window.MindGames)GAMES["Mind games"]=MindGames.list.map(g=>g.name);
    the rest show "Coming soon". A mind race counts as the mind game it races on. Admins always have everything.
    Before login (or with no server) nothing is locked. */
 const ACCESS_GAMES=[
-  ["Play together",[["play:poker","Poker on phones"],["play:imposter","Imposter"],["play:trivia","Trivia race"],["play:reaction","Last One Standing"],["play:likely","Most Likely To"]]],
+  ["Play together",[["play:poker","Poker on phones"],["play:imposter","Imposter"],["play:trivia","Trivia race"],["play:reaction","Last One Standing"],["play:likely","Most Likely To"],["play:werewolf","Werewolf"],["play:spyfall","Spyfall"],["play:codenames","Codenames"]]],
   ["Mind Games (alone or in a Mind race)",window.MindGames?MindGames.list.map(g=>["mind:"+g.id,g.name]):[]],
   ["Card Games on one iPad",[["cards:poker","Texas Hold'em"],["cards:highcard","High Card Showdown"],["cards:hilo","Higher or Lower"],["cards:blackjack","Blackjack vs Dealer"]]],
   ["The grand game",[["crown","The Road to the Crown"]]]];

@@ -12,7 +12,7 @@
 declare(strict_types=1);
 if (!defined('RG_API')) { http_response_code(404); exit; }
 
-const PARTY_GAMES = ['race', 'imposter', 'trivia', 'reaction', 'likely'];
+const PARTY_GAMES = ['race', 'imposter', 'trivia', 'reaction', 'likely', 'werewolf', 'spyfall', 'codenames'];
 const TRIVIA_TIME = 20;   // seconds to answer; points = seconds left on a right answer
 const TRIVIA_SHOW = 5;    // seconds the right answer stays up before the next question
 const TRIVIA_COUNT = 10;
@@ -267,6 +267,85 @@ const LIKELY = [
   'Who is most likely to spill their drink?', 'Who is most likely to wear sunglasses at night?', 'Who is most likely to know everyone\'s birthday?',
 ];
 
+/* ================= Werewolf, Spyfall, Codenames =================
+   werewolf:  roles {id: wolf|seer|doctor|villager}, alive [ids], phase (night|dusk|day|over), round, acts {id: target} (everyone picks at night,
+              so nobody can tell the roles apart by who is busy), votes {id: target}, news {died, saved}, seen {seer: [[target, wolf?]]}, out, out_role, winner
+   spyfall:   loc, roles {id: role}, spy, phase (talk|vote|over), at, votes, how (caught|wrong|guessed|missed), guess, winner
+   codenames: words[25], key[25] (r|b|n|a), teams {id: r|b}, spy {r: id, b: id}, turn, phase (clue|guess|over), clue {word,n}, left, open[25], winner, log */
+const PARTY_MIN = ['imposter' => 3, 'likely' => 3, 'werewolf' => 4, 'spyfall' => 3, 'codenames' => 4];
+const SPY_TIME = 480; // 8 minutes of questions, then vote
+
+const SPY_LOCS = [
+  'Airplane' => ['Pilot', 'Flight attendant', 'Passenger in first class', 'Passenger in economy', 'Air marshal', 'Mechanic', 'Crying baby'],
+  'Beach' => ['Lifeguard', 'Surfer', 'Ice cream seller', 'Sunbather', 'Kid building a sandcastle', 'Photographer', 'Beach volleyball player'],
+  'Campsite' => ['Park ranger', 'Camper', 'Scout leader', 'Hiker', 'Bear (in disguise)', 'Cook at the fire', 'Kid with a flashlight'],
+  'Hospital' => ['Doctor', 'Nurse', 'Patient', 'Surgeon', 'Visitor', 'Receptionist', 'Ambulance driver'],
+  'Restaurant' => ['Chef', 'Waiter', 'Customer', 'Food critic', 'Dishwasher', 'Manager', 'Musician'],
+  'School' => ['Teacher', 'Student', 'Principal', 'Janitor', 'Lunch lady', 'Coach', 'Parent'],
+  'Movie theater' => ['Ticket seller', 'Popcorn seller', 'Movie fan', 'Couple on a date', 'Projectionist', 'Cleaner', 'Kid who is scared'],
+  'Supermarket' => ['Cashier', 'Shopper', 'Shelf stocker', 'Butcher', 'Security guard', 'Manager', 'Kid begging for candy'],
+  'Zoo' => ['Zookeeper', 'Visitor', 'Vet', 'Photographer', 'Tour guide', 'Ice cream seller', 'Escaped monkey'],
+  'Space station' => ['Commander', 'Engineer', 'Scientist', 'Space tourist', 'Doctor', 'Alien (in disguise)', 'Robot'],
+  'Pirate ship' => ['Captain', 'Sailor', 'Cook', 'Prisoner', 'Lookout', 'Parrot', 'Treasure hunter'],
+  'Bank' => ['Teller', 'Manager', 'Customer', 'Security guard', 'Robber', 'Accountant', 'Cleaner'],
+  'Ski resort' => ['Ski instructor', 'Snowboarder', 'Beginner skier', 'Lift operator', 'Hot chocolate seller', 'Rescue patrol', 'Hotel guest'],
+  'Wedding' => ['Bride', 'Groom', 'Best man', 'Photographer', 'DJ', 'Cake maker', 'Guest who cries'],
+  'Circus' => ['Clown', 'Acrobat', 'Lion tamer', 'Juggler', 'Ringmaster', 'Popcorn seller', 'Kid in the audience'],
+  'Train' => ['Conductor', 'Passenger', 'Ticket inspector', 'Snack cart seller', 'Engine driver', 'Tourist', 'Sleeping passenger'],
+  'Police station' => ['Detective', 'Officer', 'Suspect', 'Witness', 'Lawyer', 'Chief', 'Reporter'],
+  'Cave' => ['Explorer', 'Tour guide', 'Bat expert', 'Lost hiker', 'Photographer', 'Geologist', 'Kid with a helmet'],
+];
+
+const CN_WORDS = ['Apple', 'Bear', 'River', 'Moon', 'Castle', 'Tent', 'Pirate', 'Robot', 'Ghost', 'Piano', 'Shark', 'Bridge', 'Rocket', 'Island', 'Dragon', 'Queen',
+  'King', 'Knight', 'Forest', 'Cloud', 'Snow', 'Fire', 'Lemon', 'Honey', 'Mouse', 'Horse', 'Eagle', 'Owl', 'Whale', 'Spider', 'Snake', 'Lion', 'Train', 'Plane',
+  'Boat', 'Car', 'Bike', 'Wheel', 'Clock', 'Watch', 'Ring', 'Crown', 'Star', 'Sun', 'Rain', 'Storm', 'Lightning', 'Tornado', 'Volcano', 'Mountain', 'Beach',
+  'Desert', 'Jungle', 'Cave', 'Map', 'Compass', 'Key', 'Lock', 'Door', 'Window', 'Wall', 'Tower', 'School', 'Hospital', 'Bank', 'Circus', 'Theater', 'Movie',
+  'Camera', 'Phone', 'Computer', 'Mail', 'Letter', 'Book', 'Pencil', 'Paint', 'Brush', 'Glass', 'Bottle', 'Cup', 'Plate', 'Fork', 'Knife', 'Spoon', 'Pizza',
+  'Cake', 'Cookie', 'Bread', 'Cheese', 'Egg', 'Chicken', 'Fish', 'Corn', 'Carrot', 'Potato', 'Orange', 'Grape', 'Cherry', 'Banana', 'Coconut', 'Nut', 'Seed',
+  'Tree', 'Leaf', 'Root', 'Flower', 'Rose', 'Grass', 'Garden', 'Farm', 'Barn', 'Fence', 'Field', 'Hat', 'Boot', 'Shoe', 'Glove', 'Scarf', 'Coat', 'Dress',
+  'Button', 'Needle', 'Thread', 'Rope', 'Chain', 'Net', 'Hook', 'Anchor', 'Ship', 'Sail', 'Wave', 'Shell', 'Pearl', 'Diamond', 'Gold', 'Silver', 'Coin',
+  'Card', 'Dice', 'Ball', 'Bat', 'Goal', 'Net', 'Court', 'Club', 'Drum', 'Guitar', 'Violin', 'Horn', 'Bell', 'Whistle', 'Song', 'Dance', 'Party', 'Gift',
+  'Balloon', 'Candle', 'Lamp', 'Light', 'Shadow', 'Mirror', 'Picture', 'Frame', 'Bed', 'Chair', 'Table', 'Sofa', 'Pillow', 'Blanket', 'Kitchen', 'Oven',
+  'Ice', 'Water', 'Milk', 'Juice', 'Tea', 'Coffee', 'Soup', 'Salt', 'Sugar', 'Pepper', 'Bee', 'Ant', 'Butterfly', 'Frog', 'Turtle', 'Rabbit', 'Fox', 'Wolf',
+  'Deer', 'Monkey', 'Panda', 'Tiger', 'Zebra', 'Giraffe', 'Elephant', 'Penguin', 'Doctor', 'Nurse', 'Teacher', 'Chef', 'Pilot', 'Farmer', 'Police', 'Spy',
+  'Wizard', 'Witch', 'Giant', 'Dwarf', 'Angel', 'Alien', 'Ninja', 'Cowboy', 'Viking', 'Mummy', 'Vampire', 'Zombie', 'Hero', 'Agent', 'Trap', 'Bomb', 'Laser',
+  'Magnet', 'Battery', 'Engine', 'Jet', 'Satellite', 'Planet', 'Comet', 'Space', 'Earth', 'Paris', 'London', 'Tokyo', 'Rome', 'Egypt', 'Pyramid', 'Bar', 'Note'];
+
+function ww_roles(array $ids): array {
+  $n = count($ids); $wolves = $n >= 7 ? 2 : 1;
+  $deck = array_merge(array_fill(0, $wolves, 'wolf'), ['seer'], $n >= 5 ? ['doctor'] : []);
+  $deck = array_merge($deck, array_fill(0, max(0, $n - count($deck)), 'villager'));
+  shuffle($deck);
+  return array_combine($ids, array_slice($deck, 0, $n));
+}
+function ww_check(array &$st): bool { // true when the game is over
+  $w = 0; $v = 0; foreach ($st['alive'] as $id) { if ($st['roles'][$id] === 'wolf') $w++; else $v++; }
+  if ($w === 0) $st['winner'] = 'village'; elseif ($w >= $v) $st['winner'] = 'wolves'; else return false;
+  $st['phase'] = 'over'; party_rank('werewolf', $st); return true;
+}
+function ww_top(array $votes): ?string { // most votes; a tie means nobody
+  if (!$votes) return null; $n = array_count_values(array_values($votes)); arsort($n); $top = array_keys($n, max($n), true);
+  return count($top) === 1 ? (string)$top[0] : null;
+}
+function ww_night_end(array &$st): bool {
+  $wolfVotes = []; $save = null;
+  foreach ($st['alive'] as $id) {
+    $t = $st['acts'][$id] ?? null; if ($t === null) continue;
+    if ($st['roles'][$id] === 'wolf') $wolfVotes[$id] = $t;
+    if ($st['roles'][$id] === 'doctor') $save = $t;
+    if ($st['roles'][$id] === 'seer') $st['seen'][$id][] = [$t, $st['roles'][$t] === 'wolf'];
+  }
+  $kill = null;
+  if ($wolfVotes) { $n = array_count_values(array_values($wolfVotes)); $top = array_keys($n, max($n), true); $kill = (string)$top[random_int(0, count($top) - 1)]; }
+  $st['news'] = ['died' => null, 'saved' => false];
+  if ($kill !== null) { if ($kill === $save) $st['news']['saved'] = true; else { $st['news']['died'] = $kill; $st['alive'] = array_values(array_diff($st['alive'], [$kill])); } }
+  $st['acts'] = []; $st['votes'] = []; $st['phase'] = 'day';
+  return ww_check($st);
+}
+function cn_switch(array &$st): void { $st['turn'] = $st['turn'] === 'r' ? 'b' : 'r'; $st['phase'] = 'clue'; $st['clue'] = null; $st['left'] = 0; }
+function cn_won(array $st, string $t): bool { foreach ($st['key'] as $i => $k) if ($k === $t && !$st['open'][$i]) return false; return true; }
+function cn_end(array &$st, string $t): bool { $st['winner'] = $t; $st['phase'] = 'over'; party_rank('codenames', $st); return true; }
+
 function party_new(string $game, array $b): array {
   $st = ['players' => [], 'final' => null];
   if ($game === 'race') {
@@ -283,6 +362,12 @@ function party_new(string $game, array $b): array {
     $st += ['round' => 0, 'alive' => [], 'outs' => [], 'go_at' => 0, 'taps' => [], 'phase' => 'wait', 'at' => 0];
   } elseif ($game === 'likely') {
     $st += ['prompts' => [], 'i' => 0, 'phase' => 'vote', 'votes' => [], 'pts' => []];
+  } elseif ($game === 'werewolf') {
+    $st += ['roles' => [], 'alive' => [], 'phase' => 'night', 'round' => 1, 'acts' => [], 'votes' => [], 'news' => null, 'seen' => [], 'out' => null, 'winner' => null];
+  } elseif ($game === 'spyfall') {
+    $st += ['loc' => '', 'roles' => [], 'spy' => '', 'phase' => 'talk', 'at' => 0, 'votes' => [], 'how' => null, 'guess' => null, 'winner' => null];
+  } elseif ($game === 'codenames') {
+    $st += ['words' => [], 'key' => [], 'teams' => [], 'spy' => [], 'turn' => 'r', 'phase' => 'clue', 'clue' => null, 'left' => 0, 'open' => [], 'winner' => null, 'log' => []];
   }
   return $st;
 }
@@ -319,6 +404,24 @@ function party_begin(string $game, array &$st): void {
   if ($game === 'reaction') {
     $st['round'] = 1; $st['alive'] = $ids; $st['outs'] = []; $st['taps'] = []; $st['phase'] = 'wait';
     $st['go_at'] = $go + random_int(1500, 4500) / 1000;
+  }
+  if ($game === 'werewolf') {
+    $st['roles'] = ww_roles($ids); $st['alive'] = $ids; $st['phase'] = 'night'; $st['round'] = 1; $st['acts'] = []; $st['votes'] = []; $st['news'] = null; $st['seen'] = []; $st['out'] = null; $st['winner'] = null;
+  }
+  if ($game === 'spyfall') {
+    $locs = array_keys(SPY_LOCS); $st['loc'] = $locs[random_int(0, count($locs) - 1)];
+    $st['spy'] = $ids[random_int(0, count($ids) - 1)]; $roles = SPY_LOCS[$st['loc']]; shuffle($roles); $st['roles'] = [];
+    foreach ($ids as $k => $id) $st['roles'][$id] = $id === $st['spy'] ? 'Spy' : $roles[$k % count($roles)];
+    $st['first'] = $ids[random_int(0, count($ids) - 1)]; $st['phase'] = 'talk'; $st['at'] = $go; $st['votes'] = []; $st['how'] = null; $st['guess'] = null; $st['winner'] = null;
+  }
+  if ($game === 'codenames') {
+    $sh = $ids; shuffle($sh); $st['teams'] = [];
+    foreach ($sh as $k => $id) $st['teams'][$id] = $k % 2 ? 'b' : 'r';
+    $st['spy'] = ['r' => $sh[0], 'b' => $sh[1]];
+    $first = random_int(0, 1) ? 'r' : 'b'; $second = $first === 'r' ? 'b' : 'r';
+    $key = array_merge(array_fill(0, 9, $first), array_fill(0, 8, $second), array_fill(0, 7, 'n'), ['a']); shuffle($key);
+    $st['words'] = party_pick(array_values(array_unique(CN_WORDS)), 25); $st['key'] = $key; $st['open'] = array_fill(0, 25, false);
+    $st['turn'] = $first; $st['phase'] = 'clue'; $st['clue'] = null; $st['left'] = 0; $st['winner'] = null; $st['log'] = [];
   }
   if ($game === 'likely') {
     $st['prompts'] = party_pick('likely', LIKELY, LIKELY_COUNT); $st['i'] = 0; $st['phase'] = 'vote'; $st['votes'] = []; $st['pts'] = array_fill_keys($ids, 0);
@@ -417,6 +520,88 @@ function party_move(string $game, array &$st, array $m, bool $host, array $b): b
     }
     throw new RuntimeException('Unknown move.');
   }
+  if ($game === 'werewolf') {
+    $alive = in_array($me, $st['alive'], true);
+    if ($do === 'act') { // at night everyone picks someone: wolves a victim, the seer someone to check, the doctor someone to save, villagers a suspect
+      if ($st['phase'] !== 'night') throw new RuntimeException("It isn't night.");
+      if (!$alive) throw new RuntimeException("You're out. Ghosts don't talk!");
+      $t = (string)($b['target'] ?? ''); $role = $st['roles'][$me];
+      if (!in_array($t, $st['alive'], true)) throw new RuntimeException('Pick someone still in the game.');
+      if ($role === 'wolf' && $st['roles'][$t] === 'wolf') throw new RuntimeException('That one is a wolf too.');
+      if ($t === $me && $role !== 'doctor') throw new RuntimeException('Pick someone else.');
+      $st['acts'][$me] = $t;
+      if (count(array_intersect($st['alive'], array_keys($st['acts']))) === count($st['alive'])) return ww_night_end($st);
+      return false;
+    }
+    if ($do === 'vote') {
+      if ($st['phase'] !== 'day') throw new RuntimeException('Voting is in the day.');
+      if (!$alive) throw new RuntimeException("You're out. Ghosts don't vote!");
+      $t = (string)($b['target'] ?? '');
+      if ($t !== 'skip' && (!in_array($t, $st['alive'], true) || $t === $me)) throw new RuntimeException('Pick someone else.');
+      $st['votes'][$me] = $t;
+      if (count(array_intersect($st['alive'], array_keys($st['votes']))) === count($st['alive'])) {
+        $top = ww_top(array_filter($st['votes'], fn($x) => $x !== 'skip'));
+        $skips = count(array_filter($st['votes'], fn($x) => $x === 'skip'));
+        if ($top !== null && count(array_keys($st['votes'], $top, true)) <= $skips) $top = null; // more skips than votes for the top name
+        $st['out'] = $top; $st['out_role'] = $top ? $st['roles'][$top] : null;
+        if ($top) $st['alive'] = array_values(array_diff($st['alive'], [$top]));
+        $st['phase'] = 'dusk';
+        return ww_check($st);
+      }
+      return false;
+    }
+    if ($do === 'next') { if ($st['phase'] !== 'dusk') return false; $st['phase'] = 'night'; $st['round']++; $st['acts'] = []; $st['votes'] = []; return false; }
+    throw new RuntimeException('Unknown move.');
+  }
+  if ($game === 'spyfall') {
+    if ($do === 'vote_now') { if ($st['phase'] !== 'talk') return false; if (!$host && $now < $st['at'] + SPY_TIME) throw new RuntimeException('The host starts the vote (or wait for the timer).'); $st['phase'] = 'vote'; return false; }
+    if ($do === 'vote') {
+      if ($st['phase'] !== 'vote') throw new RuntimeException('It is not time to vote.');
+      $t = (string)($b['target'] ?? ''); if (!in_array($t, $ids, true) || $t === $me) throw new RuntimeException('Pick someone else.');
+      $st['votes'][$me] = $t;
+      if (count(array_intersect($ids, array_keys($st['votes']))) === count($ids)) {
+        $top = ww_top($st['votes']);
+        $st['how'] = $top === $st['spy'] ? 'caught' : 'wrong'; $st['winner'] = $top === $st['spy'] ? 'crew' : 'spy';
+        $st['phase'] = 'over'; party_rank($game, $st); return true;
+      }
+      return false;
+    }
+    if ($do === 'guess') { // the spy may name the location any time before the votes are in
+      if ($me !== $st['spy'] || $st['phase'] === 'over') throw new RuntimeException('Only the spy can guess the place.');
+      $g = (string)($b['loc'] ?? ''); if (!isset(SPY_LOCS[$g])) throw new RuntimeException('Pick a place from the list.');
+      $st['guess'] = $g; $st['how'] = $g === $st['loc'] ? 'guessed' : 'missed'; $st['winner'] = $g === $st['loc'] ? 'spy' : 'crew';
+      $st['phase'] = 'over'; party_rank($game, $st); return true;
+    }
+    throw new RuntimeException('Unknown move.');
+  }
+  if ($game === 'codenames') {
+    if ($st['phase'] === 'over') return false;
+    $team = $st['teams'][$me]; $isSpy = $st['spy'][$team] === $me;
+    if ($do === 'clue') {
+      if ($st['phase'] !== 'clue' || $team !== $st['turn'] || !$isSpy) throw new RuntimeException("It's not your turn to give a clue.");
+      $w = trim(clean_text($b['word'] ?? '', 30)); $n = (int)($b['n'] ?? -1);
+      if ($w === '' || preg_match('/\s/', $w)) throw new RuntimeException('The clue is one word.');
+      if ($n < 0 || $n > 9) throw new RuntimeException('Pick a number from 0 to 9.');
+      foreach ($st['words'] as $i => $x) if (!$st['open'][$i] && strcasecmp($x, $w) === 0) throw new RuntimeException("The clue can't be a word on the board.");
+      $st['clue'] = ['word' => $w, 'n' => $n]; $st['left'] = $n === 0 ? 25 : $n + 1; $st['phase'] = 'guess';
+      $st['log'][] = [$team, 'clue', $w, $n];
+      return false;
+    }
+    if ($do === 'guess') {
+      if ($st['phase'] !== 'guess' || $team !== $st['turn'] || $isSpy) throw new RuntimeException("It's not your team's turn to guess.");
+      $i = (int)($b['i'] ?? -1); if ($i < 0 || $i > 24 || $st['open'][$i]) throw new RuntimeException('Pick a hidden word.');
+      $st['open'][$i] = true; $k = $st['key'][$i]; $st['log'][] = [$team, 'guess', $st['words'][$i], $k];
+      if ($k === 'a') return cn_end($st, $team === 'r' ? 'b' : 'r');
+      if ($k !== 'n' && cn_won($st, $k)) return cn_end($st, $k);
+      if ($k === $team) { $st['left']--; if ($st['left'] <= 0) cn_switch($st); } else cn_switch($st);
+      return false;
+    }
+    if ($do === 'pass') {
+      if ($st['phase'] !== 'guess' || $team !== $st['turn'] || $isSpy) throw new RuntimeException("It's not your team's turn.");
+      $st['log'][] = [$team, 'pass']; cn_switch($st); return false;
+    }
+    throw new RuntimeException('Unknown move.');
+  }
   if ($game === 'likely') {
     if ($do === 'vote') {
       if ($st['phase'] !== 'vote') throw new RuntimeException('Voting is closed.');
@@ -490,6 +675,13 @@ function party_rank(string $game, array &$st): void {
     usort($rows, fn($a, $b) => $b['score'] <=> $a['score']);
     foreach ($rows as $i => &$r) $r['place'] = $i && $rows[$i - 1]['score'] === $r['score'] ? $rows[$i - 1]['place'] : $i + 1;
     unset($r);
+  } elseif (in_array($game, ['werewolf', 'spyfall', 'codenames'], true)) {
+    foreach ($ids as $id) {
+      $won = $game === 'werewolf' ? (($st['roles'][$id] === 'wolf') === ($st['winner'] === 'wolves'))
+        : ($game === 'spyfall' ? (($id === $st['spy']) === ($st['winner'] === 'spy')) : ($st['teams'][$id] === $st['winner']));
+      $rows[] = ['id' => $id, 'place' => $won ? 1 : 2, 'bonus' => 0, 'score' => null];
+    }
+    usort($rows, fn($a, $b) => $a['place'] <=> $b['place']);
   } elseif ($game === 'reaction') {
     $place = 1;
     foreach ($st['alive'] as $id) $rows[] = ['id' => $id, 'place' => 1, 'bonus' => 0, 'score' => null];
@@ -528,6 +720,30 @@ function party_view(string $game, array $st, ?string $me, bool $live): array {
   if ($game === 'reaction' && $live) {
     $v += ['round' => $st['round'], 'alive' => $st['alive'], 'outs' => $st['outs'], 'go_at' => $st['go_at'], 'phase' => $st['phase'], 'at' => $st['at'],
       'tapped' => array_keys($st['taps']), 'last' => $st['last'] ?? null];
+  }
+  if ($game === 'werewolf' && $live && $st['roles']) {
+    $over = $st['phase'] === 'over'; $ghost = $in && !in_array($me, $st['alive'], true);
+    $v += ['alive' => $st['alive'], 'phase' => $st['phase'], 'round' => $st['round'], 'acted' => array_keys($st['acts']), 'voted' => array_keys($st['votes']),
+      'news' => $st['news'], 'out' => $st['out'], 'out_role' => $st['out_role'] ?? null, 'winner' => $st['winner'], 'count' => array_count_values(array_values($st['roles']))];
+    if ($in) {
+      $role = $st['roles'][$me]; $v['role'] = $role; $v['my_act'] = $st['acts'][$me] ?? null; $v['my_vote'] = $st['votes'][$me] ?? null;
+      if ($role === 'wolf') { $v['pack'] = array_keys(array_filter($st['roles'], fn($r) => $r === 'wolf')); $v['pack_acts'] = array_intersect_key($st['acts'], array_flip($v['pack'])); }
+      if ($role === 'seer') $v['seen'] = $st['seen'][$me] ?? [];
+    }
+    if ($st['phase'] === 'dusk' || $over) $v['tally'] = array_count_values(array_values($st['votes']));
+    if ($over || $ghost || !$in) $v['roles'] = $st['roles']; // ghosts and watchers see everything (and keep quiet!)
+  }
+  if ($game === 'spyfall' && $live && $st['roles']) {
+    $v += ['phase' => $st['phase'], 'at' => $st['at'], 'time' => SPY_TIME, 'first' => $st['first'] ?? null, 'voted' => array_keys($st['votes']), 'places' => array_keys(SPY_LOCS)];
+    if ($in) { $v['role'] = $st['roles'][$me]; if ($me !== $st['spy']) $v['loc'] = $st['loc']; $v['my_vote'] = $st['votes'][$me] ?? null; }
+    if ($st['phase'] === 'over') $v += ['loc' => $st['loc'], 'spy' => $st['spy'], 'roles' => $st['roles'], 'how' => $st['how'], 'guess' => $st['guess'], 'winner' => $st['winner'], 'tally' => array_count_values(array_values($st['votes']))];
+  }
+  if ($game === 'codenames' && $live && $st['words']) {
+    $over = $st['phase'] === 'over'; $team = $st['teams'][$me] ?? null; $isSpy = $team && $st['spy'][$team] === $me;
+    $v += ['words' => $st['words'], 'open' => $st['open'], 'teams' => $st['teams'], 'spies' => $st['spy'], 'turn' => $st['turn'], 'phase' => $st['phase'], 'clue' => $st['clue'],
+      'left' => $st['left'], 'winner' => $st['winner'], 'log' => array_slice($st['log'], -6),
+      'key' => array_map(fn($k, $o) => ($o || $isSpy || $over) ? $k : null, $st['key'], $st['open'])];
+    $v['remain'] = ['r' => 0, 'b' => 0]; foreach ($st['key'] as $i => $k) if (($k === 'r' || $k === 'b') && !$st['open'][$i]) $v['remain'][$k]++;
   }
   if ($game === 'likely' && $live && $st['prompts']) {
     $v += ['i' => $st['i'], 'n' => count($st['prompts']), 'phase' => $st['phase'], 'prompt' => $st['prompts'][$st['i']], 'voted' => array_keys($st['votes']), 'pts' => $st['pts'], 'my_vote' => $st['votes'][$me] ?? null];
