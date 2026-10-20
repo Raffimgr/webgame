@@ -323,7 +323,7 @@ function drawRace(){
       Math.random=rng(r.seed); // same puzzles on every phone
       app.hidden=true;stage.hidden=false;
       stage.innerHTML='<div class="strip" id="strip"></div><div id="mg" style="flex:1;display:flex;flex-direction:column"></div>';
-      race.game=MindGames.play(stage.querySelector("#mg"),{game:r.mind,level:r.level,color:MINDCOL[r.mind]||"#2ec4b6",autostart:true,elapsed,doneLabel:"See who's winning",
+      race.game=MindGames.play(stage.querySelector("#mg"),{game:r.mind,level:r.level,color:MINDCOL[r.mind]||"#2ec4b6",autostart:true,seeded:true,elapsed,doneLabel:"See who's winning",
         onFinish(res){Math.random=realRandom;race.live=false;race.sent=true;send("room_move",{do:"finish",win:res.win,score:res.score,left:res.left})},
         onDone(){stopRace();draw()}});
     }

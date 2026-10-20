@@ -82,6 +82,16 @@ const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// A deck that remembers what this phone has already had: the last 3/4 of the list stays out of new games until the rest has come up,
+// so words and questions don't repeat game after game. Races pass seeded: every phone must get the same words, so the memory is not read there.
+const hid=s=>{let h=5381;for(let i=0;i<s.length;i++)h=(h*33^s.charCodeAt(i))>>>0;return h.toString(36)};
+function deck(key,list,seeded){const k="rg-seen-"+key,id=x=>hid(typeof x==="string"?x:JSON.stringify(x));let seen=[];
+  if(!seeded)try{seen=JSON.parse(localStorage.getItem(k)||"[]")}catch(e){}
+  const ids=new Set(list.map(id)),old=seen.filter(h=>ids.has(h)),byId=new Map(list.map(x=>[id(x),x]));
+  let q=shuffle(list.filter(x=>!old.includes(id(x)))).concat(old.map(h=>byId.get(h))),i=0;
+  return {next(){if(i>=q.length){q=shuffle(list);i=0}const x=q[i++],h=id(x);
+    try{let s=JSON.parse(localStorage.getItem(k)||"[]").filter(y=>y!==h&&ids.has(y));s.push(h);localStorage.setItem(k,JSON.stringify(s.slice(-Math.floor(list.length*.75))))}catch(e){}
+    return x}}}
 
 // ---------- shared bits for the newer games ----------
 // shapes drawn as small SVGs (no image files)
@@ -130,14 +140,37 @@ const pAlter=(c,n)=>{for(let g=0;g<200;g++){const i=R(0,c.length-1),rest=c.filte
 const pDraw=(c,n,px,col)=>{const w=Math.max(...c.map(p=>p[0]))+1,h=Math.max(...c.map(p=>p[1]))+1;
   return `<span class="mg-poly" style="width:${px}px;height:${px}px">${c.map(([x,y])=>`<i style="left:${(x+(n-w)/2)/n*100}%;top:${(y+(n-h)/2)/n*100}%;width:${100/n}%;height:${100/n}%;background:${col}"></i>`).join("")}</span>`};
 
+// Word Scramble: words by level (4 letters, 5, 6, 7-8, 9 and up). None of them can be spelled into another common word,
+// since only the hidden word counts as right.
+const SCRAMBLE={
+  1:["BALL","BARK","BEES","BELL","BIKE","BIRD","BOAT","BOOK","BOOT","CAKE","CAMP","CAVE","CHIP","CITY","CLAW","CLUB","CORN","COWS","CROW","DISH","DOLL","DOVE","DRUM","DUCK","DUSK","FARM","FAWN","FISH","FLAG","FOAM","FOOT","FORK","FROG","GIFT","GLOW","GOLD","HAND","HAWK","HIKE","HILL","HOME","HOOT","HORN","JAZZ","JEEP","JUMP","KING","KITE","KIWI","LAVA","MASK","MILK","MINK","MOSS","MOTH","MULE","PARK","PATH","PEAK","PIGS","PINK","PLAY","POND","PONY","QUIZ","RAIN","RICE","ROOF","SAND","SEED","SOCK","SOFA","SWIM","TENT","TOAD","TREE","TRIP","TUBE","WAVE","WIND","WING","WISH","WOOD","WORM","ZOOM"],
+  2:["ACORN","APPLE","ARROW","BADGE","BANJO","BEACH","BERRY","BINGO","BIRCH","BISON","BLAZE","BLOOM","BRAVE","BUNNY","CABIN","CAMEL","CANDY","CHAIR","CHALK","CHEER","CHESS","CHICK","CHIPS","CLIFF","CLIMB","CLOCK","CLOWN","COMIC","CRAFT","CREAM","CREEK","CROWN","DAISY","DRESS","DRUMS","EAGLE","ELVES","EMBER","FAIRY","FENCE","FLAME","FLOUR","FLUTE","FUDGE","FUNNY","GECKO","GIANT","GLASS","GLOBE","GOOSE","GRASS","GUAVA","HAPPY","HIPPO","HONEY","JELLY","JEWEL","JUICE","JUMBO","KAYAK","KNIFE","KNOCK","KOALA","LAUGH","LIGHT","LLAMA","LODGE","LUCKY","MAGIC","MEDAL","MOOSE","MOUSE","MOVIE","MUSIC","NACHO","OTTER","PAINT","PANDA","PARTY","PECAN","PHONE","PIANO","PIZZA","PLANT","PORCH","PUPPY","QUAIL","QUEEN","QUILT","RADIO","RHINO","RIVER","ROBIN","ROBOT","ROYAL","SALAD","SCARF","SCOUT","SHARK","SKUNK","SLOTH","SOCKS","SPOOK","SQUID","STORM","STUMP","SUNNY","TIGER","TOAST","TORCH","TRUCK","TULIP","WAGON","WHALE","WITCH","WORLD","ZEBRA"],
+  3:["AUTUMN","BANANA","BASKET","BEAVER","BEETLE","BREEZE","BRIDGE","BUCKET","BUTTER","CAMPER","CANDLE","CANYON","CARROT","CHEESE","CHERRY","CIRCUS","COOKIE","COYOTE","CRAYON","DONKEY","DRAGON","FALCON","FAMILY","FLOWER","GALAXY","GIGGLE","GOBLIN","GUITAR","HAMMER","HARBOR","HELMET","HOCKEY","ISLAND","JAGUAR","JUNGLE","KNIGHT","LADDER","LEGEND","MEADOW","MONKEY","MUFFIN","MUSEUM","ORANGE","PADDLE","PARADE","PENCIL","PEPPER","PICNIC","PILLOW","PIRATE","PLANET","POTATO","PRINCE","PUZZLE","RABBIT","ROCKET","SADDLE","SCHOOL","SHIELD","SOCCER","SPLASH","SPRING","SUMMER","SUMMIT","SUNSET","TENNIS","TICKET","TOMATO","TROPHY","TUNDRA","TURTLE","VALLEY","VIOLIN","WAFFLE","WALLET","WALRUS","WINDOW","WINTER","WIZARD","ZIPPER"],
+  4:["AIRPLANE","AVOCADO","BACKPACK","BASEBALL","BEARCUB","BIRTHDAY","BLANKET","BROCCOLI","CALENDAR","CAMPFIRE","CARNIVAL","CHAMPION","CHEETAH","CHIPMUNK","COMPASS","COMPUTER","CUPCAKE","DAYDREAM","DINOSAUR","DOLPHIN","ELEPHANT","EXPLORER","FESTIVAL","FIREFLY","FLAMINGO","FOOTBALL","GIRAFFE","GLACIER","GORILLA","HAYRIDE","HEDGEHOG","HOLIDAY","HORIZON","HOSPITAL","JOURNEY","KANGAROO","KETCHUP","KEYBOARD","KINDNESS","KINGDOM","LANTERN","LIBRARY","LULLABY","MARATHON","MERMAID","MOUNTAIN","MUSHROOM","MYSTERY","NEIGHBOR","NOTEBOOK","OATMEAL","OCTOPUS","ORCHARD","OVERLOOK","PAJAMAS","PANCAKE","PENGUIN","PINECONE","POPCORN","PRAIRIE","PRETZEL","PUMPKIN","RACCOON","RAINBOW","SANDWICH","SKYLINE","SNEAKERS","SNOWMAN","SQUIRREL","STRATEGY","SURPRISE","SWEATER","SWIMMING","THUNDER","TREASURE","TRUMPET","UMBRELLA","UNICORN","UNIVERSE","VICTORY","VINEYARD","VOLCANO"],
+  5:["ADVENTURE","ALLIGATOR","ARMADILLO","ASTRONAUT","BASKETBALL","BINOCULARS","BLACKBIRD","BLUEBERRY","BLUEPRINT","BUTTERFLY","CAMPGROUND","CATERPILLAR","CELEBRATE","CHOCOLATE","CROCODILE","DETECTIVE","DISCOVERY","DRAGONFLY","EVERGREEN","FIREFIGHTER","FIREWORKS","FLASHLIGHT","FRIENDSHIP","GRANDFATHER","GRANDMOTHER","GRASSHOPPER","HAMBURGER","HAPPINESS","HELICOPTER","HUMMINGBIRD","HURRICANE","JELLYFISH","LIGHTHOUSE","LIGHTNING","MARSHMALLOW","MOONLIGHT","MOTORCYCLE","PINEAPPLE","PORCUPINE","RIVERBANK","SCARECROW","SCAVENGER","SCIENTIST","SHENANDOAH","SKATEBOARD","SLEEPOVER","SNOWFLAKE","SPAGHETTI","STARLIGHT","STRAWBERRY","SUBMARINE","SUNFLOWER","TELESCOPE","TRAMPOLINE","WATERFALL","WATERMELON","WILDFLOWER","WOODPECKER"]
+};
+
 // Word Sort: groups per level
 const WS=[
-  [["Animal",["Dog","Cat","Horse","Cow","Lion","Tiger","Rabbit","Sheep","Goat","Fox","Bear","Mouse"]],["Food",["Bread","Pizza","Cheese","Pasta","Rice","Soup","Cake","Burger","Salad","Butter","Cookie","Taco"]]],
-  [["Fruit",["Apple","Banana","Mango","Pear","Peach","Cherry","Grape","Lemon","Plum","Melon","Papaya","Apricot"]],["Vegetable",["Carrot","Potato","Onion","Spinach","Cabbage","Lettuce","Broccoli","Celery","Radish","Leek","Garlic","Zucchini"]],["Animal",["Zebra","Camel","Otter","Moose","Panda","Koala","Fox","Wolf","Deer","Badger","Hippo","Llama"]]],
-  [["Fruit",["Fig","Lime","Guava","Lychee","Mango","Pomelo","Date","Quince","Papaya","Apricot"]],["Vegetable",["Kale","Beet","Turnip","Leek","Okra","Celery","Parsnip","Radish","Artichoke","Fennel"]],["Animal",["Lynx","Yak","Ferret","Bison","Gazelle","Tapir","Hyena","Mink","Ibex","Lemur"]],["Country",["Peru","Spain","Kenya","Norway","Egypt","Japan","Canada","Brazil","Greece","Portugal","Nepal","Iceland"]]],
-  [["Mammal",["Whale","Bat","Dolphin","Seal","Otter","Hedgehog","Beaver","Walrus","Squirrel","Mole"]],["Bird",["Penguin","Ostrich","Owl","Eagle","Parrot","Swan","Robin","Pelican","Flamingo","Emu"]],["Fish",["Shark","Salmon","Tuna","Cod","Trout","Seahorse","Eel","Sardine","Carp","Herring"]],["Insect",["Ant","Bee","Beetle","Moth","Wasp","Ladybug","Cricket","Grasshopper","Dragonfly","Termite"]]],
-  [["Mammal",["Whale","Bat","Platypus","Pangolin","Manatee","Dolphin","Walrus","Narwhal","Orca","Hedgehog"]],["Bird",["Penguin","Kiwi","Puffin","Ostrich","Emu","Kingfisher","Albatross","Toucan","Heron","Cassowary"]],["Fish",["Seahorse","Stingray","Shark","Eel","Pufferfish","Swordfish","Clownfish","Barracuda","Anchovy","Mackerel"]],
-   ["Reptile",["Gecko","Iguana","Cobra","Turtle","Tortoise","Crocodile","Chameleon","Python","Alligator","Komodo dragon"]],["Amphibian",["Frog","Toad","Newt","Salamander","Axolotl","Bullfrog","Tree frog","Caecilian"]],["Insect",["Cicada","Mantis","Firefly","Flea","Earwig","Ladybug","Termite","Locust","Moth","Hornet"]]]
+  [["Animal",["Dog","Cat","Horse","Cow","Lion","Tiger","Rabbit","Sheep","Goat","Fox","Bear","Mouse","Elephant","Monkey","Giraffe","Zebra","Frog","Owl","Pig","Deer","Wolf","Squirrel","Turtle","Kangaroo","Penguin","Snake","Camel"]],
+   ["Food",["Bread","Pizza","Cheese","Pasta","Rice","Soup","Cake","Burger","Salad","Butter","Cookie","Taco","Pancake","Sandwich","Noodles","Muffin","Waffle","Yogurt","Popcorn","Bagel","Hot dog","Cereal","Donut","Toast","Omelet","Pretzel"]]],
+  [["Fruit",["Apple","Banana","Mango","Pear","Peach","Cherry","Grape","Lemon","Plum","Melon","Papaya","Apricot","Strawberry","Kiwi","Orange","Pineapple","Watermelon","Blueberry","Raspberry","Coconut","Nectarine","Tangerine"]],
+   ["Vegetable",["Carrot","Potato","Onion","Spinach","Cabbage","Lettuce","Broccoli","Celery","Radish","Leek","Garlic","Zucchini","Peas","Cauliflower","Asparagus","Beet","Kale","Turnip","Sweet potato","Green beans","Artichoke","Brussels sprouts"]],
+   ["Animal",["Zebra","Camel","Otter","Moose","Panda","Koala","Fox","Wolf","Deer","Badger","Hippo","Llama","Giraffe","Rhino","Leopard","Gorilla","Raccoon","Kangaroo","Cheetah","Squirrel","Hedgehog","Beaver"]]],
+  [["Fruit",["Fig","Lime","Guava","Lychee","Mango","Pomelo","Date","Quince","Papaya","Apricot","Persimmon","Kumquat","Passion fruit","Dragon fruit","Starfruit","Mulberry","Cranberry","Gooseberry","Durian","Clementine"]],
+   ["Vegetable",["Kale","Beet","Turnip","Leek","Okra","Celery","Parsnip","Radish","Artichoke","Fennel","Rutabaga","Kohlrabi","Bok choy","Watercress","Shallot","Chard","Arugula","Endive","Daikon","Collard greens"]],
+   ["Animal",["Lynx","Yak","Ferret","Bison","Gazelle","Tapir","Hyena","Mink","Ibex","Lemur","Ocelot","Wombat","Meerkat","Armadillo","Alpaca","Jackal","Mongoose","Okapi","Platypus","Caribou"]],
+   ["Country",["Peru","Spain","Kenya","Norway","Egypt","Japan","Canada","Brazil","Greece","Portugal","Nepal","Iceland","Mexico","Chile","Ghana","Sweden","Italy","India","Vietnam","Morocco","Ireland","Finland","Argentina","Poland","Lebanon","Armenia"]]],
+  [["Mammal",["Whale","Bat","Dolphin","Seal","Otter","Hedgehog","Beaver","Walrus","Squirrel","Mole","Kangaroo","Elephant","Giraffe","Raccoon","Chipmunk","Moose","Sloth","Koala","Porcupine","Bear"]],
+   ["Bird",["Penguin","Ostrich","Owl","Eagle","Parrot","Swan","Robin","Pelican","Flamingo","Emu","Crow","Sparrow","Hawk","Woodpecker","Cardinal","Hummingbird","Peacock","Pigeon","Goose","Turkey"]],
+   ["Fish",["Shark","Salmon","Tuna","Cod","Trout","Seahorse","Eel","Sardine","Carp","Herring","Catfish","Goldfish","Halibut","Tilapia","Swordfish","Perch","Bass","Pike","Mackerel","Anchovy"]],
+   ["Insect",["Ant","Bee","Beetle","Moth","Wasp","Ladybug","Cricket","Grasshopper","Dragonfly","Termite","Butterfly","Mosquito","Firefly","Housefly","Cockroach","Flea","Hornet","Cicada","Mantis","Stick insect"]]],
+  [["Mammal",["Whale","Bat","Platypus","Pangolin","Manatee","Dolphin","Walrus","Narwhal","Orca","Hedgehog","Aardvark","Echidna","Lemur","Dugong","Tapir","Wombat","Sloth","Mole","Okapi"]],
+   ["Bird",["Penguin","Kiwi","Puffin","Ostrich","Emu","Kingfisher","Albatross","Toucan","Heron","Cassowary","Hummingbird","Roadrunner","Vulture","Condor","Pelican","Stork","Cormorant","Kookaburra","Lyrebird","Macaw"]],
+   ["Fish",["Seahorse","Stingray","Shark","Eel","Pufferfish","Swordfish","Clownfish","Barracuda","Anchovy","Mackerel","Halibut","Grouper","Marlin","Piranha","Sturgeon","Flounder","Lionfish","Tilapia"]],
+   ["Reptile",["Gecko","Iguana","Cobra","Turtle","Tortoise","Crocodile","Chameleon","Python","Alligator","Komodo dragon","Rattlesnake","Skink","Boa","Viper","Anole","Sea turtle","Bearded dragon","Gila monster","Caiman"]],
+   ["Amphibian",["Frog","Toad","Newt","Salamander","Axolotl","Bullfrog","Tree frog","Caecilian","Mudpuppy","Hellbender","Spring peeper","Poison dart frog","Cane toad","Leopard frog","Glass frog"]],
+   ["Insect",["Cicada","Mantis","Firefly","Flea","Earwig","Ladybug","Termite","Locust","Moth","Hornet","Dragonfly","Grasshopper","Weevil","Aphid","Stick insect","Cockroach","Mosquito","Dung beetle","Katydid"]]]
 ];
 
 // ---------- the first six games ----------
@@ -183,9 +216,8 @@ numbermemory:{name:"Number Memory",skill:"Memory",how:"A number flashes on the s
 
 wordscramble:{name:"Word Scramble",skill:"Words",how:"Tap the letters in the right order to spell the hidden word. Skip costs 5 seconds.",
   time:60,target:L=>[6,5,5,4,4][L-1],
-  setup(api){const W={1:["TENT","TREE","ROCK","HILL","KING","FISH","DUCK","JUMP","CAMP","BOOK","FROG","CAVE"],2:["CABIN","RIVER","CROWN","QUEEN","BRAVE","MAGIC","PLANT","TORCH","BEACH","GHOST"],3:["CAMPER","JUNGLE","BRIDGE","CANYON","SUMMIT","PUZZLE","LEGEND","KNIGHT","VALLEY"],4:["COMPASS","LANTERN","MOUNTAIN","VICTORY","KINGDOM","BACKPACK","JOURNEY","TREASURE"],5:["WATERFALL","ADVENTURE","CHAMPION","SHENANDOAH","BLUEBERRY","CAMPFIRE","STRATEGY"]};
-    const pool=shuffle(W[api.level]);let wi=0;
-    const make=()=>{const word=pool[wi++%pool.length];let letters=shuffle(word.split(""));while(letters.join("")===word)letters=shuffle(word.split(""));let built="",wait=false;const used=new Set();
+  setup(api){const pool=deck("scramble"+api.level,SCRAMBLE[api.level],api.seeded);
+    const make=()=>{const word=pool.next();let letters=shuffle(word.split(""));while(letters.join("")===word)letters=shuffle(word.split(""));let built="",wait=false;const used=new Set();
       const draw=()=>{api.body.innerHTML=`<p class="mg-hint">Unscramble the word</p><div class="mg-typed">${(built||"").padEnd(word.length,"_").split("").join(" ")}</div>
         <div class="mg-tiles">${letters.map((l,i)=>`<button class="mg-b" data-i="${i}" ${used.has(i)?"disabled":""}>${l}</button>`).join("")}</div>
         <div style="display:flex;gap:10px"><button class="mg-b sm" data-a="undo">Undo</button><button class="mg-b sm" data-a="skip">Skip</button></div>`;
@@ -305,7 +337,7 @@ turntwin:{name:"Turn Twin",skill:"Spatial",how:"Which shape is the same as the t
 pairup:{name:"Pair Up",skill:"Visual memory",how:"Flip two cards at a time. Matching cards stay open. Find every pair.",
   time:L=>[60,75,90,110,130][L-1],target:L=>[6,8,10,12,15][L-1],goal:()=>"Find all the pairs before the timer runs out to win.",
   setup(api){const L=api.level,pairs=[6,8,10,12,15][L-1],S=api.size(),wide=S.w>S.h,[c1,r1]=[[4,3],[4,4],[5,4],[6,4],[6,5]][L-1],cols=wide?c1:r1,rows=wide?r1:c1,sz=api.fit(cols,rows,40,112,8);
-    let faces;if(L<=3)faces=[...Array(pairs)].map((_,i)=>[SHAPES[i%8],PAL[i]]);else{faces=[];const cs=shuffle(PAL.slice(0,9)).slice(0,3);shuffle(SHAPES).slice(0,L===4?4:5).forEach(k=>cs.forEach(c=>faces.push([k,c])))}
+    let faces;if(L<=3){const sh=shuffle(SHAPES),pc=shuffle(PAL);faces=[...Array(pairs)].map((_,i)=>[sh[i%8],pc[i]])}else{faces=[];const cs=shuffle(PAL.slice(0,9)).slice(0,3);shuffle(SHAPES).slice(0,L===4?4:5).forEach(k=>cs.forEach(c=>faces.push([k,c])))}
     const deck=shuffle([...faces.keys(),...faces.keys()]),gone=new Set();let open=[],lock=false;
     api.body.innerHTML=`<p class="mg-hint" id="mgPh">Find the pairs</p><div class="mg-grid" style="grid-template-columns:repeat(${cols},${sz}px);width:auto">${deck.map((f,i)=>`<button class="mg-card" data-i="${i}" style="width:${sz}px;height:${sz}px" aria-label="Card ${i+1}"><span>${svg(faces[f][0],faces[f][1])}</span></button>`).join("")}</div>`;
     const cards=[...api.body.querySelectorAll(".mg-card")],ph=api.body.querySelector("#mgPh"),peek=[2500,1500,0,0,0][L-1];
@@ -355,9 +387,16 @@ truefalse:{name:"True or False",skill:"Math speed",how:"Is the sum right? Tap Tr
 
 nextnumber:{name:"Number Pattern",skill:"Logic",how:"Find the rule behind the numbers and pick the missing one. A wrong tap costs 5 seconds.",
   time:60,target:L=>[6,6,7,7,7][L-1],
-  setup(api){const L=api.level,len=L<3?5:6;let last="";
-    const gen=()=>{const t=pick({1:["add"],2:["add","sub","dbl"],3:["alt","mul","sq","add2"],4:["grow","sq","dblp","alt","mul"],5:["fib","tri","inter","dblm","sqp","grow2"]}[L]);let s=[];const F=f=>{for(let i=0;i<len;i++)s.push(f(i))};
-      if(t==="add"){const a=R(1,10),d=R(2,5);F(i=>a+i*d)}
+  setup(api){const L=api.level,len=L<3?5:6;const had=new Set();
+    const gen=()=>{const t=pick({1:["add","add","down","tens"],2:["add","sub","dbl","tens","fives"],3:["alt","mul","sq","add2","half","sub2"],4:["grow","sq","dblp","alt","mul","cube","half"],5:["fib","tri","inter","dblm","sqp","grow2","prime"]}[L]);let s=[];const F=f=>{for(let i=0;i<len;i++)s.push(f(i))};
+      if(t==="add"){const a=R(1,12),d=R(2,5);F(i=>a+i*d)}
+      else if(t==="down"){const d=R(1,3),a=R(len*d+2,25);F(i=>a-i*d)}
+      else if(t==="tens"){const a=R(1,9)*(R(0,1)?1:10);F(i=>a+i*10)}
+      else if(t==="fives"){const a=R(1,8)*5;F(i=>a+i*5)}
+      else if(t==="sub2"){const a=R(60,140),d=R(6,13);F(i=>a-i*d)}
+      else if(t==="half"){const b=R(1,5);F(i=>b*2**(len-1-i))}
+      else if(t==="cube"){const a=R(1,2);s=[];for(let i=0;i<5;i++)s.push((a+i)**3)}
+      else if(t==="prime"){const P=[2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53],a=R(0,P.length-len);s=P.slice(a,a+len)}
       else if(t==="add2"){const a=R(5,40),d=R(6,15);F(i=>a+i*d)}
       else if(t==="sub"){const a=R(50,95),d=R(3,9);F(i=>a-i*d)}
       else if(t==="dbl"){const a=R(1,5);F(i=>a*2**i)}
@@ -372,8 +411,8 @@ nextnumber:{name:"Number Pattern",skill:"Logic",how:"Find the rule behind the nu
       else if(t==="dblm"){s=[R(2,5)];while(s.length<len)s.push(s[s.length-1]*2-1)}
       else if(t==="sqp"){const a=R(1,4),k=pick([1,-1,2]);F(i=>(a+i)**2+k)}
       else{s=[R(2,8)];while(s.length<len)s.push(s[s.length-1]+2**(s.length-1))}
-      return {s,miss:L<4?s.length-1:R(1,s.length-1)}};
-    const make=()=>{let g;do g=gen();while(g.s.join()===last);last=g.s.join();const {s,miss}=g,ans=s[miss],d=Math.abs(s[1]-s[0])||3;
+      return {s,miss:L<2?R(2,s.length-1):R(1,s.length-1)}};
+    const make=()=>{let g,n=0;do g=gen();while(had.has(g.s.join())&&n++<40);had.add(g.s.join());const {s,miss}=g,ans=s[miss],d=Math.abs(s[1]-s[0])||3;
       const opts=new Set([ans]);for(const v of shuffle([ans+1,ans-1,ans+2,ans-2,ans+d,ans-d,ans+2*d]))if(opts.size<4&&v>=0&&v!==ans)opts.add(v);
       api.body.innerHTML=`<div class="mg-q mg-seq"><small>What's missing?</small><div>${s.map((v,i)=>i===miss?`<b class="mg-miss">?</b>`:`<span>${v}</span>`).join("")}</div></div><div class="mg-opts">${[...opts].sort((a,b)=>a-b).map(o=>`<button class="mg-b" data-v="${o}">${o}</button>`).join("")}</div>`;
       const bs=api.body.querySelectorAll(".mg-b");bs.forEach(b=>b.onclick=()=>{if(+b.dataset.v===ans){bs.forEach(x=>x.onclick=null);b.classList.add("ok");api.score(1);setTimeout(()=>api.alive()&&make(),250)}else{b.classList.add("no");api.penalty(5);api.shake()}})};
@@ -381,8 +420,9 @@ nextnumber:{name:"Number Pattern",skill:"Logic",how:"Find the rule behind the nu
 
 wordsort:{name:"Word Sort",skill:"Words",how:"A word appears. Tap the group it belongs to as fast as you can. A wrong tap costs 3 seconds.",
   time:45,target:L=>[10,10,11,12,12][L-1],
-  setup(api){const L=api.level,cats=WS[L-1];let order=cats.map((_,i)=>i),last="";
-    const make=()=>{const ci=R(0,cats.length-1);let w;do w=pick(cats[ci][1]);while(w===last);last=w;if(L===5)order=shuffle(order);
+  setup(api){const L=api.level,cats=WS[L-1];let order=cats.map((_,i)=>i);
+    const words=deck("wordsort"+L,[].concat(...cats.map((c,ci)=>c[1].map(w=>ci+"|"+w))),api.seeded);
+    const make=()=>{const [c,w]=words.next().split("|"),ci=+c;if(L===5)order=shuffle(order);
       api.body.innerHTML=`<p class="mg-hint">Where does this word belong?</p><div class="mg-q"><small>Word</small>${w}</div><div class="mg-opts ${cats.length%3===0?"c3":""}">${order.map(i=>`<button class="mg-b sm" data-i="${i}">${cats[i][0]}</button>`).join("")}</div>`;
       api.body.querySelectorAll(".mg-b").forEach(b=>b.onclick=()=>{if(+b.dataset.i===ci){api.score(1);make()}else{b.classList.add("no");api.penalty(3);api.shake()}})};
     make()}}
@@ -395,7 +435,7 @@ function play(el,o){css();const G=GAMES[o.game],L=Math.max(1,Math.min(5,o.level|
   el.innerHTML=`<div class="mg" style="--x:${color}"><div class="mg-top"><div class="ttl">${G.name}${lv}<small>${esc(o.team?o.team+" · ":"")}Level ${L} of 5 · ${G.skill}</small></div>
     <span class="mg-chip" id="mgS">0 / ${target}</span>${lives?`<span class="mg-chip mg-lives" id="mgL">${"♥".repeat(lives)}</span>`:""}<span class="mg-clock" id="mgT">${left}</span></div><div class="mg-body" id="mgB"></div></div>`;
   const root=el.querySelector(".mg"),body=el.querySelector("#mgB"),$=s=>el.querySelector(s);
-  const api={level:L,body,alive:()=>!over,
+  const api={level:L,body,seeded:!!o.seeded,alive:()=>!over,
     size:()=>({w:body.clientWidth||360,h:body.clientHeight||500}),
     fit(cols,rows,reserve=0,max=110,gap=8){const z=api.size();return Math.max(24,Math.floor(Math.min(max,(z.w-(cols-1)*gap)/cols,(z.h-reserve-(rows-1)*gap)/rows)))},
     score(n){score+=n;$("#mgS").textContent=`${score} / ${target}`;if(score>=target)finish()},
@@ -414,6 +454,6 @@ function play(el,o){css();const G=GAMES[o.game],L=Math.max(1,Math.min(5,o.level|
   $("#mgGo").onclick=()=>{let c=3;const cd=()=>{if(over)return;if(c===0){go();return}body.innerHTML=`<div class="mg-cd">${c--}</div>`;setTimeout(cd,650)};cd()};
   return {stop(){over=true;clearInterval(timer)}}}
 
-window.MindGames={list:Object.keys(GAMES).map(id=>({id,name:GAMES[id].name,skill:GAMES[id].skill,how:GAMES[id].how})),play,
+window.MindGames={list:Object.keys(GAMES).map(id=>({id,name:GAMES[id].name,skill:GAMES[id].skill,how:GAMES[id].how})),play,deck,
   liquidPuzzle,liquidSolve:lqSolve}; // the last two are for testing that every Liquid Lab puzzle can be solved
 })();
