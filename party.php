@@ -409,7 +409,7 @@ function party_begin(string $game, array &$st): void {
     $st['roles'] = ww_roles($ids); $st['alive'] = $ids; $st['phase'] = 'night'; $st['round'] = 1; $st['acts'] = []; $st['votes'] = []; $st['news'] = null; $st['seen'] = []; $st['out'] = null; $st['winner'] = null;
   }
   if ($game === 'spyfall') {
-    $locs = array_keys(SPY_LOCS); $st['loc'] = $locs[random_int(0, count($locs) - 1)];
+    $st['loc'] = party_pick('spyfall', array_keys(SPY_LOCS), 1)[0];
     $st['spy'] = $ids[random_int(0, count($ids) - 1)]; $roles = SPY_LOCS[$st['loc']]; shuffle($roles); $st['roles'] = [];
     foreach ($ids as $k => $id) $st['roles'][$id] = $id === $st['spy'] ? 'Spy' : $roles[$k % count($roles)];
     $st['first'] = $ids[random_int(0, count($ids) - 1)]; $st['phase'] = 'talk'; $st['at'] = $go; $st['votes'] = []; $st['how'] = null; $st['guess'] = null; $st['winner'] = null;
@@ -420,7 +420,7 @@ function party_begin(string $game, array &$st): void {
     $st['spy'] = ['r' => $sh[0], 'b' => $sh[1]];
     $first = random_int(0, 1) ? 'r' : 'b'; $second = $first === 'r' ? 'b' : 'r';
     $key = array_merge(array_fill(0, 9, $first), array_fill(0, 8, $second), array_fill(0, 7, 'n'), ['a']); shuffle($key);
-    $st['words'] = party_pick(array_values(array_unique(CN_WORDS)), 25); $st['key'] = $key; $st['open'] = array_fill(0, 25, false);
+    $st['words'] = party_pick('codenames', array_values(array_unique(CN_WORDS)), 25); $st['key'] = $key; $st['open'] = array_fill(0, 25, false);
     $st['turn'] = $first; $st['phase'] = 'clue'; $st['clue'] = null; $st['left'] = 0; $st['winner'] = null; $st['log'] = [];
   }
   if ($game === 'likely') {
