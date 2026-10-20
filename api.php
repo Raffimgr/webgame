@@ -284,7 +284,7 @@ function lobby_finish(array &$r): void {
   $r['status'] = 'done';
   $l = $r['state']['lobby'] ?? null;
   $f = $r['state']['final'] ?? [];
-  if (!$l || empty($l['score']) || !empty($l['event_id'])) return;
+  if (!$l || !empty($l['event_id'])) return; // "Count for the scoreboard" off: still logged, as a hidden practice game
   $rows = array_values(array_filter($f, fn($x) => !empty($x['place'])));
   if (count($rows) < 2 || count(array_unique(array_column($rows, 'place'))) < 2) return; // nobody won anything (e.g. poker ended before a hand finished)
   $note = $r['game'] === 'trivia' ? 'Played together on phones. Score = seconds left on right answers.' : ($r['game'] === 'likely' ? 'Played together on phones. Score = times you picked the same person as most of the group.' : null);
@@ -292,6 +292,7 @@ function lobby_finish(array &$r): void {
   db()->prepare('INSERT INTO events(game,category,mode,played_at,status,note,created_by,score_dir) VALUES(?,?,?,?,?,?,?,?)')
     ->execute([$r['game'] === 'race' ? $r['state']['name'] : GAME_LABEL[$r['game']], GAME_CAT[$r['game']], 'solo', $l['when'] ?: date('Y-m-d\TH:i'), 'done', $note, $r['host'], 'high']);
   $eid = (int)db()->lastInsertId();
+  if (empty($l['score'])) db()->prepare('UPDATE events SET hidden=1 WHERE id=?')->execute([$eid]);
   save_results($eid, 'solo', array_map(fn($x) => ['player_id' => $x['id'], 'place' => $x['place'], 'score' => $x['score'] ?? ($x['chips'] ?? null), 'bonus' => $x['bonus'] ?? 0], $rows));
   $r['state']['lobby']['event_id'] = $eid;
 }
