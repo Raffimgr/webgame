@@ -70,6 +70,11 @@ function db(): PDO {
   if (!in_array('hidden', $ecols, true)) $pdo->exec('ALTER TABLE events ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0');
   if (!in_array('deleted_at', $ecols, true)) $pdo->exec('ALTER TABLE events ADD COLUMN deleted_at TEXT');
   if (!in_array('fee', $cols, true)) $pdo->exec('ALTER TABLE results ADD COLUMN fee INTEGER NOT NULL DEFAULT 0'); // coins paid during the game (Road to the Crown player swaps)
+  $pcols = array_column($pdo->query('PRAGMA table_info(players)')->fetchAll(), 'name');
+  if (!in_array('screen', $pcols, true)) { // a watch-only login for the iPad or a laptop: it shows live games and the scoreboard, never plays
+    $pdo->exec('ALTER TABLE players ADD COLUMN screen INTEGER NOT NULL DEFAULT 0');
+    $pdo->exec("INSERT OR IGNORE INTO players(id,name,short,color,is_admin,sort,screen) VALUES('screen','Score screen','TV','#5ab0ff',0,99,1)");
+  }
   return $pdo;
 }
 
@@ -153,11 +158,14 @@ const SOON = 'Coming soon: this game isn\'t open for you yet.';
 
 function me(): ?array {
   if (empty($_SESSION['pid'])) return null;
-  $s = db()->prepare('SELECT id,name,short,color,avatar,is_admin FROM players WHERE id=? AND active=1'); $s->execute([$_SESSION['pid']]);
+  $s = db()->prepare('SELECT id,name,short,color,avatar,is_admin,screen FROM players WHERE id=? AND active=1'); $s->execute([$_SESSION['pid']]);
   $r = $s->fetch();
+  if ($r) $r['screen'] = (int)$r['screen'];
   return $r ?: null;
 }
 function need_login(): array { $m = me(); if (!$m) fail('Please log in.', 401); return $m; }
+/* Someone who plays: the Score screen only watches. */
+function need_player(): array { $m = need_login(); if ($m['screen']) fail('The Score screen only watches. Log in as a member to play.', 403); return $m; }
 function need_admin(): array { $m = need_login(); if (!(int)$m['is_admin']) fail('Only the admin can do that.', 403); return $m; }
 
 function clean_color(string $c): string { return preg_match('/^#[0-9a-fA-F]{6}$/', $c) ? strtolower($c) : '#9aa3b3'; }
@@ -169,10 +177,12 @@ function clean_avatar($a): ?string {
   return $a;
 }
 
-function players_public(bool $all = false): array {
-  $q = 'SELECT id,name,short,color,avatar,is_admin,active,(pass_hash IS NOT NULL) AS has_pass FROM players' . ($all ? '' : ' WHERE active=1') . ' ORDER BY sort,name';
+/* The members. The Score screen (screen=1) is left out unless $all (the admin's Members list) or $screens (only screens, for the login page). */
+function players_public(bool $all = false, bool $screens = false): array {
+  $q = 'SELECT id,name,short,color,avatar,is_admin,active,screen,(pass_hash IS NOT NULL) AS has_pass FROM players'
+    . ($all ? '' : ' WHERE active=1 AND screen=' . ($screens ? 1 : 0)) . ' ORDER BY sort,name';
   $rows = db()->query($q)->fetchAll();
-  foreach ($rows as &$r) { $r['is_admin'] = (int)$r['is_admin']; $r['active'] = (int)$r['active']; $r['has_pass'] = (int)$r['has_pass']; }
+  foreach ($rows as &$r) { $r['is_admin'] = (int)$r['is_admin']; $r['active'] = (int)$r['active']; $r['screen'] = (int)$r['screen']; $r['has_pass'] = (int)$r['has_pass']; }
   return $rows;
 }
 
@@ -188,7 +198,7 @@ function event_full(int $id): ?array {
 
 /* Places from the admin's list. Solo: one row per player. Teams: the team gets the place and every member gets its coins. */
 function save_results(int $eid, string $mode, array $rows): void {
-  $ok = array_column(players_public(true), 'id');
+  $ok = array_column(array_filter(players_public(true), fn($p) => !$p['screen']), 'id');
   $old = db()->prepare('SELECT player_id,bonus,fee FROM results WHERE event_id=?'); $old->execute([$eid]);
   $oldRows = $old->fetchAll();
   $kept = array_column($oldRows, 'bonus', 'player_id'); // an edit in the admin page keeps the seconds-left bonus
@@ -351,7 +361,7 @@ switch ($a) {
 case 'state': // who am I, who can log in, is the admin password set yet
   front_auto();
   $adminSet = (int)db()->query('SELECT COUNT(*) FROM players WHERE is_admin=1 AND pass_hash IS NOT NULL')->fetchColumn() > 0;
-  out(['me' => me(), 'players' => players_public(), 'admin_ready' => $adminSet, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'access' => access_conf(), 'crown' => crown_conf()]);
+  out(['me' => me(), 'players' => players_public(), 'screens' => players_public(false, true), 'admin_ready' => $adminSet, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'access' => access_conf(), 'crown' => crown_conf()]);
 
 case 'players':
   front_auto();
@@ -434,6 +444,8 @@ case 'player_save':
   if (!empty($b['password']) && mb_strlen((string)$b['password']) < 4) fail('Use at least 4 characters.');
   $isAdmin = !empty($b['is_admin']) ? 1 : 0; $active = array_key_exists('active', $b) ? (!empty($b['active']) ? 1 : 0) : 1;
   if ($id === $adm['id']) { $isAdmin = 1; $active = 1; } // the admin cannot lock himself out
+  $scr = db()->prepare('SELECT screen FROM players WHERE id=?'); $scr->execute([$id]);
+  if ((int)$scr->fetchColumn()) $isAdmin = 0; // the Score screen only watches
   db()->prepare('UPDATE players SET name=?,short=?,color=?,is_admin=?,active=? WHERE id=?')
     ->execute([$name, $short, clean_color((string)($b['color'] ?? '')), $isAdmin, $active, $id]);
   if (array_key_exists('avatar', $b)) db()->prepare('UPDATE players SET avatar=? WHERE id=?')->execute([clean_avatar($b['avatar']), $id]);
@@ -589,7 +601,7 @@ case 'invites': // games someone asked me to join (the home page shows them)
 
 case 'room_create':
   if (!$post) fail('Use POST.');
-  $m = need_login(); $b = body();
+  $m = need_player(); $b = body();
   $game = (string)($b['game'] ?? 'poker');
   if ($game !== 'poker' && !in_array($game, PARTY_GAMES, true)) fail('Unknown game.');
   $gid = room_gid($game, (string)($b['mind'] ?? ''));
@@ -634,7 +646,7 @@ case 'room_state': // cheap when nothing changed: {same:1}
 case 'room_join':
 case 'room_leave':
   if (!$post) fail('Use POST.');
-  $m = need_login(); $id = (int)(body()['id'] ?? 0);
+  $m = need_player(); $id = (int)(body()['id'] ?? 0);
   room_out(room_change($id, function (&$r) use ($m, $a) {
     if (!in_array($r['status'], ['lobby', 'playing'], true)) throw new RuntimeException('This game is over.');
     if ($a === 'room_join' && !can_play($m, room_gid($r['game'], (string)($r['state']['mind'] ?? '')))) throw new RuntimeException(SOON);
@@ -650,7 +662,7 @@ case 'room_leave':
 
 case 'room_ready': // in the lobby: tap Ready (or undo it). When everyone invited is in and ready, the game starts by itself.
   if (!$post) fail('Use POST.');
-  $m = need_login(); $b = body(); $id = (int)($b['id'] ?? 0);
+  $m = need_player(); $b = body(); $id = (int)($b['id'] ?? 0);
   room_out(room_change($id, function (&$r) use ($m, $b) {
     if ($r['status'] !== 'lobby') throw new RuntimeException('This game has already started.');
     if (!in_array($m['id'], lobby_ids($r), true)) throw new RuntimeException('Join the game first.');
@@ -660,7 +672,7 @@ case 'room_ready': // in the lobby: tap Ready (or undo it). When everyone invite
 
 case 'room_start': // host: start now with the players who are ready (the others watch)
   if (!$post) fail('Use POST.');
-  $m = need_login(); $id = (int)(body()['id'] ?? 0);
+  $m = need_player(); $id = (int)(body()['id'] ?? 0);
   room_out(room_change($id, function (&$r) use ($m) {
     room_need_host($r, $m);
     if ($r['status'] !== 'lobby') throw new RuntimeException('This game has already started.');
@@ -670,7 +682,7 @@ case 'room_start': // host: start now with the players who are ready (the others
 
 case 'room_move': // a move in a play-together game (not poker)
   if (!$post) fail('Use POST.');
-  $m = need_login(); $b = body(); $id = (int)($b['id'] ?? 0);
+  $m = need_player(); $b = body(); $id = (int)($b['id'] ?? 0);
   room_out(room_change($id, function (&$r) use ($m, $b) {
     if ($r['game'] === 'poker' || $r['status'] !== 'playing') throw new RuntimeException('This game is not running.');
     if (party_move($r['game'], $r['state'], $m, $r['host'] === $m['id'], $b)) lobby_finish($r);
@@ -678,7 +690,7 @@ case 'room_move': // a move in a play-together game (not poker)
 
 case 'room_act':
   if (!$post) fail('Use POST.');
-  $m = need_login(); $b = body(); $id = (int)($b['id'] ?? 0);
+  $m = need_player(); $b = body(); $id = (int)($b['id'] ?? 0);
   $act = (string)($b['act'] ?? '');
   if (!in_array($act, ['fold', 'check', 'call', 'raise', 'allin'], true)) fail('Unknown action.');
   $amt = null;
@@ -696,7 +708,7 @@ case 'room_act':
 
 case 'room_skip': // host: the player to act has been away too long. Check if free, otherwise fold.
   if (!$post) fail('Use POST.');
-  $m = need_login(); $b = body(); $id = (int)($b['id'] ?? 0);
+  $m = need_player(); $b = body(); $id = (int)($b['id'] ?? 0);
   room_out(room_change($id, function (&$r) use ($m) {
     room_need_host($r, $m);
     $h = &$r['state']['hand'];
@@ -709,7 +721,7 @@ case 'room_skip': // host: the player to act has been away too long. Check if fr
 
 case 'room_next':
   if (!$post) fail('Use POST.');
-  $m = need_login(); $b = body(); $id = (int)($b['id'] ?? 0);
+  $m = need_player(); $b = body(); $id = (int)($b['id'] ?? 0);
   room_out(room_change($id, function (&$r) use ($m) {
     room_need_host($r, $m);
     if ($r['game'] !== 'poker' || $r['status'] !== 'playing' || !$r['state']['hand']['done']) throw new RuntimeException('Finish this hand first.');
@@ -730,7 +742,7 @@ case 'room_close': // host (or the admin) ends the game: poker shows the final r
 
 case 'room_again': // host: the same game again with the same players; everyone's phone follows to the new lobby
   if (!$post) fail('Use POST.');
-  $m = need_login(); $id = (int)(body()['id'] ?? 0);
+  $m = need_player(); $id = (int)(body()['id'] ?? 0);
   $old = room_load($id);
   if ($old['host'] !== $m['id']) fail('Only the host can do that.');
   if ($old['status'] !== 'done') fail('Finish this game first.');

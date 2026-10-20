@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Score Screen</title>
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><link rel="icon" type="image/png" href="icons/icon-192.png"><link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="Shenandoah Cabin"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* The Score screen: a watch-only page for an iPad or a laptop left on in the cabin.
+   Auto mode follows whatever is happening: a live game fills the screen; otherwise it switches between the scoreboard and the trip photos.
+   A finished game pops up the winners. The chips on top pin one view. */
+:root{color-scheme:dark;--bg:#1b1d22;--fg:#eef1f6;--mut:#9aa3b3;--dim:#6b7383;--ink:#15181e;--sheet:#2a2e35;--acc:#2ec4b6;--gold:#ffd23f;
+  --raise:linear-gradient(145deg,#30343c,#25282e);--raise-sh:-5px -5px 12px rgba(255,255,255,.035),7px 9px 18px rgba(0,0,0,.55);
+  --well:#202328;--well-sh:inset 4px 4px 10px rgba(0,0,0,.55),inset -3px -3px 8px rgba(255,255,255,.035);
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--play:"Fredoka","Inter",system-ui,sans-serif}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased;overflow:hidden;display:flex;flex-direction:column}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+[hidden]{display:none!important}
+.hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px))}
+.brand{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.brand b{font:600 22px var(--play);white-space:nowrap}
+.brand small{display:block;color:var(--mut);font-size:12.5px;line-height:1.2}
+.clock{font:600 30px var(--play);font-variant-numeric:tabular-nums;color:var(--gold);white-space:nowrap}
+.seg{display:flex;gap:4px;padding:5px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh)}
+.seg button{padding:8px 13px;border-radius:12px;font-weight:700;font-size:13.5px;color:var(--mut);white-space:nowrap}
+.seg button.on{background:var(--acc);color:var(--ink)}
+.seg button .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff5d5d;margin-left:6px;vertical-align:1px;animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.25}}
+.ic{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--raise);box-shadow:var(--raise-sh);font-size:17px;color:var(--mut)}
+.menu{position:absolute;right:16px;top:calc(62px + env(safe-area-inset-top,0px));z-index:30;background:var(--sheet);border-radius:18px;padding:8px;box-shadow:0 18px 40px rgba(0,0,0,.6);display:flex;flex-direction:column;min-width:200px}
+.menu button,.menu a{padding:11px 14px;border-radius:12px;text-align:left;color:var(--fg);text-decoration:none;font-weight:600;font-size:14px}
+.menu button:hover,.menu a:hover{background:#33383f}
+main{flex:1;min-height:0;position:relative;padding:0 max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.view{position:absolute;inset:0 max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:fade .5s}
+@keyframes fade{from{opacity:0}}
+.panel{background:var(--raise);box-shadow:var(--raise-sh);border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0;min-height:0}
+.panel h2{margin:0;font:600 20px var(--play);display:flex;align-items:baseline;gap:10px}
+.panel h2 small{font:500 13px var(--font);color:var(--mut)}
+/* scoreboard */
+#vBoard{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px}
+#vBoard .col{display:flex;flex-direction:column;gap:16px;min-height:0}
+.podium{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:10px;align-items:end;text-align:center;padding-top:6px}
+.pod{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.pod b{font:600 19px var(--play);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pod .big{font:700 30px var(--play);color:var(--gold);line-height:1}
+.pod .sub{color:var(--mut);font-size:12.5px}
+.pod .stand{width:100%;border-radius:14px 14px 4px 4px;background:var(--well);box-shadow:var(--well-sh);display:grid;place-items:center;font:700 22px var(--play);color:var(--dim)}
+.lb{display:flex;flex-direction:column;gap:6px;overflow:auto;min-height:0;flex:1}
+.lr{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh)}
+.lr .rk{width:26px;text-align:center;font:700 17px var(--play);color:var(--mut)}
+.lr .nm{flex:1;min-width:0;font-weight:650;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lr .nm small{display:block;color:var(--mut);font-weight:500;font-size:12.5px}
+.lr .num{text-align:right;font:700 20px var(--play);min-width:54px}
+.lr .num small{display:block;font:500 11.5px var(--font);color:var(--mut)}
+.lr .num.g{color:var(--gold)}
+.lr.zero{opacity:.55}
+.games{display:flex;flex-direction:column;gap:8px;overflow:auto;min-height:0;flex:1}
+.gm{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh)}
+.gm .t{flex:1;min-width:0}
+.gm .t b{display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gm .t small{color:var(--mut);font-size:12.5px}
+.gm .w{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--gold);white-space:nowrap}
+.empty{color:var(--mut);text-align:center;padding:18px 6px;margin:0}
+.lob{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;background:color-mix(in srgb,var(--acc) 12%,var(--well));box-shadow:var(--well-sh)}
+.lob b{font-weight:700}
+.lob .ppl{display:flex;flex-wrap:wrap;gap:6px}
+.lob .ppl span{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 3px;border-radius:99px;background:#2b2f36;font-size:13px;font-weight:600}
+.lob .ppl span.ok{box-shadow:0 0 0 2px #7be08a}
+.lob .ppl span.no{opacity:.5}
+/* live */
+#vLive{display:flex;flex-direction:column;gap:10px}
+.lchips{display:flex;gap:8px;flex-wrap:wrap}
+.lchips button{padding:8px 14px;border-radius:99px;background:var(--raise);box-shadow:var(--raise-sh);font-weight:700;font-size:13.5px;color:var(--mut)}
+.lchips button.on{color:var(--ink);background:var(--gold)}
+.frame{flex:1;min-height:0;border-radius:22px;overflow:hidden;background:#15181e;box-shadow:var(--well-sh);position:relative}
+.frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.idle{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;color:var(--mut)}
+.idle b{font:600 26px var(--play);color:var(--fg)}
+/* photos */
+#vPhotos{border-radius:22px;overflow:hidden;background:#000}
+#vPhotos img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity 1.2s}
+#vPhotos img.bg{object-fit:cover;filter:blur(30px) brightness(.45);transform:scale(1.15)}
+#vPhotos img.on{opacity:1}
+#vPhotos img.fg.on{animation:kb 12s ease-out forwards}
+@keyframes kb{from{transform:scale(1)}to{transform:scale(1.06)}}
+.cap{position:absolute;left:16px;right:16px;bottom:16px;display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:18px;background:rgba(21,24,30,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.cap span{flex:1;min-width:0}
+.cap b{display:block}
+.cap small{color:var(--mut)}
+/* bottom strip: what's on right now, shown over the scoreboard and photos */
+.now{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(22px + env(safe-area-inset-bottom,0px));z-index:5;display:flex;align-items:center;gap:10px;padding:10px 18px;border-radius:99px;background:var(--gold);color:var(--ink);font-weight:800;box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:calc(100% - 32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* winners pop-up */
+.win{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:rgba(15,17,21,.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow:hidden}
+.win .card{position:relative;z-index:2;width:min(620px,100%);background:var(--sheet);border-radius:30px;padding:26px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.6);animation:pop .5s cubic-bezier(.2,1.4,.4,1)}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+.win h2{margin:0;font:700 34px var(--play);color:var(--gold);line-height:1.1}
+.win .g{color:var(--mut);font-weight:600}
+.win .row{display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+.win .p{display:flex;flex-direction:column;align-items:center;gap:6px;font:600 18px var(--play)}
+.win .p small{font:700 15px var(--font);color:var(--gold)}
+.win .rest{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;color:var(--mut);font-size:14px}
+.cf{position:absolute;top:-20px;width:10px;height:16px;border-radius:3px;z-index:1;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+@media (max-width:820px),(orientation:portrait){
+  body{overflow:auto}
+  main{flex:none}
+  .view{position:relative;inset:auto}
+  #vBoard{grid-template-columns:minmax(0,1fr)}
+  #vLive{height:calc(100vh - 150px);height:calc(100dvh - 150px)}
+  #vPhotos{height:70vh;position:relative}
+  .clock{font-size:24px}
+  .brand b{font-size:19px}
+}
+@media (max-width:560px){.hd .seg{order:3;width:100%}.seg button{flex:1;padding:8px 4px}}
+</style>
+</head>
+<body>
+<header class="hd">
+  <div class="brand"><span style="font-size:28px">📺</span><div><b>Score screen</b><small id="sub">Decision Makers +3 · Shenandoah Trip</small></div></div>
+  <div class="seg" id="seg">
+    <button data-v="auto" class="on">Auto</button><button data-v="live">Live</button><button data-v="board">Scoreboard</button><button data-v="photos">Photos</button>
+  </div>
+  <span class="clock" id="clock"></span>
+  <button class="ic" id="more" aria-label="More">⋯</button>
+</header>
+<div class="menu" id="menu" hidden>
+  <button id="fs">⛶ Full screen</button>
+  <a href="scores.html" target="_blank" rel="noopener">📊 Open the full scoreboard</a>
+  <button id="out">↩ Log out</button>
+</div>
+<main>
+  <section class="view" id="vLive" hidden></section>
+  <section class="view" id="vBoard" hidden>
+    <div class="col">
+      <div class="panel"><h2>🏆 Top 3 <small id="perLbl">Whole trip · average coins per game</small></h2><div class="podium" id="podium"></div></div>
+      <div class="panel" style="flex:1"><h2>Everyone <small>coins per game · total</small></h2><div class="lb" id="lb"></div></div>
+    </div>
+    <div class="col">
+      <div class="panel" id="lobPanel" hidden><h2>⏳ Waiting to start</h2><div id="lobs" style="display:flex;flex-direction:column;gap:8px"></div></div>
+      <div class="panel" style="flex:1"><h2>Latest games <small id="today"></small></h2><div class="games" id="games"></div></div>
+    </div>
+  </section>
+  <section class="view" id="vPhotos" hidden></section>
+  <div class="now" id="now" hidden></div>
+</main>
+
+<script src="rg.js?v=9"></script>
+<script>
+const $=s=>document.querySelector(s);
+const {api,av,esc}=RG;
+let me=null,P={},events=[],rooms=[],photos=[],media="",mode="auto",view="",liveId=0,keep={},seen=null,lastTurn=0,photoAt=0,photoI=-1;
+const BOARD_S=45,PHOTO_S=30,SLIDE_S=9; // auto mode: seconds on the scoreboard, then on photos; seconds per photo
+
+const pname=id=>(P[id]||{name:id}).name;
+const pl=(n,w)=>n+" "+w+(n===1?"":"s");
+const today=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
+const ago=t=>{const s=Math.max(0,Date.now()/1000-t);return s<3600?Math.max(1,Math.round(s/60))+" min ago":s<86400?Math.round(s/3600)+" h ago":Math.round(s/86400)+" d ago"};
+const frameUrl=r=>r.game==="crown"?`map.html?watch=1&room=${r.id}`:r.game==="poker"?`online.html?room=${r.id}`:`play.html?room=${r.id}`;
+
+/* ---------- clock ---------- */
+function tick(){$("#clock").textContent=new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})}
+setInterval(tick,5000);tick();
+
+/* ---------- which view ---------- */
+function liveRooms(){ // playing now, plus a game that just ended (kept a little so its final screen shows)
+  const now=Date.now(),list=rooms.filter(r=>r.status==="playing");
+  Object.entries(keep).forEach(([id,k])=>{if(k.until>now&&!list.some(r=>r.id===+id))list.push(k.r);else if(k.until<=now)delete keep[id]});
+  return list.sort((a,b)=>(b.game==="crown")-(a.game==="crown")||b.id-a.id);
+}
+function pick(){
+  let v=mode;
+  if(mode==="auto"){
+    if(liveRooms().length)v="live";
+    else{
+      const cyc=photos.length?BOARD_S+PHOTO_S:BOARD_S,t=(Date.now()/1000-lastTurn)%cyc;
+      v=t<BOARD_S?"board":"photos";
+    }
+  }
+  if(v!==view){view=v;["Live","Board","Photos"].forEach(n=>$("#v"+n).hidden=v!==n.toLowerCase());}
+  if(v==="live")drawLive();
+  if(v==="photos")slide();
+  drawNow();
+}
+$("#seg").onclick=e=>{const b=e.target.closest("button");if(!b)return;mode=b.dataset.v;lastTurn=Date.now()/1000;
+  $("#seg").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));pick()};
+
+/* ---------- live games ---------- */
+function drawLive(){
+  const list=liveRooms(),box=$("#vLive");
+  if(!list.length){liveId=0;box.innerHTML=`<div class="idle"><span style="font-size:54px">🎲</span><b>No game is being played right now</b>
+      <span>When someone starts a game on their phone, it shows up here by itself.</span>${lobbyHTML()}</div>`;return}
+  if(!list.some(r=>r.id===liveId))liveId=list[0].id;
+  const r=list.find(x=>x.id===liveId),chips=list.length>1?`<div class="lchips">${list.map(x=>`<button data-id="${x.id}" class="${x.id===liveId?"on":""}">${esc(x.label)}</button>`).join("")}</div>`:"";
+  const fr=box.querySelector("iframe");
+  const page=frameUrl(r).split("?")[0];
+  let lost=false;try{lost=!fr||!fr.contentWindow.location.pathname.endsWith(page)}catch(e){} // a tap inside it left the game page: bring it back
+  if(fr&&+fr.dataset.id===liveId&&!lost){const c=box.querySelector(".lchips");if(c)c.outerHTML=chips||"";else if(chips)box.insertAdjacentHTML("afterbegin",chips);return}
+  box.innerHTML=`${chips}<div class="frame"><iframe data-id="${r.id}" src="${frameUrl(r)}" title="${esc(r.label)}"></iframe></div>`;
+}
+$("#vLive").addEventListener("click",e=>{const b=e.target.closest(".lchips button");if(b){liveId=+b.dataset.id;drawLive()}});
+
+/* ---------- lobbies (waiting to start) ---------- */
+function lobbyHTML(){
+  const ls=rooms.filter(r=>r.status==="lobby");
+  return ls.map(r=>`<div class="lob" style="text-align:left;width:min(560px,100%)"><b>${esc(r.label)} <span style="color:var(--mut);font-weight:500">· ${r.ready.length} of ${r.invited.length} ready</span></b>
+    <div class="ppl">${r.invited.map(id=>`<span class="${r.ready.includes(id)?"ok":r.members.includes(id)?"":"no"}">${av(P[id]||{short:"?",color:"#9aa3b3"},22)}${esc(pname(id))}${r.ready.includes(id)?" ✓":""}</span>`).join("")}</div></div>`).join("");
+}
+function drawNow(){
+  const live=rooms.filter(r=>r.status==="playing"),ls=rooms.filter(r=>r.status==="lobby"),n=$("#now");
+  $("#seg [data-v=live]").innerHTML="Live"+(live.length?'<span class="dot"></span>':"");
+  const txt=view==="live"?"":live.length?`🎮 ${live.map(r=>r.label).join(" · ")} ${live.length>1?"are":"is"} on now`+(mode==="auto"?"":" · tap to watch")
+    :ls.length&&view==="photos"?`⏳ ${ls[0].label}: ${ls[0].ready.length} of ${ls[0].invited.length} ready`:"";
+  n.hidden=!txt;n.textContent=txt;
+  $("#lobPanel").hidden=!ls.length;$("#lobs").innerHTML=lobbyHTML();
+}
+$("#now").onclick=()=>{if(rooms.some(r=>r.status==="playing")){$("#seg [data-v=live]").click()}};
+
+/* ---------- scoreboard ---------- */
+function drawBoard(){
+  const list=events.filter(e=>e.status==="done"&&!e.hidden&&!e.deleted_at),m={};
+  const row=id=>m[id]||(m[id]={id,coins:0,games:0,wins:0});
+  Object.values(P).forEach(p=>{if(+p.active!==0)row(p.id)}); // everyone on the trip, plus hidden members who played
+  list.forEach(e=>e.results.forEach(r=>{if(!P[r.player_id])return;const s=row(r.player_id);s.coins+=r.coins;s.games++;if(r.place===1)s.wins++}));
+  const st=Object.values(m).map(s=>({...s,avg:s.games?s.coins/s.games:0})).sort((a,b)=>(!a.games)-(!b.games)||b.avg-a.avg||b.coins-a.coins||b.wins-a.wins);
+  const f1=n=>Math.round(n*10)/10;
+  const top=st.filter(s=>s.games).slice(0,3),order=[top[1],top[0],top[2]],hs=[70,104,52];
+  $("#podium").innerHTML=top.length?order.map((s,i)=>{if(!s)return "<div></div>";const p=P[s.id],first=i===1,sz=first?96:72;
+    return `<div class="pod">${first?`<svg width="40" height="26" viewBox="0 0 34 22"><path d="M3 20 L6 5 L12 12 L17 2 L22 12 L28 5 L31 20Z" fill="#ffd23f" stroke="#a37c00" stroke-width="1.5" stroke-linejoin="round"/></svg>`:""}
+      ${av(p,sz)}<b>${esc(p.name)}</b><span class="big">${f1(s.avg)}</span><span class="sub">${s.coins} coins · ${pl(s.wins,"win")}</span>
+      <div class="stand" style="height:${hs[i]}px">${[2,1,3][i]}</div></div>`}).join("")
+    :`<p class="empty" style="grid-column:1/-1">No games on the scoreboard yet. The first winner shows up here.</p>`;
+  $("#lb").innerHTML=st.map((s,i)=>{const p=P[s.id];return `<div class="lr${s.games?"":" zero"}"><span class="rk">${s.games?i+1:"·"}</span>${av(p,38)}
+    <span class="nm">${esc(p.name)}<small>${s.games?pl(s.games,"game")+" · "+pl(s.wins,"win"):"No games yet"}</small></span>
+    <span class="num g">${f1(s.avg)}<small>per game</small></span><span class="num">${s.coins}<small>total</small></span></div>`}).join("");
+  const td=list.filter(e=>(e.played_at||"").slice(0,10)===today()).length;
+  $("#today").textContent=td?pl(td,"game")+" today":"";
+  $("#games").innerHTML=list.length?list.slice(0,12).map(e=>{const w=e.results.filter(r=>r.place===1);
+    return `<div class="gm"><div class="t"><b>${esc(e.game)}</b><small>${esc(RG.fmtDate(e.played_at))}</small></div>
+      <div class="w">${w.slice(0,3).map(r=>av(P[r.player_id]||{short:"?",color:"#9aa3b3"},30)).join("")}${w.length===1?esc(pname(w[0].player_id)):w.length?esc(w[0].team||pl(w.length,"winner")):""}${w.length?` <span>+${w[0].coins}</span>`:""}</div></div>`}).join("")
+    :`<p class="empty">Finished games show up here.</p>`;
+}
+
+/* ---------- winners pop-up when a game is saved ---------- */
+function celebrate(e){
+  const rs=e.results.filter(r=>r.place).sort((a,b)=>a.place-b.place),w=rs.filter(r=>r.place===1),rest=rs.filter(r=>r.place>1).slice(0,8);
+  if(!w.length)return;
+  const team=e.mode==="teams"&&w[0].team;
+  const d=document.createElement("div");d.className="win";
+  d.innerHTML=`<div class="card"><span style="font-size:46px">🏆</span><h2>${team?esc(team)+" wins!":w.length===1?esc(pname(w[0].player_id))+" wins!":"We have winners!"}</h2>
+    <span class="g">${esc(e.game)}</span>
+    <div class="row">${w.map(r=>`<div class="p">${av(P[r.player_id]||{short:"?",color:"#9aa3b3"},w.length>3?60:84)}${esc(pname(r.player_id))}<small>+${r.coins} coins</small></div>`).join("")}</div>
+    ${rest.length?`<div class="rest">${rest.map(r=>`<span>${RG.ordinal(r.place)} ${esc(pname(r.player_id))} · +${r.coins}</span>`).join("")}</div>`:""}</div>`;
+  const cols=["#ffd23f","#2ec4b6","#ff6b6b","#7be08a","#5ab0ff","#c58bff"];
+  for(let i=0;i<70;i++){const c=document.createElement("i");c.className="cf";c.style.cssText=`left:${Math.random()*100}%;background:${cols[i%cols.length]};animation-duration:${2.5+Math.random()*3}s;animation-delay:${Math.random()*1.5}s`;d.appendChild(c)}
+  d.onclick=()=>d.remove();document.body.appendChild(d);setTimeout(()=>d.remove(),12000);
+}
+
+/* ---------- photos from the Trip Feed ---------- */
+function slide(){
+  const box=$("#vPhotos");
+  if(!photos.length){box.innerHTML=`<div class="idle" style="height:100%"><span style="font-size:54px">📸</span><b>No photos yet</b><span>Photos shared in the Trip Feed show up here.</span></div>`;photoI=-1;return}
+  if(!box.querySelector(".fg")){box.innerHTML=`<img class="bg" alt=""><img class="bg" alt=""><img class="fg" alt=""><img class="fg" alt=""><div class="cap"></div>`;photoAt=0}
+  if(Date.now()-photoAt<SLIDE_S*1000)return;
+  photoAt=Date.now();photoI=(photoI+1)%photos.length;
+  const ph=photos[photoI],bgs=box.querySelectorAll(".bg"),fgs=box.querySelectorAll(".fg"),k=photoI%2,url=`social.php?f=${ph.id}`;
+  const img=new Image();img.onload=()=>{bgs[k].src=fgs[k].src=url;bgs[k].classList.add("on");fgs[k].classList.add("on");bgs[1-k].classList.remove("on");fgs[1-k].classList.remove("on");
+    box.querySelector(".cap").innerHTML=`${av(P[ph.by]||{short:"?",color:"#9aa3b3"},36)}<span><b>${esc(ph.cap||"Shared by "+pname(ph.by))}</b><small>${esc(pname(ph.by))} · ${ago(ph.at)}</small></span><small>${photoI+1} / ${photos.length}</small>`};
+  img.src=url;
+}
+async function loadPhotos(){
+  try{const r=await fetch("social.php",{credentials:"same-origin"});if(!r.ok)return;const j=await r.json();
+    photos=[];(j.posts||[]).forEach(p=>p.items.forEach(it=>{if(it.kind==="photo")photos.push({id:it.id,by:p.by,at:p.at,cap:p.cap})}));
+    for(let i=photos.length-1;i>0;i--){const j2=Math.floor(Math.random()*(i+1));[photos[i],photos[j2]]=[photos[j2],photos[i]]}
+  }catch(e){}
+}
+
+/* ---------- polling ---------- */
+async function loadRooms(){
+  try{const j=await api("room_list");const before=rooms;rooms=j.rooms;
+    before.filter(r=>r.status==="playing"&&!rooms.some(x=>x.id===r.id)).forEach(r=>keep[r.id]={r,until:Date.now()+20000}); // a game that just ended stays 20 s
+  }catch(e){}
+}
+async function loadEvents(){
+  try{const j=await api("events");j.players.forEach(p=>{if(!p.screen)P[p.id]=p});events=j.events;
+    const ids=new Set(events.map(e=>e.id));
+    if(seen){const fresh=events.filter(e=>!seen.has(e.id)&&e.status==="done"&&!e.hidden&&!e.deleted_at);if(fresh.length)celebrate(fresh[0])}
+    seen=ids;drawBoard();
+  }catch(e){}
+}
+
+/* keep the screen awake (works where the browser allows it) */
+let lock=null;
+async function wake(){try{if(navigator.wakeLock&&!lock&&!document.hidden){lock=await navigator.wakeLock.request("screen");lock.addEventListener("release",()=>lock=null)}}catch(e){}}
+document.addEventListener("visibilitychange",wake);
+
+$("#more").onclick=e=>{e.stopPropagation();$("#menu").hidden=!$("#menu").hidden};
+document.addEventListener("click",e=>{if(!e.target.closest("#menu"))$("#menu").hidden=true});
+if(!document.fullscreenEnabled)$("#fs").hidden=true;
+$("#fs").onclick=()=>{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>{})};
+$("#out").onclick=async()=>{try{await api("logout",{})}catch(e){}location.reload()};
+
+(async function start(){
+  try{const r=await RG.login();me=r.me;(r.state.players||[]).forEach(p=>P[p.id]=p)}catch(x){document.body.innerHTML=`<p class="empty" style="margin:auto">${esc(x.message)}</p>`;return}
+  if(!me.screen)$("#sub").textContent="Watching as "+me.name+" · Decision Makers +3";
+  lastTurn=Date.now()/1000;
+  await Promise.all([loadRooms(),loadEvents(),loadPhotos()]);
+  pick();wake();
+  setInterval(async()=>{await loadRooms();pick()},3000);
+  setInterval(loadEvents,10000);
+  setInterval(loadPhotos,180000);
+  setInterval(pick,1000);
+})();
+</script>
+</body>
+</html>

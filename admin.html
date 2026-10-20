@@ -126,17 +126,18 @@ html.rg-nav-on .sheet{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)
   <section id="t-set" hidden></section>
 </div>
 <script src="mind.js"></script>
-<script src="rg.js?v=8"></script>
+<script src="rg.js?v=9"></script>
 <script>
 (async function(){
 const {api,av,esc,toast}=RG;
 const COLORS=["#d4f09a","#f7b8d2","#aab7ff","#ffe08a","#ffbf99","#ff9fb8","#7ee8f0","#9df0c8","#d8c39a","#c9a7ff","#7be08a","#ff8f70"];
-let me,players=[],events=[],coins=[],access={nofeed:[],nochat:[],nogames:[],open:[]},crown={off:[],fee:5};
+let me,players=[],screens=[],events=[],coins=[],access={nofeed:[],nochat:[],nogames:[],open:[]},crown={off:[],fee:5};
 try{const r=await RG.login({admin:true});me=r.me;if(r.state.access)access=Object.assign(access,r.state.access);if(r.state.crown)crown=Object.assign(crown,r.state.crown)}catch(e){document.querySelector(".wrap").innerHTML=`<div class="panel"><h2>Can't reach the server</h2><p class="hint">${esc(e.message)} The admin page only works on the website itself.</p><a class="btn" href="games.html">Home</a></div>`;return}
 document.getElementById("who").innerHTML=`${av(me,22)} ${esc(me.name)} · <button id="out" style="color:#9aa3b3;font-weight:600">Log out</button>`;
 document.getElementById("out").onclick=async()=>{try{await api("logout",{})}catch(x){}location.reload()};
 
-async function load(){const r=await api("events");events=r.events;players=r.players;coins=r.coins}
+const setPlayers=l=>{players=l.filter(p=>!p.screen);screens=l.filter(p=>p.screen)}; // the Score screen only shows under Members (for its password), never in game lists
+async function load(){const r=await api("events");events=r.events;setPlayers(r.players);coins=r.coins}
 try{await load()}catch(e){document.querySelector(".wrap").innerHTML=`<div class="panel"><h2>Couldn't load the games</h2><p class="hint">${esc(e.message)}</p><a class="btn" href="admin.html">Try again</a></div>`;return}
 const P=id=>players.find(p=>p.id===id)||{id,name:id,short:"?",color:"#9aa3b3"};
 const coinFor=pl=>pl>=1&&pl<=coins.length?coins[pl-1]:0;
@@ -323,10 +324,10 @@ function drawEvents(){
 function drawPlayers(){
   const el=document.getElementById("t-pl");
   el.innerHTML=`<div class="panel"><h2>Members and passwords</h2><p class="hint">Each member logs in with their own password. Members without a password can't log in yet.</p>
-  ${players.map(p=>`<div class="pp" style="${p.active?"":"opacity:.5"}">${av(p,40)}<div><b>${esc(p.name)}</b> ${p.is_admin?`<span class="tag" style="font-size:11px;font-weight:800;padding:2px 7px;border-radius:99px;background:#1d3d3a;color:#7ee8f0">ADMIN</span>`:""}<div class="sub">${p.has_pass?"Has a password":"No password yet"}${p.active?"":" · hidden"}</div></div><button class="btn sm" data-pe="${p.id}">Edit</button></div>`).join("")}
+  ${players.concat(screens).map(p=>`<div class="pp" style="${p.active?"":"opacity:.5"}">${av(p,40)}<div><b>${esc(p.name)}</b> ${p.is_admin?`<span class="tag" style="font-size:11px;font-weight:800;padding:2px 7px;border-radius:99px;background:#1d3d3a;color:#7ee8f0">ADMIN</span>`:""}${p.screen?`<span class="tag" style="font-size:11px;font-weight:800;padding:2px 7px;border-radius:99px;background:#1d2c3d;color:#9ccbff">📺 WATCH ONLY</span>`:""}<div class="sub">${p.has_pass?"Has a password":"No password yet"}${p.active?"":" · hidden"}</div></div><button class="btn sm" data-pe="${p.id}">Edit</button></div>`).join("")}
   <div class="actions"><button class="btn" id="allpw">Same password for everyone</button><button class="btn main" id="addp">＋ Add member</button></div></div>`;
-  el.querySelector("#allpw").onclick=async()=>{const pw=prompt("One password for every member (admins keep their own):");if(pw==null)return;try{const r=await api("password_all",{password:pw});players=r.players;drawPlayers();toast(`Set for ${r.changed} members.`)}catch(x){toast(x.message)}};
-  el.querySelectorAll("[data-pe]").forEach(b=>b.onclick=()=>editPlayer(players.find(p=>p.id===b.dataset.pe)));
+  el.querySelector("#allpw").onclick=async()=>{const pw=prompt("One password for every member (admins keep their own):");if(pw==null)return;try{const r=await api("password_all",{password:pw});setPlayers(r.players);drawPlayers();toast(`Set for ${r.changed} members.`)}catch(x){toast(x.message)}};
+  el.querySelectorAll("[data-pe]").forEach(b=>b.onclick=()=>editPlayer(players.concat(screens).find(p=>p.id===b.dataset.pe)));
   el.querySelector("#addp").onclick=()=>editPlayer(null);
 }
 function editPlayer(p){
@@ -337,7 +338,8 @@ function editPlayer(p){
     <div class="row"><label><span class="lab">Name</span><input class="in" id="pn" value="${esc(d.name)}" maxlength="30"></label><label style="max-width:120px;min-width:90px"><span class="lab">Letters</span><input class="in" id="ps" value="${esc(d.short)}" maxlength="3"></label></div>
     <div><div class="lab" style="margin-bottom:6px">Color</div><div class="colors">${COLORS.map(c=>`<button style="--x:${c}" data-c="${c}" class="${c===d.color?"on":""}" aria-label="${c}"></button>`).join("")}</div></div>
     <label style="display:flex;flex-direction:column;gap:6px"><span class="lab">${p&&p.has_pass?"New password (leave empty to keep it)":"Password"}</span><input class="in" id="pw" type="text" autocomplete="off" placeholder="At least 4 letters" value="${esc(d.pw||"")}"></label>
-    ${p&&p.id===me.id?"":`<label style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="padm" ${d.is_admin?"checked":""}> Also an admin</label>
+    ${p&&p.screen?`<p class="hint" style="margin:0">The Score screen only watches: log in with it on the iPad or a laptop to see live games, the scoreboard and trip photos.</p>`:""}
+    ${p&&(p.id===me.id||p.screen)?"":`<label style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="padm" ${d.is_admin?"checked":""}> Also an admin</label>
     <label style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="pact" ${d.active?"checked":""}> Shows up in the game (untick to hide)</label>`}
     <div class="actions"><button class="btn" id="pc">Cancel</button><button class="btn main" id="pok">Save</button></div></div>`;
     const $=x=>s.querySelector(x);
@@ -347,7 +349,7 @@ function editPlayer(p){
     $("#pa").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{d.avatar=await RG.shrinkAvatar(f);keep();draw()}catch(x){toast(x.message)}};
     if($("#pan"))$("#pan").onclick=()=>{d.avatar=null;keep();draw()};
     $("#pc").onclick=()=>s.remove();
-    $("#pok").onclick=async()=>{keep();try{const r=await api("player_save",{id:d.id,name:d.name,short:d.short,color:d.color,avatar:d.avatar,is_admin:d.is_admin,active:d.active,password:d.pw||""});players=r.players;s.remove();drawPlayers();toast("Saved.")}catch(x){toast(x.message)}};
+    $("#pok").onclick=async()=>{keep();try{const r=await api("player_save",{id:d.id,name:d.name,short:d.short,color:d.color,avatar:d.avatar,is_admin:d.is_admin,active:d.active,password:d.pw||""});setPlayers(r.players);s.remove();drawPlayers();toast("Saved.")}catch(x){toast(x.message)}};
   };
   const keep=()=>{const $=x=>s.querySelector(x);d.name=$("#pn").value;d.short=$("#ps").value;d.pw=$("#pw").value;if($("#padm"))d.is_admin=$("#padm").checked?1:0;if($("#pact"))d.active=$("#pact").checked?1:0};
   draw();document.body.appendChild(s);

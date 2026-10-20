@@ -8,6 +8,7 @@ const CSS=`
 .rg-card p{margin:0;color:#9aa3b3;font-size:14px}
 .rg-who{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:10px}
 .rg-who button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-radius:16px;border:0;background:#202328;color:#eef1f6;font:600 12.5px "Inter",system-ui;cursor:pointer;box-shadow:inset 3px 3px 8px rgba(0,0,0,.5)}
+.rg-who .scr{grid-column:1/-1;flex-direction:row;justify-content:center;gap:10px;padding:10px;font-size:13.5px}
 .rg-who button.on{background:#33383f;box-shadow:0 0 0 2px var(--x),0 0 14px color-mix(in srgb,var(--x) 40%,transparent)}
 .rg-in{width:100%;padding:13px 14px;border-radius:14px;border:0;background:#202328;color:#eef1f6;font:500 16px "Inter",system-ui;box-shadow:inset 3px 3px 8px rgba(0,0,0,.5)}
 .rg-in:focus{outline:2px solid #2ec4b6}
@@ -43,7 +44,7 @@ const st=document.createElement("style");st.textContent=CSS;document.head.append
 (function(){
   const here={"":"trip","index.html":"trip","games.html":"games","social.html":"feed","chat.html":"chat","plan.html":"plan","profile.html":"me",
     "play.html":"games","online.html":"games","mind.html":"games","cards.html":"games","map.html":"games","scores.html":"games","admin.html":"me"}[location.pathname.split("/").pop()];
-  if(!here)return;
+  if(!here||window.top!==window)return; // pages shown inside the Score screen have no bar
   const items=[["trip","./","\u{1F3D4}️","Trip"],["games","games.html","\u{1F3B2}","Games"],["feed","social.html","\u{1F4F8}","Feed"],
     ["chat","chat.html","\u{1F4AC}","Chat"],["plan","plan.html","\u{1F4CB}","To-do"],["me","profile.html","\u{1F464}","Me"]];
   let nav=null,shownMe=false;
@@ -90,19 +91,22 @@ function av(p,size=36){
 function toast(msg){const t=document.createElement("div");t.className="rg-toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
 
 /* Login screen. Resolves with the logged-in player. admin:true = only the admin may pass. */
+/* The Score screen account only watches: on its own (not inside the screen page) every page sends it to screen.html. */
+const toScreen=me=>{if(me&&me.screen&&window.top===window&&!/screen\.html$/.test(location.pathname)){location.replace("screen.html");return true}};
 async function login({admin=false}={}){
   const s=await api("state");setAccess(s);
+  if(s.me&&!admin&&toScreen(s.me))return new Promise(()=>{});
   if(s.me&&(!admin||s.me.is_admin))return {me:s.me,state:s};
   return new Promise(resolve=>{
     const g=document.createElement("div");g.className="rg-gate";
-    const list=admin?s.players.filter(p=>p.is_admin):s.players;
+    const list=admin?s.players.filter(p=>p.is_admin):s.players.concat(s.screens||[]);
     let pick=list.length===1?list[0]:null;
     const draw=()=>{
       const needSetup=pick&&pick.is_admin&&!s.admin_ready;
       g.innerHTML=`<form class="rg-card" autocomplete="on">
         <h2>${admin?"Admin":"Who's playing?"}</h2>
         <p>${admin?"Only the admin can record games and change settings.":"Pick your profile and type your password."}</p>
-        <div class="rg-who">${list.map(p=>`<button type="button" data-id="${esc(p.id)}" class="${pick&&pick.id===p.id?"on":""}" style="--x:${esc(p.color)}">${av(p,44)}${esc(p.name)}</button>`).join("")}</div>
+        <div class="rg-who">${list.map(p=>`<button type="button" data-id="${esc(p.id)}" class="${pick&&pick.id===p.id?"on":""}${p.screen?" scr":""}" style="--x:${esc(p.color)}">${p.screen?"<span>\u{1F4FA}</span>":av(p,44)}<span>${esc(p.name)}</span>${p.screen?'<small style="color:#9aa3b3;font-weight:500">(watch only)</small>':""}</button>`).join("")}</div>
         ${pick?`<input type="text" name="username" value="${esc(pick.id)}" autocomplete="username" hidden>
         <input class="rg-in" type="password" name="password" placeholder="${needSetup?"Choose the admin password (6+ letters)":"Password"}" autocomplete="${needSetup?"new-password":"current-password"}" required>
         ${needSetup?`<input class="rg-in" type="password" name="password2" placeholder="Type it again" autocomplete="new-password" required>`:""}
@@ -121,6 +125,7 @@ async function login({admin=false}={}){
           if(needSetup){if(pw!==f.password2.value)throw new Error("The two passwords don't match.");r=await api("setup",{password:pw})}
           else r=await api("login",{id:pick.id,password:pw});
           if(admin&&!r.me.is_admin)throw new Error("That profile is not the admin.");
+          if(!admin&&toScreen(r.me))return;
           const s2=await api("state");setAccess(s2);
           g.remove();window.dispatchEvent(new Event("rg-login"));resolve({me:r.me,state:s2});
         }catch(x){err.textContent=x.message;btn.disabled=false}
