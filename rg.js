@@ -195,6 +195,12 @@ const ACCESS_GAMES=[
   ["Mind Games (alone or in a Mind race)",window.MindGames?MindGames.list.map(g=>["mind:"+g.id,g.name]):[]],
   ["Card Games on one iPad",[["cards:poker","Texas Hold'em"],["cards:highcard","High Card Showdown"],["cards:hilo","Higher or Lower"],["cards:blackjack","Blackjack vs Dealer"]]],
   ["The grand game",[["crown","The Road to the Crown"]]]];
+/* The Road to the Crown: the games that can be shuffled onto the map (names as in map.html POOL). Admin > Settings picks which ones. */
+const CROWN_GAMES=[
+  ["Game stops",["Charades","Heads Up","Taboo","Pictionary","Memory Match","Trivia Sprint"]],
+  ["Challenges (team vs team)",["Air Hockey","Tap Race","Quick Draw","Trivia Battle","Imposter"]],
+  ["Showdowns (everyone plays)",["Last One Standing","Mind Race"]],
+  ["Mind game stops (near the castle)",["Quick Math","Color Clash","Number Memory","Word Scramble","Bigger or Smaller","Grid Recall","Liquid Lab","Echo Tiles","Odd One Out","Flash Count","Number Hunt","Turn Twin","Pair Up","Slide Puzzle","Arrow Storm","True or False","Number Pattern","Word Sort"]]];
 let acc=null,accMe=null;const accPeople={};
 function setAccess(s){acc=s.access||null;accMe=s.me||null;(s.players||[]).forEach(p=>accPeople[p.id]=p)}
 function locked(pid,list){const p=pid?accPeople[pid]:accMe;return !!(acc&&p&&!+p.is_admin&&(acc[list]||[]).includes(p.id))}
@@ -205,5 +211,5 @@ const canAny=prefix=>!locked(null,"nogames")||acc.open.some(g=>g.startsWith(pref
 const SOON="Coming soon";
 const playing=on=>document.documentElement.classList.toggle("rg-playing",!!on); // hides the bottom bar during a game
 
-window.RG={api,av,esc,toast,login,playing,canPlay,canFeed,canChat,canAny,ACCESS_GAMES,SOON,shrinkPhoto,shrinkAvatar,PERIODS,inPeriod,parseLocal,nowLocal,fmtDate,ordinal,GAMES};
+window.RG={api,av,esc,toast,login,playing,canPlay,canFeed,canChat,canAny,ACCESS_GAMES,CROWN_GAMES,SOON,shrinkPhoto,shrinkAvatar,PERIODS,inPeriod,parseLocal,nowLocal,fmtDate,ordinal,GAMES};
 })();

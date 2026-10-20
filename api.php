@@ -69,6 +69,7 @@ function db(): PDO {
   // Game log: hidden = kept but off the scoreboard (practice); deleted_at = in the Deleted list, can be restored.
   if (!in_array('hidden', $ecols, true)) $pdo->exec('ALTER TABLE events ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0');
   if (!in_array('deleted_at', $ecols, true)) $pdo->exec('ALTER TABLE events ADD COLUMN deleted_at TEXT');
+  if (!in_array('fee', $cols, true)) $pdo->exec('ALTER TABLE results ADD COLUMN fee INTEGER NOT NULL DEFAULT 0'); // coins paid during the game (Road to the Crown player swaps)
   return $pdo;
 }
 
@@ -129,6 +130,9 @@ function coins_table(): array { return setting('coins', DEFAULT_COINS); }
 function coins_for(int $place): int { $t = coins_table(); return $place >= 1 && $place <= count($t) ? (int)$t[$place - 1] : 0; }
 const DEFAULT_BONUS_PER = 10; // timed games: 1 extra coin for every this many seconds left (0 = off)
 function bonus_per(): int { return max(0, (int)setting('bonus_per', DEFAULT_BONUS_PER)); }
+/* Admin > Settings > The Road to the Crown: off = games left off the map (names as in map.html POOL), fee = coins each player pays when their team swaps a player. */
+const CROWN_FEE = 5;
+function crown_conf(): array { $c = setting('crown', []); return ['off' => array_values(array_filter((array)($c['off'] ?? []), 'is_string')), 'fee' => max(0, min(50, (int)($c['fee'] ?? CROWN_FEE)))]; }
 
 /* Admin > Settings > Access. nofeed / nochat: players who can't open the trip feed / the group chat. nogames: players who can only play the games in open
    (ids like play:imposter, mind:liquidsort, cards:blackjack, crown); every other game shows them "Coming soon". Admins can always do everything. */
@@ -144,7 +148,7 @@ function can_play(array $p, string $gid): bool {
   return !in_array($p['id'], $a['nogames'], true) || in_array($gid, $a['open'], true);
 }
 /* A mind race counts as the mind game it races on. */
-function room_gid(string $game, string $mind = ''): string { return $game === 'race' ? 'mind:' . $mind : 'play:' . $game; }
+function room_gid(string $game, string $mind = ''): string { return $game === 'race' ? 'mind:' . $mind : ($game === 'crown' ? 'crown' : 'play:' . $game); }
 const SOON = 'Coming soon: this game isn\'t open for you yet.';
 
 function me(): ?array {
@@ -185,10 +189,12 @@ function event_full(int $id): ?array {
 /* Places from the admin's list. Solo: one row per player. Teams: the team gets the place and every member gets its coins. */
 function save_results(int $eid, string $mode, array $rows): void {
   $ok = array_column(players_public(true), 'id');
-  $old = db()->prepare('SELECT player_id,bonus FROM results WHERE event_id=?'); $old->execute([$eid]);
-  $kept = array_column($old->fetchAll(), 'bonus', 'player_id'); // an edit in the admin page keeps the seconds-left bonus
+  $old = db()->prepare('SELECT player_id,bonus,fee FROM results WHERE event_id=?'); $old->execute([$eid]);
+  $oldRows = $old->fetchAll();
+  $kept = array_column($oldRows, 'bonus', 'player_id'); // an edit in the admin page keeps the seconds-left bonus
+  $keptFee = array_column($oldRows, 'fee', 'player_id'); // and the swap fees
   db()->prepare('DELETE FROM results WHERE event_id=?')->execute([$eid]);
-  $ins = db()->prepare('INSERT INTO results(event_id,player_id,team,place,coins,score,bonus) VALUES(?,?,?,?,?,?,?)');
+  $ins = db()->prepare('INSERT INTO results(event_id,player_id,team,place,coins,score,bonus,fee) VALUES(?,?,?,?,?,?,?,?)');
   $seen = [];
   foreach ($rows as $r) {
     $pid = (string)($r['player_id'] ?? '');
@@ -198,7 +204,8 @@ function save_results(int $eid, string $mode, array $rows): void {
     $score = isset($r['score']) && $r['score'] !== '' && $r['score'] !== null && is_numeric($r['score']) ? (float)$r['score'] : null;
     $team = $mode === 'teams' ? clean_text($r['team'] ?? '', 40) : null;
     $bonus = isset($r['bonus']) ? max(0, min(1000, (int)$r['bonus'])) : (int)($kept[$pid] ?? 0);
-    $ins->execute([$eid, $pid, $team ?: null, $place, ($place ? coins_for($place) : 0) + $bonus, $score, $bonus]);
+    $fee = isset($r['fee']) ? max(0, min(1000, (int)$r['fee'])) : (int)($keptFee[$pid] ?? 0);
+    $ins->execute([$eid, $pid, $team ?: null, $place, ($place ? coins_for($place) : 0) + $bonus - $fee, $score, $bonus, $fee]);
   }
 }
 
@@ -253,8 +260,8 @@ function room_out(array $r, array $m): void { out(['room' => room_view_any($r, $
 /* ---------- the shared lobby (every online game) ----------
    state.lobby: invited [ids the host picked], ready {id: 1}, start_at (server time the countdown ends), score (record on the scoreboard),
    when (host's local time, for the scoreboard), event_id (once recorded), next (the room "Play again" made). */
-const GAME_LABEL = ['poker' => 'Poker', 'race' => 'Mind race', 'imposter' => 'Imposter', 'trivia' => 'Trivia race', 'reaction' => 'Last One Standing', 'likely' => 'Most Likely To', 'werewolf' => 'Werewolf', 'spyfall' => 'Spyfall', 'codenames' => 'Codenames'];
-const GAME_CAT = ['poker' => 'Cards', 'race' => 'Mind games', 'imposter' => 'Party', 'trivia' => 'Trivia', 'reaction' => 'Arcade', 'likely' => 'Party', 'werewolf' => 'Party', 'spyfall' => 'Party', 'codenames' => 'Party'];
+const GAME_LABEL = ['poker' => 'Poker', 'race' => 'Mind race', 'imposter' => 'Imposter', 'trivia' => 'Trivia race', 'reaction' => 'Last One Standing', 'likely' => 'Most Likely To', 'werewolf' => 'Werewolf', 'spyfall' => 'Spyfall', 'codenames' => 'Codenames', 'crown' => 'The Road to the Crown'];
+const GAME_CAT = ['crown' => 'Grand game', 'poker' => 'Cards', 'race' => 'Mind games', 'imposter' => 'Party', 'trivia' => 'Trivia', 'reaction' => 'Arcade', 'likely' => 'Party', 'werewolf' => 'Party', 'spyfall' => 'Party', 'codenames' => 'Party'];
 const COUNTDOWN = 4; // seconds from "everyone is ready" to "go", the same moment on every phone
 function lobby_ids(array $r): array { return array_column($r['game'] === 'poker' ? $r['state']['seats'] : $r['state']['players'], 'id'); }
 function room_label(array $r): string { return $r['game'] === 'race' ? $r['state']['name'] . ' · level ' . $r['state']['level'] : GAME_LABEL[$r['game']] ?? $r['game']; }
@@ -262,6 +269,7 @@ function room_label(array $r): string { return $r['game'] === 'race' ? $r['state
 /* Start when everyone invited has joined and everyone in is ready. $force (host's Start now): the ready ones play, the rest watch. */
 function lobby_try_start(array &$r, bool $force = false): void {
   if ($r['status'] !== 'lobby') return;
+  if ($r['game'] === 'crown' && !$force) return; // the host starts The Road to the Crown by hand, once everyone in the lobby is ready
   $r['state']['lobby'] ??= ['invited' => lobby_ids($r), 'ready' => [], 'start_at' => null, 'score' => false, 'when' => '', 'event_id' => null, 'next' => null]; // a table made before lobbies
   $l = &$r['state']['lobby']; $ids = lobby_ids($r);
   $ready = array_values(array_filter($ids, fn($i) => !empty($l['ready'][$i])));
@@ -270,6 +278,7 @@ function lobby_try_start(array &$r, bool $force = false): void {
     if (count($ids) < $need || count($ready) !== count($ids) || array_diff($l['invited'], $ids)) return;
   } else {
     if (count($ready) < $need) throw new RuntimeException("At least $need players need to be ready.");
+    if ($r['game'] === 'crown' && count($ready) !== count($ids)) throw new RuntimeException('Wait until everyone in the lobby has tapped Ready.');
     foreach (array_diff($ids, $ready) as $x) { if ($r['game'] === 'poker') room_stand($r['state'], $x, false); else party_leave($r['state'], $x); }
   }
   unset($l);
@@ -288,12 +297,13 @@ function lobby_finish(array &$r): void {
   $rows = array_values(array_filter($f, fn($x) => !empty($x['place'])));
   if (count($rows) < 2 || count(array_unique(array_column($rows, 'place'))) < 2) return; // nobody won anything (e.g. poker ended before a hand finished)
   $note = $r['game'] === 'trivia' ? 'Played together on phones. Score = seconds left on right answers.' : ($r['game'] === 'likely' ? 'Played together on phones. Score = times you picked the same person as most of the group.' : null);
+  if ($r['game'] === 'crown') $note = 'Played on phones. 1st: crowned King or Queen, 2nd: their team, 3rd: the other team. Coins include 1 bonus coin per 10 time points' . (array_sum(array_column($rows, 'fee')) ? ', minus coins paid for player swaps' : '') . '.';
   $note = $note ?? ($r['game'] === 'race' ? 'Played together on phones. Level ' . $r['state']['level'] . '; score = seconds left' . (bonus_per() ? ', plus 1 coin per ' . bonus_per() . ' seconds left' : '') . '.' : 'Played together on phones.');
   db()->prepare('INSERT INTO events(game,category,mode,played_at,status,note,created_by,score_dir) VALUES(?,?,?,?,?,?,?,?)')
     ->execute([$r['game'] === 'race' ? $r['state']['name'] : GAME_LABEL[$r['game']], GAME_CAT[$r['game']], 'solo', $l['when'] ?: date('Y-m-d\TH:i'), 'done', $note, $r['host'], 'high']);
   $eid = (int)db()->lastInsertId();
   if (empty($l['score'])) db()->prepare('UPDATE events SET hidden=1 WHERE id=?')->execute([$eid]);
-  save_results($eid, 'solo', array_map(fn($x) => ['player_id' => $x['id'], 'place' => $x['place'], 'score' => $x['score'] ?? ($x['chips'] ?? null), 'bonus' => $x['bonus'] ?? 0], $rows));
+  save_results($eid, 'solo', array_map(fn($x) => ['player_id' => $x['id'], 'place' => $x['place'], 'score' => $x['score'] ?? ($x['chips'] ?? null), 'bonus' => $x['bonus'] ?? 0, 'fee' => $x['fee'] ?? 0], $rows));
   $r['state']['lobby']['event_id'] = $eid;
 }
 
@@ -341,7 +351,7 @@ switch ($a) {
 case 'state': // who am I, who can log in, is the admin password set yet
   front_auto();
   $adminSet = (int)db()->query('SELECT COUNT(*) FROM players WHERE is_admin=1 AND pass_hash IS NOT NULL')->fetchColumn() > 0;
-  out(['me' => me(), 'players' => players_public(), 'admin_ready' => $adminSet, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'access' => access_conf()]);
+  out(['me' => me(), 'players' => players_public(), 'admin_ready' => $adminSet, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'access' => access_conf(), 'crown' => crown_conf()]);
 
 case 'players':
   front_auto();
@@ -527,9 +537,9 @@ case 'settings_save':
     db()->beginTransaction();
     db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['coins', json_encode($c)]);
     // Coins follow the table: re-count every recorded result.
-    $rows = db()->query('SELECT event_id,player_id,place,bonus FROM results WHERE place IS NOT NULL')->fetchAll();
+    $rows = db()->query('SELECT event_id,player_id,place,bonus,fee FROM results WHERE place IS NOT NULL')->fetchAll();
     $up = db()->prepare('UPDATE results SET coins=? WHERE event_id=? AND player_id=?');
-    foreach ($rows as $r) $up->execute([coins_for((int)$r['place']) + (int)$r['bonus'], $r['event_id'], $r['player_id']]);
+    foreach ($rows as $r) $up->execute([coins_for((int)$r['place']) + (int)$r['bonus'] - (int)$r['fee'], $r['event_id'], $r['player_id']]);
     db()->commit();
   }
   if (isset($b['bonus_per'])) db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['bonus_per', json_encode(max(0, min(600, (int)$b['bonus_per'])))]);
@@ -540,7 +550,11 @@ case 'settings_save':
     $open = array_values(array_unique(array_filter((array)($b['access']['open'] ?? []), fn($x) => is_string($x) && preg_match('/^(crown|(play|mind|cards):[a-z]{2,20})$/', $x))));
     db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['access', json_encode(['nofeed' => $who('nofeed'), 'nochat' => $who('nochat'), 'nogames' => $who('nogames'), 'open' => array_slice($open, 0, 200)])]);
   }
-  out(['ok' => 1, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'front' => front_on(), 'access' => access_conf()]);
+  if (isset($b['crown']) && is_array($b['crown'])) {
+    $off = array_values(array_unique(array_filter((array)($b['crown']['off'] ?? []), fn($x) => is_string($x) && preg_match('/^[A-Za-z][A-Za-z \'-]{1,39}$/', $x))));
+    db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['crown', json_encode(['off' => array_slice($off, 0, 60), 'fee' => max(0, min(50, (int)($b['crown']['fee'] ?? CROWN_FEE)))])]);
+  }
+  out(['ok' => 1, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'front' => front_on(), 'access' => access_conf(), 'crown' => crown_conf()]);
 
 case 'front':
   need_admin(); out(['front' => front_on(), 'possible' => front_file() !== null]);
@@ -595,6 +609,14 @@ case 'room_create':
     } else {
       if (count($invite) < (PARTY_MIN[$game] ?? 2)) fail('This game needs at least ' . PARTY_MIN[$game] . ' players.');
       $st = party_new($game, $b); party_join($st, $m);
+      if ($game === 'crown') { // two teams, set by the host: every invited player on exactly one team
+        $tm = is_array($b['teams'] ?? null) ? $b['teams'] : [];
+        $t0 = array_values(array_unique(array_filter((array)($tm[0] ?? []), fn($x) => is_string($x) && in_array($x, $invite, true))));
+        $t1 = array_values(array_diff(array_unique(array_filter((array)($tm[1] ?? []), fn($x) => is_string($x) && in_array($x, $invite, true))), $t0));
+        if (!$t0 || !$t1) fail('Each team needs at least one player.');
+        if (array_diff($invite, $t0, $t1)) fail('Put every player on a team (you too).');
+        $st['teams'] = [$t0, $t1];
+      }
     }
   } catch (RuntimeException $e) { fail($e->getMessage()); }
   $st['lobby'] = ['invited' => $invite, 'ready' => [], 'start_at' => null, 'score' => ($b['score'] ?? true) !== false, 'when' => clean_when($b['when'] ?? ''), 'event_id' => null, 'next' => null];

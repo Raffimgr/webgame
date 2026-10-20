@@ -12,7 +12,7 @@
 declare(strict_types=1);
 if (!defined('RG_API')) { http_response_code(404); exit; }
 
-const PARTY_GAMES = ['race', 'imposter', 'trivia', 'reaction', 'likely', 'werewolf', 'spyfall', 'codenames'];
+const PARTY_GAMES = ['race', 'imposter', 'trivia', 'reaction', 'likely', 'werewolf', 'spyfall', 'codenames', 'crown'];
 const TRIVIA_TIME = 20;   // seconds to answer; points = seconds left on a right answer
 const TRIVIA_SHOW = 5;    // seconds the right answer stays up before the next question
 const TRIVIA_COUNT = 10;
@@ -348,6 +348,11 @@ function cn_end(array &$st, string $t): bool { $st['winner'] = $t; $st['phase'] 
 
 function party_new(string $game, array $b): array {
   $st = ['players' => [], 'final' => null];
+  if ($game === 'crown') { // The Road to the Crown: the map runs on the phones (map.html); the server keeps the board, the teams and the swap fees. Teams are set in room_create.
+    $nm = (array)($b['names'] ?? []);
+    $st += ['teams' => [[], []], 'names' => [clean_text($nm[0] ?? '', 24) ?: 'Team Ridge', clean_text($nm[1] ?? '', 24) ?: 'Team Ember'], 'board' => null, 'bv' => 0, 'fees' => []];
+    if ($st['names'][0] === $st['names'][1]) $st['names'][1] .= ' 2';
+  }
   if ($game === 'race') {
     $mind = (string)($b['mind'] ?? '');
     if (!preg_match('/^[a-z]{3,20}$/', $mind)) throw new RuntimeException('Pick a mind game.');
@@ -384,6 +389,12 @@ function party_leave(array &$st, string $id): void {
 /* Everyone is ready: set the game up. */
 function party_begin(string $game, array &$st): void {
   $ids = array_column($st['players'], 'id');
+  if ($game === 'crown') { // invited players who never joined drop off their team; the host's phone then sends the new map
+    foreach ($st['teams'] as &$t) $t = array_values(array_intersect($t, $ids));
+    unset($t);
+    if (!$st['teams'][0] || !$st['teams'][1]) throw new RuntimeException('Each team needs at least one player in the lobby.');
+    $st['board'] = null; $st['bv'] = 0; $st['fees'] = [];
+  }
   if ($game === 'race') { $st['seed'] = random_int(1, 2147483646); $st['results'] = []; }
   if ($game === 'imposter') {
     if (count($ids) < 3) throw new RuntimeException('Imposter needs at least 3 players.');
@@ -443,11 +454,57 @@ function party_pick(string $key, array $all, int $n): array {
   return $pick;
 }
 
+/* The Road to the Crown: a phone sends the whole map after its move (bv = the board version it started from, so two phones can't both move).
+   swap {out, in}: out leaves the team, in takes their place (a trade when in is on the other team); everyone on that team pays the fee,
+   taken off their coins for this game. final [{id, place, bonus}] once someone is crowned: the game is over. */
+function crown_move(array &$st, array $m, bool $host, array $b): bool {
+  if ((string)($b['do'] ?? '') !== 'sync') throw new RuntimeException('Unknown move.');
+  if ((int)($b['bv'] ?? -1) !== (int)$st['bv']) throw new RuntimeException('The map moved on: someone else played first.');
+  $board = $b['board'] ?? null;
+  if (!is_array($board) || !is_array($board['N'] ?? null) || !is_array($board['S'] ?? null) || !is_array($board['S']['teams'] ?? null) || count($board['S']['teams']) !== 2) throw new RuntimeException('That map is broken.');
+  if (strlen(json_encode($board)) > 400000) throw new RuntimeException('That map is too big.');
+  if ($st['board'] === null && !$host) throw new RuntimeException('Waiting for the host to set up the map.');
+  if (!empty($b['swap']) && is_array($b['swap'])) {
+    $out = (string)($b['swap']['out'] ?? ''); $in = (string)($b['swap']['in'] ?? '');
+    $ti = in_array($out, $st['teams'][0], true) ? 0 : (in_array($out, $st['teams'][1], true) ? 1 : -1);
+    if ($ti < 0) throw new RuntimeException('Pick a player on the team.');
+    if (!$host && !in_array($m['id'], $st['teams'][$ti], true)) throw new RuntimeException('You can only swap players on your own team.');
+    if ($in === '' || in_array($in, $st['teams'][$ti], true)) throw new RuntimeException('Pick someone from outside the team.');
+    $o = 1 - $ti; $k = array_search($in, $st['teams'][$o], true);
+    if ($k !== false) { if (count($st['teams'][$o]) < 1) throw new RuntimeException('Pick someone else.'); $st['teams'][$o][$k] = $out; }
+    else {
+      $pp = array_column(players_public(), null, 'id');
+      if (!isset($pp[$in])) throw new RuntimeException('That player was not found.');
+      if (!can_play($pp[$in], 'crown')) throw new RuntimeException('This game is coming soon for ' . $pp[$in]['name'] . ', so they can\'t join yet.');
+      party_leave($st, $out); $st['players'][] = ['id' => $in, 'name' => $pp[$in]['name']];
+    }
+    $fee = crown_conf()['fee'];
+    foreach ($st['teams'][$ti] as $p) $st['fees'][$p] = ($st['fees'][$p] ?? 0) + $fee;
+    $st['teams'][$ti][array_search($out, $st['teams'][$ti], true)] = $in;
+  }
+  foreach ([0, 1] as $i) { // the map's teams must be the server's teams
+    $a = array_values(array_map('strval', (array)($board['S']['teams'][$i]['ids'] ?? []))); $c = $st['teams'][$i]; sort($a); sort($c);
+    if ($a !== $c) throw new RuntimeException("The teams on the map don't match. Reload and try again.");
+  }
+  $st['board'] = $board; $st['bv']++;
+  if (!empty($b['final']) && is_array($b['final']) && !empty($board['S']['over'])) {
+    $all = array_merge($st['teams'][0], $st['teams'][1]); $st['final'] = [];
+    foreach ($b['final'] as $f) {
+      $id = (string)($f['id'] ?? '');
+      if (!in_array($id, $all, true) || in_array($id, array_column($st['final'], 'id'), true)) continue;
+      $st['final'][] = ['id' => $id, 'place' => max(1, min(3, (int)($f['place'] ?? 3))), 'bonus' => max(0, min(1000, (int)($f['bonus'] ?? 0))), 'fee' => (int)($st['fees'][$id] ?? 0), 'score' => null];
+    }
+    return true;
+  }
+  return false;
+}
+
 /* A move from one phone. Returns true when the game just ended. */
 function party_move(string $game, array &$st, array $m, bool $host, array $b): bool {
   $me = $m['id']; $ids = array_column($st['players'], 'id');
   if (!in_array($me, $ids, true)) throw new RuntimeException("You're watching this game.");
   $do = (string)($b['do'] ?? '');
+  if ($game === 'crown') return crown_move($st, $m, $host, $b);
   if ($game === 'race') {
     if ($do !== 'finish') throw new RuntimeException('Unknown move.');
     if (isset($st['results'][$me])) return false; // already in (a double tap)
@@ -695,6 +752,7 @@ function party_rank(string $game, array &$st): void {
 function party_view(string $game, array $st, ?string $me, bool $live): array {
   $ids = array_column($st['players'], 'id'); $in = in_array($me, $ids, true);
   $v = ['players' => $st['players'], 'final' => $st['final']];
+  if ($game === 'crown') return $v + ['teams' => $st['teams'], 'names' => $st['names'], 'board' => $st['board'], 'bv' => $st['bv'], 'fees' => (object)$st['fees'], 'fee' => crown_conf()['fee']];
   if ($game === 'race') {
     $v += ['mind' => $st['mind'], 'name' => $st['name'], 'level' => $st['level'], 'seed' => $live ? $st['seed'] : 0,
       'done_ids' => array_keys($st['results']), 'results' => $st['final'] ? $st['results'] : (isset($st['results'][$me]) ? [$me => $st['results'][$me]] : [])];

@@ -145,7 +145,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--teal);outline-offse
   <div id="stage" hidden></div>
 </div>
 <script src="mind.js"></script>
-<script src="rg.js?v=7"></script>
+<script src="rg.js?v=8"></script>
 <script src="lobby.js?v=2"></script>
 <script>
 (function(){
@@ -172,7 +172,7 @@ const nameOf=id=>who(id).name;
 const av=(id,s)=>{const p=who(id);return `<span class="av" style="--x:${esc(p.color)};--s:${s||38}px">${p.avatar?`<img src="${esc(p.avatar)}" alt="">`:esc(p.short)}</span>`};
 const coinsFor=p=>p>=1&&p<=coins.length?coins[p-1]:0;
 /* Admin > Access: what a game counts as (a mind race is the mind game it races on), and whether I may start it */
-const gidOf=(game,mind)=>game==="race"?"mind:"+mind:"play:"+game;
+const gidOf=(game,mind)=>game==="race"?"mind:"+mind:game==="crown"?"crown":"play:"+game;
 const gameOpen=k=>k==="race"?RG.canAny("mind:"):RG.canPlay("play:"+k);
 const SN=`<small class="sn">${RG.SOON}</small>`;
 function setTitle(t,sub){$("#ttl").innerHTML=esc(t)+`<small>${esc(sub)}</small>`}
@@ -199,7 +199,8 @@ async function send(action,extra){
   catch(e){err=e.message}
   finally{busy=false;draw()}
 }
-function setRoom(r){
+function setRoom(r){if(r.game==="crown"){location.replace("map.html?room="+r.id);return} // The Road to the Crown has its own page
+
   L.clock(r);
   if(r.game==="poker"){location.replace("online.html?room="+r.id);return}
   const prev=room;room=r;
@@ -272,7 +273,7 @@ function drawHub(){
     <div class="col" id="rooms">${rooms===null?'<div class="empty">Loading…</div>':open.length?open.map(r=>roomRow(r)).join(""):'<div class="empty">No games right now. Start one above: the players you pick get an invite on their phone.</div>'}</div></div>`;
   $("#out").onclick=async()=>{try{await RG.api("logout",{})}catch(e){}location.reload()};
   app.querySelectorAll("[data-new]").forEach(b=>b.onclick=()=>newGame(b.dataset.new));
-  app.querySelectorAll(".room").forEach(b=>b.onclick=()=>{if(b.dataset.soon&&b.dataset.g!=="poker"){RG.toast(RG.SOON);return}if(b.dataset.g==="poker")location.href="online.html?room="+b.dataset.id;else openRoom(+b.dataset.id)});
+  app.querySelectorAll(".room").forEach(b=>b.onclick=()=>{if(b.dataset.soon&&b.dataset.g!=="poker"){RG.toast(RG.SOON);return}if(b.dataset.g==="poker")location.href="online.html?room="+b.dataset.id;else if(b.dataset.g==="crown")location.href="map.html?room="+b.dataset.id;else openRoom(+b.dataset.id)});
 }
 
 function newGame(game,keep){
@@ -296,7 +297,7 @@ function drawNew(){
   app.innerHTML=`<div class="col">${opts}
     <div class="panel"><div class="row" style="justify-content:space-between"><span class="lab">Who's playing</span><button class="chip" id="allp">${f.players.length&&f.players.length===can.length?"Clear":"Everyone"}</button></div>
       <div class="who" id="who">${all.map(p=>{const ok=p.id===me.id||RG.canPlay(gid,p.id);return `<button data-p="${esc(p.id)}" class="${p.id===me.id||f.players.includes(p.id)?"on":ok?"":"soon"}" style="--x:${esc(p.color)}" ${p.id===me.id||!ok?"disabled":""}>${av(p.id,44)}${esc(p.name)}${p.id===me.id?"<small class='muted' style='font-size:11px'>you</small>":ok?"":SN}</button>`}).join("")}</div>
-      <label class="tog"><input type="checkbox" id="score" ${f.score?"checked":""}> Count for the scoreboard</label></div>
+      <label class="tog"><input type="checkbox" id="score" ${f.score?"checked":""}> Count for the scoreboard (off = practice)</label></div>
     ${err?`<div class="err">${esc(err)}</div>`:""}
     <button class="go wide" id="create" style="--x:${g.x}" ${busy||n<g.min?"disabled":""}>${n<g.min?`Pick at least ${g.min-1} other player${g.min>2?"s":""}`:`Open the lobby for ${n} players`}</button>
     <button class="go ghost sm" id="cancel">Back</button></div>`;
@@ -601,7 +602,7 @@ function drawDone(){
       const note=r.game==="race"?(rs?(rs.win?rs.left+" seconds left":"Scored "+rs.score+", time ran out"):"Didn't finish"):r.game==="imposter"?(x.id===r.imposter?"The imposter":"Knew the word"):r.game==="werewolf"?(WW[(r.roles||{})[x.id]]||{}).n||"":r.game==="spyfall"?(x.id===r.spy?"The spy":"Knew the place"):r.game==="codenames"?CNC[r.teams[x.id]].n+" team"+(r.spies[r.teams[x.id]]===x.id?" spymaster":""):r.game==="trivia"?x.score+" points (seconds left on right answers)":r.game==="likely"?x.score+" matching pick"+(x.score===1?"":"s"):r.game==="reaction"?(x.place===1?"Last one standing":"Out"):"";
       return `<div class="rr${x.place===1?" first":""}"><span class="pl">${x.place||"–"}</span>${av(x.id,40)}<span class="t"><b>${esc(nameOf(x.id))}</b><small>${note}</small></span>
         <span class="v">${r.score?"+"+c:""}<small>${r.score?(x.bonus?`coins (${x.bonus} for time)`:"coins"):""}</small></span></div>`}).join("")}</div>
-    ${r.event_id?`<p class="saved">✓ Saved to the scoreboard</p>`:r.score?`<p class="muted" style="text-align:center;margin:0">Not saved: nobody won anything.</p>`:""}
+    ${r.event_id?`<p class="saved">${r.score?"✓ Saved to the scoreboard":"✓ Saved to the Game log as practice (not on the scoreboard)"}</p>`:r.score?`<p class="muted" style="text-align:center;margin:0">Not saved: nobody won anything.</p>`:""}
     <div class="row" style="justify-content:center">${r.me.host?`<button class="go" id="again" style="--x:${GAMES[r.game].x}" ${busy?"disabled":""}>Play again, same players</button>`:`<p class="muted" style="margin:0">If ${esc(nameOf(r.host))} starts another round, your phone follows.</p>`}
       <button class="go ghost" id="hub">All games</button></div>${err?`<div class="err">${esc(err)}</div>`:""}</div>`;
   $("#hub").onclick=()=>openRoom(null);

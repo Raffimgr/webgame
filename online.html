@@ -177,7 +177,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--teal);outline-offse
   <div id="app"><div class="empty">Loading…</div></div>
 </div>
 <script src="cards.js"></script>
-<script src="rg.js?v=7"></script>
+<script src="rg.js?v=8"></script>
 <script src="lobby.js?v=2"></script>
 <script>
 (function(){
@@ -408,7 +408,7 @@ function drawFinal(){
   if(!f.length){app.innerHTML=`<div class="panel"><p class="big">This table was closed</p><button class="go" id="tables">Back to the tables</button></div>`;$("#tables").onclick=()=>openRoom(null);return}
   const w=f.filter(x=>x.place===1).map(x=>esc(nameOf(x.id)));
   const href="admin.html?record=1&game=Poker&order="+f.map(x=>encodeURIComponent(x.id)).join(",")+"&places="+f.map(x=>x.place).join(",");
-  const saved=r.event_id?`<p style="text-align:center;font-weight:700;color:var(--green);margin:0">✓ Saved to the scoreboard</p>`:"";
+  const saved=r.event_id?`<p style="text-align:center;font-weight:700;color:var(--green);margin:0">${r.score?"✓ Saved to the scoreboard":"✓ Saved to the Game log as practice (not on the scoreboard)"}</p>`:"";
   app.innerHTML=`<div style="display:flex;flex-direction:column;gap:16px">
     <p class="big">${w.length>1?w.join(" & ")+" share the win":w[0]+" wins!"}</p>
     <div class="res">${f.map(x=>{const d=x.chips-r.chips;return `<div class="rr${x.place===1?" first":""}"><span class="pl">${x.place}</span>${av(x.id,40)}<span class="t"><b>${esc(nameOf(x.id))}</b><small>Started with ${r.chips}</small></span><span class="v">${x.chips}<small class="${d>0?"up":d<0?"dn":"muted"}">${d>0?"+":""}${d}</small></span></div>`}).join("")}</div>

@@ -126,13 +126,13 @@ html.rg-nav-on .sheet{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)
   <section id="t-set" hidden></section>
 </div>
 <script src="mind.js"></script>
-<script src="rg.js?v=7"></script>
+<script src="rg.js?v=8"></script>
 <script>
 (async function(){
 const {api,av,esc,toast}=RG;
 const COLORS=["#d4f09a","#f7b8d2","#aab7ff","#ffe08a","#ffbf99","#ff9fb8","#7ee8f0","#9df0c8","#d8c39a","#c9a7ff","#7be08a","#ff8f70"];
-let me,players=[],events=[],coins=[],access={nofeed:[],nochat:[],nogames:[],open:[]};
-try{const r=await RG.login({admin:true});me=r.me;if(r.state.access)access=Object.assign(access,r.state.access)}catch(e){document.querySelector(".wrap").innerHTML=`<div class="panel"><h2>Can't reach the server</h2><p class="hint">${esc(e.message)} The admin page only works on the website itself.</p><a class="btn" href="games.html">Home</a></div>`;return}
+let me,players=[],events=[],coins=[],access={nofeed:[],nochat:[],nogames:[],open:[]},crown={off:[],fee:5};
+try{const r=await RG.login({admin:true});me=r.me;if(r.state.access)access=Object.assign(access,r.state.access);if(r.state.crown)crown=Object.assign(crown,r.state.crown)}catch(e){document.querySelector(".wrap").innerHTML=`<div class="panel"><h2>Can't reach the server</h2><p class="hint">${esc(e.message)} The admin page only works on the website itself.</p><a class="btn" href="games.html">Home</a></div>`;return}
 document.getElementById("who").innerHTML=`${av(me,22)} ${esc(me.name)} · <button id="out" style="color:#9aa3b3;font-weight:600">Log out</button>`;
 document.getElementById("out").onclick=async()=>{try{await api("logout",{})}catch(x){}location.reload()};
 
@@ -376,12 +376,29 @@ function drawAccess(){
   const flip=(l,v)=>{const i=l.indexOf(v);if(i>=0)l.splice(i,1);else l.push(v);drawAccess();saveAccess()};
   el.querySelectorAll("[data-acc]").forEach(b=>b.onclick=()=>flip(access[b.dataset.acc],b.dataset.p));
   el.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>flip(access.open,b.dataset.open));
+  const cb=el.querySelector('[data-open="crown"]');if(cb&&RG.CROWN_GAMES){cb.insertAdjacentHTML("afterend",`<button class="ogi" id="toCrownSet">⚙ Pick the map games ›</button>`);el.querySelector("#toCrownSet").onclick=()=>{const t=document.getElementById("crownSet");if(t)t.scrollIntoView({behavior:"smooth",block:"start"})}}
 }
+
+/* ---------- The Road to the Crown: which games can land on the map, and the player-swap fee ---------- */
+function crownHTML(){
+  if(!RG.CROWN_GAMES)return "";
+  const on=g=>!crown.off.includes(g);
+  return `<div class="panel" id="crownSet"><h2>The Road to the Crown</h2><p class="hint">Pick the games that can land on the map. Each new map shuffles the ticked games onto its stops. Each group keeps at least one game.</p>
+    ${RG.CROWN_GAMES.map(([grp,list])=>`<div class="lab">${esc(grp)}<span class="n">${list.filter(on).length} of ${list.length}</span></div><div class="og">${list.map(g=>`<button class="ogi${on(g)?" on":""}" data-cg="${esc(g)}" aria-pressed="${on(g)}"><span class="chk">✓</span>${esc(g)}</button>`).join("")}</div>`).join("")}
+    <div class="lab" style="margin-top:14px">Player swap fee</div><p class="hint">During a game a team can swap a player. Everyone on that team pays this many coins, taken off their coins for that game.</p>
+    <div class="seg" id="cfee">${[0,2,3,5,10].map(n=>`<button class="${crown.fee===n?"on":""}" data-fee="${n}">${n} coin${n===1?"":"s"}</button>`).join("")}</div></div>`}
+let crownSave=Promise.resolve();
+function drawCrown(){const el=document.getElementById("crownBox");if(!el)return;el.innerHTML=crownHTML();
+  const save=()=>{const c=JSON.parse(JSON.stringify(crown));crownSave=crownSave.then(()=>api("settings_save",{crown:c})).then(r=>{if(r.crown)crown=r.crown;toast("Saved.")},x=>toast(x.message))};
+  el.querySelectorAll("[data-cg]").forEach(b=>b.onclick=()=>{const g=b.dataset.cg,i=crown.off.indexOf(g);
+    if(i>=0)crown.off.splice(i,1);else{const grp=RG.CROWN_GAMES.find(([,l])=>l.includes(g))[1];if(grp.filter(x=>!crown.off.includes(x)).length<=1){toast("Keep at least one game in this group.");return}crown.off.push(g)}
+    drawCrown();save()});
+  el.querySelectorAll("[data-fee]").forEach(b=>b.onclick=()=>{crown.fee=+b.dataset.fee;drawCrown();save()})}
 
 /* ---------- settings ---------- */
 function drawSettings(){
   const el=document.getElementById("t-set");
-  el.innerHTML=`<div id="acc" style="display:flex;flex-direction:column;gap:16px"></div><div class="panel"><h2>Coins for each place</h2><p class="hint">Every game gives coins by place. Places past the last box get nothing. Changing this re-counts every game already recorded.</p>
+  el.innerHTML=`<div id="acc" style="display:flex;flex-direction:column;gap:16px"></div><div id="crownBox"></div><div class="panel"><h2>Coins for each place</h2><p class="hint">Every game gives coins by place. Places past the last box get nothing. Changing this re-counts every game already recorded.</p>
     <div class="coins-ed" id="ce">${coins.map((c,i)=>`<label>${RG.ordinal(i+1)}<input class="in" type="number" min="0" inputmode="numeric" value="${c}"></label>`).join("")}</div>
     <div class="actions" style="justify-content:flex-start"><button class="btn sm" id="cadd">＋ Place</button><button class="btn sm" id="cdel">− Place</button><span style="flex:1"></span><button class="btn main" id="csave">Save coins</button></div></div>
   <div class="panel"><h2>Backup</h2><p class="hint">Download every member, game and score as one file (photos stay on the server).</p><div class="actions" style="justify-content:flex-start"><a class="btn" href="api.php?a=export" download>Download backup</a></div></div>
@@ -389,7 +406,7 @@ function drawSettings(){
   (async()=>{const h=el.querySelector("#fr-h"),b=el.querySelector("#fr");
     const paint=on=>{h.textContent=on?"raffaelco.com sends visitors straight to the games.":"raffaelco.com does not open the games. Use raffaelco.com/DM/.";b.textContent=on?"Stop sending raffaelco.com here":"Make raffaelco.com open the games";b.hidden=false;b.onclick=async()=>{b.disabled=true;try{const r=await api("settings_save",{front:!on});paint(r.front);toast("Saved.")}catch(x){toast(x.message)}b.disabled=false}};
     try{const r=await api("front");if(!r.possible){h.textContent="Only available on the real website.";return}paint(r.front)}catch(x){h.textContent=x.message}})();
-  drawAccess();
+  drawAccess();drawCrown();
   const read=()=>[...el.querySelectorAll("#ce input")].map(i=>+i.value||0);
   el.querySelector("#cadd").onclick=()=>{coins=[...read(),0];drawSettings()};
   el.querySelector("#cdel").onclick=()=>{coins=read().slice(0,-1);if(!coins.length)coins=[10];drawSettings()};
