@@ -5,3 +5,12 @@
     Header set Cache-Control "no-cache"
   </FilesMatch>
 </IfModule>
+
+# The site moved to raffaelco.com/DM/. In the old ridge-games copy, pages forward there (same path and query);
+# .php files keep answering, because the media Worker still checks logins at ridge-games/social.php.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_URI} ^/ridge-games(/|$)
+  RewriteCond %{REQUEST_URI} !\.php$
+  RewriteRule ^(.*)$ /DM/$1 [R=302,L]
+</IfModule>

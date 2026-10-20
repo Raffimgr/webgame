@@ -327,7 +327,7 @@ function drawSettings(){
   <div class="panel"><h2>Backup</h2><p class="hint">Download every member, game and score as one file (photos stay on the server).</p><div class="actions" style="justify-content:flex-start"><a class="btn" href="api.php?a=export" download>Download backup</a></div></div>
   <div class="panel"><h2>Front page</h2><p class="hint" id="fr-h">Checking…</p><div class="actions" style="justify-content:flex-start"><button class="btn" id="fr" hidden></button></div></div>`;
   (async()=>{const h=el.querySelector("#fr-h"),b=el.querySelector("#fr");
-    const paint=on=>{h.textContent=on?"raffaelco.com sends visitors straight to the games.":"raffaelco.com does not open the games. Use raffaelco.com/ridge-games/.";b.textContent=on?"Stop sending raffaelco.com here":"Make raffaelco.com open the games";b.hidden=false;b.onclick=async()=>{b.disabled=true;try{const r=await api("settings_save",{front:!on});paint(r.front);toast("Saved.")}catch(x){toast(x.message)}b.disabled=false}};
+    const paint=on=>{h.textContent=on?"raffaelco.com sends visitors straight to the games.":"raffaelco.com does not open the games. Use raffaelco.com/DM/.";b.textContent=on?"Stop sending raffaelco.com here":"Make raffaelco.com open the games";b.hidden=false;b.onclick=async()=>{b.disabled=true;try{const r=await api("settings_save",{front:!on});paint(r.front);toast("Saved.")}catch(x){toast(x.message)}b.disabled=false}};
     try{const r=await api("front");if(!r.possible){h.textContent="Only available on the real website.";return}paint(r.front)}catch(x){h.textContent=x.message}})();
   drawAccess();
   const read=()=>[...el.querySelectorAll("#ce input")].map(i=>+i.value||0);

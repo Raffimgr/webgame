@@ -92,8 +92,13 @@ function setting(string $k, $default) {
 /* raffaelco.com's front page can send visitors to the games. We only ever touch an index.html we wrote ourselves (it carries FRONT_MARK). */
 const FRONT_MARK = '<!-- ridge-games-front-redirect -->';
 function front_file(): ?string {
-  if (getenv('RG_DATA') || basename(__DIR__) !== 'ridge-games') return null; // only when installed as public_html/ridge-games
+  if (getenv('RG_DATA') || basename(__DIR__) !== SITE_DIR) return null; // only the main copy, public_html/DM (the old ridge-games copy only forwards)
   return dirname(__DIR__) . '/index.html';
+}
+const SITE_DIR = 'DM'; // the site lives at raffaelco.com/DM/; the old raffaelco.com/ridge-games/ copy sends people there (.htaccess)
+function front_html(): string {
+  $u = '/' . SITE_DIR . '/';
+  return "<!doctype html>\n" . FRONT_MARK . "\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<title>Ridge Games</title>\n<meta http-equiv=\"refresh\" content=\"0; url=$u\">\n<script>location.replace('$u')</script>\n<p style=\"font-family:system-ui;text-align:center;margin-top:20vh\"><a href=\"$u\">Open Ridge Games</a></p>\n";
 }
 function front_on(): bool { $f = front_file(); return $f && is_file($f) && str_contains((string)file_get_contents($f), FRONT_MARK); }
 function front_free(): bool { $root = dirname(__DIR__); foreach (['index.html', 'index.php', 'index.htm', 'default.php'] as $n) if (file_exists("$root/$n")) return false; return true; }
@@ -102,14 +107,16 @@ function front_set(bool $on): void {
   if ($on) {
     if (front_on()) return;
     if (!front_free()) fail('The main site already has its own front page, so I left it alone.');
-    $html = "<!doctype html>\n" . FRONT_MARK . "\n<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<title>Ridge Games</title>\n<meta http-equiv=\"refresh\" content=\"0; url=/ridge-games/\">\n<script>location.replace('/ridge-games/')</script>\n<p style=\"font-family:system-ui;text-align:center;margin-top:20vh\"><a href=\"/ridge-games/\">Open Ridge Games</a></p>\n";
+    $html = front_html();
     if (file_put_contents($f, $html) === false) fail('Could not write the front page.');
   } elseif (front_on()) {
     @unlink($f);
   }
 }
 function front_auto(): void { // first run: switch the redirect on once, as Sako asked; after that only the admin toggle changes it
-  if (!front_file() || setting('front_auto', 0)) return;
+  if (!front_file()) return;
+  if (front_on() && file_get_contents(front_file()) !== front_html()) @file_put_contents(front_file(), front_html()); // our redirect, pointed at the old address
+  if (setting('front_auto', 0)) return;
   if (front_free()) { try { front_set(true); } catch (Throwable $e) { return; } }
   db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['front_auto', '1']);
 }

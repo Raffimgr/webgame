@@ -10,7 +10,7 @@ Party games for the Shenandoah trip: the Road to the Crown map, 18 mind games, c
 - Group chat (`chat.html`, `chat.php`): one conversation for everyone, with hearts (double-tap), "seen by" and an unread count on the Chat button (`ridge-data/chat.sqlite`).
 - Profiles (`profile.html`, `profile.html?id=…`): picture, name, color and password for your own; anyone's feed posts as a grid, their to-dos and games.
 - Bottom bar (in `rg.js`): Trip / Games / Feed / Chat / To-do / Me on those main pages only, never inside a game. Pages load `rg.js?v=N`; bump N when rg.js changes, and `.htaccess` makes phones check for new copies of pages and scripts.
-- Static pages + `api.php` (PHP 8, SQLite). Hosted at raffaelco.com/ridge-games/ (Hostinger pulls this repo).
+- Static pages + `api.php` (PHP 8, SQLite). Hosted at raffaelco.com/DM/ (Hostinger pulls this repo into public_html/DM). The old public_html/ridge-games copy stays only so its .php files keep answering (the media Worker checks logins at ridge-games/social.php); its pages forward to /DM/.
 - Data (database, photos, sessions) lives outside the web folder in `domains/raffaelco.com/ridge-data/`, never in this repo.
 - First visit to `admin.html`: the admin (Raffael) picks his password, then sets each player's password.
 - Local test: `RG_DATA=/tmp/rgdata php -S 127.0.0.1:8099`
