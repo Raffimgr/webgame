@@ -83,7 +83,7 @@ html.rg-nav-on .sheet{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)
 .alist{display:flex;flex-direction:column;gap:8px}
 .ar{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:8px 12px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh)}
 .ar b{font-weight:650;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.ar b small{display:block;font-weight:500;color:var(--mut);font-size:12px}
+.ar b small{display:block;font-weight:500;color:var(--mut);font-size:12px;white-space:nowrap}
 .tg{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:56px;font-size:11.5px;font-weight:700;color:var(--mut)}
 .tg:disabled{opacity:.45;cursor:default}
 .sw{position:relative;width:48px;height:28px;border-radius:99px;background:#3a3f48;transition:background .2s}
@@ -94,6 +94,11 @@ html.rg-nav-on .sheet{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)
 .ogi{display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 10px;border-radius:14px;background:var(--well);box-shadow:var(--well-sh);font-weight:600;font-size:14px;text-align:left}
 .ogi .chk{width:26px;height:26px;border-radius:8px}
 .ogi.on .chk{background:var(--acc);color:var(--ink)}
+.cnt{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cnt div{padding:10px 14px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh)}
+.cnt b{display:block;font:600 30px/1.1 var(--play)}
+.cnt span{font-size:12.5px;font-weight:600;color:var(--mut)}
+.lab .n{color:var(--acc);margin-left:6px}
 </style>
 </head>
 <body>
@@ -295,10 +300,13 @@ function accessHTML(){
   const sw=(p,k,label)=>{const adm=!!p.is_admin,on=adm||!access[k].includes(p.id);
     return `<button class="tg" data-acc="${k}" data-p="${esc(p.id)}" aria-pressed="${on}" aria-label="${label} for ${esc(p.name)}" ${adm?"disabled":""}><span class="sw${on?" on":""}"></span>${label}</button>`};
   const off=players.filter(p=>p.active&&!p.is_admin&&access.nogames.includes(p.id)).map(p=>p.name);
+  const all=RG.ACCESS_GAMES.flatMap(([,l])=>l.map(([id])=>id)),open=all.filter(id=>access.open.includes(id)).length;
+  const note=p=>p.is_admin?"Admin, always on":access.nogames.includes(p.id)?`Plays ${open} of ${all.length} games`:"";
   return `<div class="panel"><h2>Who can use the Feed and the Games</h2><p class="hint">Turn Games off and that person still sees every game, but can only play the games ticked below. The rest say Coming soon. Admins always have everything.</p>
-    <div class="alist">${players.filter(p=>p.active).map(p=>`<div class="ar">${av(p,36)}<b>${esc(p.name)}${p.is_admin?"<small>Admin, always on</small>":""}</b>${sw(p,"nofeed","Feed")}${sw(p,"nogames","Games")}</div>`).join("")}</div></div>
-  <div class="panel"><h2>Games open to everyone</h2><p class="hint">${off.length?`Games off for ${esc(off.join(", ").replace(/, ([^,]*)$/," and $1"))}: they can play only what's ticked here.`:"Nobody has Games off right now. What you tick here stays playable for anyone you turn Games off for."}</p>
-    ${RG.ACCESS_GAMES.map(([grp,list])=>`<div class="lab">${esc(grp)}</div><div class="og">${list.map(([id,name])=>{const on=access.open.includes(id);return `<button class="ogi${on?" on":""}" data-open="${id}" aria-pressed="${on}"><span class="chk">✓</span>${esc(name)}</button>`}).join("")}</div>`).join("")}</div>`;
+    <div class="alist">${players.filter(p=>p.active).map(p=>`<div class="ar">${av(p,36)}<b>${esc(p.name)}${note(p)?`<small>${note(p)}</small>`:""}</b>${sw(p,"nofeed","Feed")}${sw(p,"nogames","Games")}</div>`).join("")}</div></div>
+  <div class="panel"><h2>Games open to everyone</h2>
+    <div class="cnt"><div><b>${all.length}</b><span>games in the list</span></div><div><b style="color:var(--acc)">${open}</b><span>playable</span></div></div><p class="hint">${off.length?`Games off for ${esc(off.join(", ").replace(/, ([^,]*)$/," and $1"))}: they can play only what's ticked here.`:"Nobody has Games off right now. What you tick here stays playable for anyone you turn Games off for."}</p>
+    ${RG.ACCESS_GAMES.map(([grp,list])=>`<div class="lab">${esc(grp)}<span class="n">${list.filter(([id])=>access.open.includes(id)).length} of ${list.length}</span></div><div class="og">${list.map(([id,name])=>{const on=access.open.includes(id);return `<button class="ogi${on?" on":""}" data-open="${id}" aria-pressed="${on}"><span class="chk">✓</span>${esc(name)}</button>`}).join("")}</div>`).join("")}</div>`;
 }
 let accSave=Promise.resolve(); // one save at a time, in the order they were tapped
 function saveAccess(){const copy=JSON.parse(JSON.stringify(access));accSave=accSave.then(()=>api("settings_save",{access:copy})).then(()=>toast("Saved."),x=>toast(x.message))}
