@@ -92,6 +92,8 @@ button:focus-visible{outline:2px solid var(--adv);outline-offset:3px}
 /* sheet */
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:20;opacity:0;pointer-events:none;transition:opacity .2s}
 .scrim.on{opacity:1;pointer-events:auto}
+html.rg-nav-on .toast{bottom:auto!important} /* this page's toast sits at the top */
+html.rg-nav-on:not(.rg-playing) .sheet{bottom:calc(64px + env(safe-area-inset-bottom,0px));max-height:calc(90% - 64px)} /* sheets sit above the bottom bar */
 .sheet{position:fixed;left:50%;bottom:0;z-index:21;width:min(540px,100%);max-height:90%;overflow-y:auto;background:var(--sheet);border-radius:26px 26px 0 0;padding:18px max(18px,env(safe-area-inset-left,0px)) calc(22px + env(safe-area-inset-bottom,0px));transform:translate(-50%,calc(100% + 60px));visibility:hidden;transition:transform .28s cubic-bezier(.2,.8,.2,1),visibility 0s .28s;box-shadow:0 -10px 40px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:12px}
 .sheet.on{transform:translate(-50%,0);visibility:visible;transition-delay:0s}
 .sh-top{display:flex;align-items:center;gap:12px}
@@ -223,6 +225,7 @@ a.go{display:block;text-decoration:none}
 <div class="arena" id="arena" hidden></div>
 
 <script src="mind.js"></script>
+<script src="rg.js?v=6"></script>
 <script>
 (function(){
 // built-in roster, used only when the game server can't be reached
@@ -411,8 +414,9 @@ function endTurn(){if(S.free){render();return}
 // ---------- sheets ----------
 const X='<button class="x well" data-shut aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>';
 let locked=false;
-function open(h,lock,keepScroll){locked=!!lock;const sh=$("sheet"),y=sh.scrollTop;sh.innerHTML=h;sh.classList.add("on");$("scrim").classList.add("on");sh.scrollTop=keepScroll?y:0}
-function shut(){locked=false;$("sheet").classList.remove("on");$("scrim").classList.remove("on")}
+function open(h,lock,keepScroll){locked=!!lock;const sh=$("sheet"),y=sh.scrollTop;sh.innerHTML=h;sh.classList.add("on");$("scrim").classList.add("on");sh.scrollTop=keepScroll?y:0;navSync()}
+function shut(){locked=false;$("sheet").classList.remove("on");$("scrim").classList.remove("on");navSync()}
+function navSync(){if(window.RG)RG.playing(!$("arena").hidden)} // the bottom bar hides while a challenge is played
 const avBtn=(id,attr,dis,note)=>`<button class="pbtn" ${attr} ${dis?"disabled":""}>${avH(id)}${esc(pp(id).name)}<small>${esc(note||teamOf(id).name)}</small></button>`;
 
 // new grand game: who plays, 2 teams, team names
@@ -516,8 +520,8 @@ let loop=null,cleanup=null,onQuit=null;
 const QUIT='<button class="x well" id="arQuit" aria-label="Leave the game">✕</button>';
 const arTop=(mid,t)=>{t=t||cur();return `<div class="ar-top"><span class="sc" style="color:${t.x}">${esc(t.name)}</span><span class="mid">${mid}</span>${QUIT}</div>`};
 const duoTop=(A,B,mid)=>`<div class="ar-top"><span class="sc" style="color:${A.x}">${esc(A.name)}<b id="sL">0</b></span><span class="mid">${mid}</span><span class="sc" style="color:${B.x}"><b id="sR">0</b>${esc(B.name)}</span>${QUIT}</div>`;
-function openArena(h){const A=$("arena");A.innerHTML=h;A.hidden=false}
-function closeArena(){if(loop)cancelAnimationFrame(loop);loop=null;if(cleanup)cleanup();cleanup=null;onQuit=null;$("arena").hidden=true;$("arena").innerHTML=""}
+function openArena(h){const A=$("arena");A.innerHTML=h;A.hidden=false;navSync()}
+function closeArena(){if(loop)cancelAnimationFrame(loop);loop=null;if(cleanup)cleanup();cleanup=null;onQuit=null;$("arena").hidden=true;$("arena").innerHTML="";navSync()}
 // res: win:<seconds left> · lose · cw · cl · fw:<seconds left> · fl · surv:<id> · duel:<id>
 function arenaOver(title,color,text,res,label){const d=document.createElement("div");d.className="ar-over";
   d.innerHTML=`<div class="ar-box"><div class="big" style="color:${color}">${esc(title)}</div><p class="hint" style="margin:0">${text}</p><button class="go p" style="--x:${color}" data-arres="${esc(res)}">${label||"Back to the map"}</button></div>`;$("arena").appendChild(d);

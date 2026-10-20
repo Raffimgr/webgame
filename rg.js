@@ -28,19 +28,21 @@ const CSS=`
 .rg-lock{position:relative}
 .rg-lock>:not(.rg-soon){opacity:.45;filter:grayscale(.5)}
 .rg-lock>.rg-soon{position:absolute;top:12px;right:12px;z-index:1}
-html.rg-nav-on .rg-gate{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))}
-html.rg-nav-on .rg-card{max-height:calc(100vh - 110px)}
-html.rg-nav-on body{padding-bottom:calc(68px + env(safe-area-inset-bottom,0px))}
-html.rg-nav-on .toast,html.rg-nav-on .rg-toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+html.rg-playing .rg-nav{display:none}
+html.rg-nav-on:not(.rg-playing) .rg-gate{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))}
+html.rg-nav-on:not(.rg-playing) .rg-card{max-height:calc(100vh - 110px)}
+html.rg-nav-on:not(.rg-playing) body{padding-bottom:calc(68px + env(safe-area-inset-bottom,0px))}
+html.rg-nav-on:not(.rg-playing) .toast,html.rg-nav-on:not(.rg-playing) .rg-toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 `;
 const st=document.createElement("style");st.textContent=CSS;document.head.appendChild(st);
 
 /* Bottom bar (like Instagram's) to switch between the Shenandoah Guide (the front page), the games home, the trip feed, the group chat,
-   the to-do list and your profile. Only on those pages, so it never covers a game while it is being played.
+   the to-do list and your profile. Also on the game pages (Games lit up), where RG.playing(true) hides it while a game is being played.
    The Chat button shows how many messages you haven't read yet; the Me button shows your picture once you are logged in.
    It stays above the login screen, so someone who isn't logged in can still switch pages. */
 (function(){
-  const here={"":"trip","index.html":"trip","games.html":"games","social.html":"feed","chat.html":"chat","plan.html":"plan","profile.html":"me"}[location.pathname.split("/").pop()];
+  const here={"":"trip","index.html":"trip","games.html":"games","social.html":"feed","chat.html":"chat","plan.html":"plan","profile.html":"me",
+    "play.html":"games","online.html":"games","mind.html":"games","cards.html":"games","map.html":"games","scores.html":"games"}[location.pathname.split("/").pop()];
   if(!here)return;
   const items=[["trip","./","\u{1F3D4}️","Trip"],["games","games.html","\u{1F3B2}","Games"],["feed","social.html","\u{1F4F8}","Feed"],
     ["chat","chat.html","\u{1F4AC}","Chat"],["plan","plan.html","\u{1F4CB}","To-do"],["me","profile.html","\u{1F464}","Me"]];
@@ -200,6 +202,7 @@ const canPlay=(gid,pid)=>!locked(pid,"nogames")||acc.open.includes(gid);
 const canFeed=pid=>!locked(pid,"nofeed");
 const canAny=prefix=>!locked(null,"nogames")||acc.open.some(g=>g.startsWith(prefix)); // e.g. "mind:": at least one mind game
 const SOON="Coming soon";
+const playing=on=>document.documentElement.classList.toggle("rg-playing",!!on); // hides the bottom bar during a game
 
-window.RG={api,av,esc,toast,login,canPlay,canFeed,canAny,ACCESS_GAMES,SOON,shrinkPhoto,shrinkAvatar,PERIODS,inPeriod,parseLocal,nowLocal,fmtDate,ordinal,GAMES};
+window.RG={api,av,esc,toast,login,playing,canPlay,canFeed,canAny,ACCESS_GAMES,SOON,shrinkPhoto,shrinkAvatar,PERIODS,inPeriod,parseLocal,nowLocal,fmtDate,ordinal,GAMES};
 })();

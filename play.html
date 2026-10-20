@@ -205,6 +205,7 @@ function openRoom(id){
 /* ---------- screens ---------- */
 function draw(){
   if(!me)return;
+  RG.playing(mode==="room"&&room&&room.status==="playing"); // the bottom bar hides only while the game runs
   const bk=$("#back");
   if(mode==="hub"){bk.textContent="Home";bk.href="games.html";bk.onclick=null}
   else{bk.textContent="All games";bk.href="play.html";bk.onclick=e=>{e.preventDefault();if(race&&race.live&&!confirm("Leave the race? You'll get no place."))return;openRoom(null)}}

@@ -55,7 +55,7 @@ button:focus-visible,a:focus-visible{outline:2px solid #2ec4b6;outline-offset:3p
   <div id="stage" hidden></div>
 </div>
 <script src="mind.js"></script>
-<script src="rg.js?v=5"></script>
+<script src="rg.js?v=6"></script>
 <script>
 (function(){
   const COL={quickmath:"#ffd23f",colorclash:"#f7b8d2",numbermemory:"#aab7ff",wordscramble:"#d4f09a",biggerorsmaller:"#ffbf99",gridrecall:"#7ee8f0",
@@ -77,9 +77,9 @@ button:focus-visible,a:focus-visible{outline:2px solid #2ec4b6;outline-offset:3p
   RG.login().then(drawCards,()=>{}); // no server: everything stays open
   sk.onclick=e=>{const b=e.target.closest("button");if(!b)return;skill=b.dataset.s;try{localStorage.setItem("rg_mind_skill",skill)}catch(e){}drawSk();drawCards()};
   let cur=null;
-  cards.onclick=e=>{const b=e.target.closest(".card");if(!b)return;if(b.classList.contains("rg-lock")){RG.toast(RG.SOON);return}menu.hidden=true;stage.hidden=false;
+  cards.onclick=e=>{const b=e.target.closest(".card");if(!b)return;if(b.classList.contains("rg-lock")){RG.toast(RG.SOON);return}menu.hidden=true;RG.playing(true);stage.hidden=false;
     cur=MindGames.play(stage,{game:b.dataset.g,level,color:COL[b.dataset.g],doneLabel:"Back to the games",onDone:back})};
-  function back(){if(cur)cur.stop();cur=null;stage.hidden=true;stage.innerHTML="";menu.hidden=false}
+  function back(){if(cur)cur.stop();cur=null;stage.hidden=true;stage.innerHTML="";menu.hidden=false;RG.playing(false)}
   document.getElementById("home").addEventListener("click",e=>{if(cur){e.preventDefault();back()}});
 })();
 </script>

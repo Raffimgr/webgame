@@ -249,6 +249,7 @@ function openRoom(id){
 function draw(){
   const keep=document.activeElement&&document.activeElement.id==="rzr";
   if(!me)return;
+  RG.playing(!!(roomId&&room&&room.status==="playing")); // the bottom bar hides only while the hands are dealt
   $("#badge").innerHTML=room&&roomId&&room.me.seat<0&&room.status!=="done"?'<span class="badge">Watching</span>':"";
   const bk=$("#back");
   if(roomId){bk.textContent="Tables";bk.href="online.html";bk.onclick=e=>{e.preventDefault();openRoom(null)}}else{bk.textContent="Card games";bk.href="cards.html";bk.onclick=null}

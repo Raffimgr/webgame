@@ -206,7 +206,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--teal);outline-offse
   <div id="stage" hidden></div>
 </div>
 <script src="cards.js"></script>
-<script src="rg.js?v=5"></script>
+<script src="rg.js?v=6"></script>
 <script>
 (function(){
 "use strict";
@@ -254,9 +254,9 @@ $("#games").onclick=e=>{const b=e.target.closest(".game");if(b&&b.dataset.soon){
 let timers=[],curSetup=null,playing=false; // playing: a game is under way (leaving asks first)
 function later(f,ms){timers.push(setTimeout(f,ms))}
 function clearTimers(){timers.forEach(clearTimeout);timers=[]}
-function show(html){menu.hidden=true;stage.hidden=false;stage.innerHTML=html;window.scrollTo(0,0)}
+function show(html){menu.hidden=true;stage.hidden=false;RG.playing(true);stage.innerHTML=html;window.scrollTo(0,0)}
 const leaveOk=()=>!playing||confirm("Leave this game? It will not be saved.");
-function backToMenu(){clearTimers();playing=false;curSetup=null;stage.hidden=true;stage.innerHTML="";menu.hidden=false;window.scrollTo(0,0)}
+function backToMenu(){clearTimers();playing=false;curSetup=null;stage.hidden=true;stage.innerHTML="";menu.hidden=false;RG.playing(false);window.scrollTo(0,0)}
 $("#home").addEventListener("click",e=>{if(!leaveOk()){e.preventDefault();return}playing=false;if(!stage.hidden){e.preventDefault();backToMenu()}});
 const head=(t,sub,right)=>`<div class="ghd"><div class="ttl">${t}<small>${sub}</small></div>${right||""}<button class="pill" data-quit>Card games</button></div>`;
 stage.addEventListener("click",e=>{if(e.target.closest("[data-quit]")&&leaveOk())backToMenu()});
