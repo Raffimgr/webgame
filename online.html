@@ -263,7 +263,7 @@ function drawLobby(){
   const rooms=list||[];
   app.innerHTML=`<div style="display:flex;flex-direction:column;gap:14px">
     <div class="panel"><div class="me">${av(me.id,36)}<b>Playing as ${esc(me.name)}</b><button id="out">Not you?</button></div></div>
-    <a class="go wide" href="play.html?new=poker" style="--x:var(--gold)">New table: pick the players</a>
+    ${RG.canPlay("play:poker")?`<a class="go wide" href="play.html?new=poker" style="--x:var(--gold)">New table: pick the players</a>`:`<div class="panel" style="flex-direction:row;align-items:center;gap:12px"><span class="rg-soon">${RG.SOON}</span><span class="muted">Poker on phones isn't open for you yet. You can still watch a table.</span></div>`}
     <span class="lab">Tables</span>
     <div class="rooms" id="rooms">${list===null?'<div class="empty">Loading…</div>':rooms.length?rooms.map(r=>`<button class="room" data-id="${r.id}">
       <span class="t"><b>${esc(tableName(r.host))}</b><small>${r.status==="lobby"?"Waiting to start":"Playing · hand "+r.hand_no} · ${r.chips} chips · ${r.seats.length} of 9 seats</small><span class="avs">${r.seats.map(id=>av(id,26)).join("")}</span></span>

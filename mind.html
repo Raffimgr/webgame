@@ -55,6 +55,7 @@ button:focus-visible,a:focus-visible{outline:2px solid #2ec4b6;outline-offset:3p
   <div id="stage" hidden></div>
 </div>
 <script src="mind.js"></script>
+<script src="rg.js?v=5"></script>
 <script>
 (function(){
   const COL={quickmath:"#ffd23f",colorclash:"#f7b8d2",numbermemory:"#aab7ff",wordscramble:"#d4f09a",biggerorsmaller:"#ffbf99",gridrecall:"#7ee8f0",
@@ -69,11 +70,14 @@ button:focus-visible,a:focus-visible{outline:2px solid #2ec4b6;outline-offset:3p
   // skill filter: All + each skill (remembered on this device)
   const sk=document.getElementById("sk"),skills=[...new Set(MindGames.list.map(g=>g.skill))];let skill="All";try{skill=localStorage.getItem("rg_mind_skill")||"All"}catch(e){}if(skill!=="All"&&!skills.includes(skill))skill="All";
   function drawSk(){sk.innerHTML=["All",...skills].map(x=>`<button class="${x===skill?"on":""}" data-s="${x}" aria-pressed="${x===skill}">${x}</button>`).join("")}
-  function drawCards(){cards.innerHTML=MindGames.list.filter(g=>skill==="All"||g.skill===skill).map(g=>`<button class="card" data-g="${g.id}" style="--x:${COL[g.id]||"#7ee8f0"}"><span class="ic">${ICON[g.id]||"?"}</span><small>${g.skill}</small><b>${g.name}</b><span>${g.how}</span></button>`).join("")}
+  // Admin > Access: games this player may not play yet stay in the list, after the open ones, marked Coming soon.
+  function drawCards(){const open=g=>RG.canPlay("mind:"+g.id);
+    cards.innerHTML=MindGames.list.filter(g=>skill==="All"||g.skill===skill).sort((a,b)=>open(b)-open(a)).map(g=>`<button class="card${open(g)?"":" rg-lock"}" data-g="${g.id}" style="--x:${COL[g.id]||"#7ee8f0"}">${open(g)?"":`<span class="rg-soon">${RG.SOON}</span>`}<span class="ic">${ICON[g.id]||"?"}</span><small>${g.skill}</small><b>${g.name}</b><span>${g.how}</span></button>`).join("")}
   drawSk();drawCards();
+  RG.login().then(drawCards,()=>{}); // no server: everything stays open
   sk.onclick=e=>{const b=e.target.closest("button");if(!b)return;skill=b.dataset.s;try{localStorage.setItem("rg_mind_skill",skill)}catch(e){}drawSk();drawCards()};
   let cur=null;
-  cards.onclick=e=>{const b=e.target.closest(".card");if(!b)return;menu.hidden=true;stage.hidden=false;
+  cards.onclick=e=>{const b=e.target.closest(".card");if(!b)return;if(b.classList.contains("rg-lock")){RG.toast(RG.SOON);return}menu.hidden=true;stage.hidden=false;
     cur=MindGames.play(stage,{game:b.dataset.g,level,color:COL[b.dataset.g],doneLabel:"Back to the games",onDone:back})};
   function back(){if(cur)cur.stop();cur=null;stage.hidden=true;stage.innerHTML="";menu.hidden=false}
   document.getElementById("home").addEventListener("click",e=>{if(cur){e.preventDefault();back()}});

@@ -129,6 +129,7 @@ try {
   }
 
   $pid = guide_login();
+  if (!guide_can_feed($pid)) fail('Coming soon: the Trip Feed isn\'t open for you yet.', 403);
   $db = social_db();
   $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 

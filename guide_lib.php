@@ -47,3 +47,13 @@ function guide_is_admin(string $pid): bool {
   $s = $pdo->prepare('SELECT is_admin FROM players WHERE id=?'); $s->execute([$pid]);
   return (int)$s->fetchColumn() === 1;
 }
+
+/* Admin > Settings > Access: false when the admin turned the trip feed off for this player. Admins always see it. */
+function guide_can_feed(string $pid): bool {
+  try {
+    $pdo = new PDO('sqlite:' . data_dir() . '/ridge.sqlite', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $s = $pdo->prepare("SELECT v FROM settings WHERE k='access'"); $s->execute();
+    $a = json_decode((string)$s->fetchColumn(), true);
+  } catch (Throwable $e) { return true; }
+  return !is_array($a) || !in_array($pid, (array)($a['nofeed'] ?? []), true) || guide_is_admin($pid);
+}

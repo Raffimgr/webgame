@@ -74,6 +74,8 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--teal);outline-offse
 .minds button{padding:10px 12px;border-radius:14px;background:var(--well);box-shadow:var(--well-sh);font-weight:650;font-size:14px;text-align:left}
 .minds button small{display:block;color:var(--mut);font-weight:500;font-size:12px}
 .minds button.on{background:var(--teal);color:var(--ink);box-shadow:0 0 12px rgba(46,196,182,.4)}
+.who button.soon,.minds button.soon{opacity:.45;cursor:default}
+.who button .sn,.minds button .sn{display:block;color:var(--gold);font:800 10.5px var(--font);letter-spacing:.04em;text-transform:uppercase}
 .minds button.on small{color:#15403b}
 .tog{display:flex;align-items:center;gap:12px;font-weight:600}
 .tog input{width:22px;height:22px;accent-color:var(--teal)}
@@ -158,6 +160,10 @@ const who=id=>people[id]||{id,name:id,short:String(id).slice(0,2),color:"#9aa3b3
 const nameOf=id=>who(id).name;
 const av=(id,s)=>{const p=who(id);return `<span class="av" style="--x:${esc(p.color)};--s:${s||38}px">${p.avatar?`<img src="${esc(p.avatar)}" alt="">`:esc(p.short)}</span>`};
 const coinsFor=p=>p>=1&&p<=coins.length?coins[p-1]:0;
+/* Admin > Access: what a game counts as (a mind race is the mind game it races on), and whether I may start it */
+const gidOf=(game,mind)=>game==="race"?"mind:"+mind:"play:"+game;
+const gameOpen=k=>k==="race"?RG.canAny("mind:"):RG.canPlay("play:"+k);
+const SN=`<small class="sn">${RG.SOON}</small>`;
 function setTitle(t,sub){$("#ttl").innerHTML=esc(t)+`<small>${esc(sub)}</small>`}
 
 /* ---------- talking to the server ---------- */
@@ -234,8 +240,9 @@ setInterval(()=>{
 function roomRow(r,inv){
   const g=GAMES[r.game]||{name:r.game},ids=r.members;
   const sub=r.status==="lobby"?`Waiting in the lobby · ${r.ready.length} of ${r.invited.length} ready`:"Playing now";
-  return `<button class="room${inv?" inv":""}" data-id="${r.id}" data-g="${r.game}"><span class="t"><b>${esc(r.label)}</b><small>${inv?esc(nameOf(r.host))+" invited you · ":"Host "+esc(nameOf(r.host))+" · "}${sub}</small><span class="avs">${(r.status==="lobby"?r.invited:ids).map(i=>av(i,26)).join("")}</span></span>
-    <em>${inv?"Join ›":ids.includes(me.id)?"Back to it ›":r.status==="lobby"?"Open ›":"Watch ›"}</em></button>`;
+  const soon=!ids.includes(me.id)&&!RG.canPlay(gidOf(r.game,r.mind||""));
+  return `<button class="room${inv?" inv":""}" data-id="${r.id}" data-g="${r.game}"${soon?' data-soon="1"':""}><span class="t"><b>${esc(r.label)}</b><small>${inv?esc(nameOf(r.host))+" invited you · ":"Host "+esc(nameOf(r.host))+" · "}${sub}</small><span class="avs">${(r.status==="lobby"?r.invited:ids).map(i=>av(i,26)).join("")}</span></span>
+    <em>${soon?`<span class="rg-soon">${RG.SOON}</span>`:inv?"Join ›":ids.includes(me.id)?"Back to it ›":r.status==="lobby"?"Open ›":"Watch ›"}</em></button>`;
 }
 function drawHub(){
   setTitle("Play together","Everyone plays on their own phone");
@@ -244,40 +251,43 @@ function drawHub(){
     <div class="panel"><div class="me">${av(me.id,36)}<b>Playing as ${esc(me.name)}</b><button id="out">Not you?</button></div></div>
     ${invites.length?`<span class="lab">You're invited</span><div class="col" id="inv">${invites.map(r=>roomRow(r,1)).join("")}</div>`:""}
     <span class="lab">Start a game</span>
-    <div class="games">${Object.entries(GAMES).map(([k,g])=>`<button class="gcard" data-new="${k}" style="--x:${g.x}"><span class="ic">${g.ic}</span><b>${g.name}</b><span>${g.how}</span></button>`).join("")}</div>
+    <div class="games">${Object.entries(GAMES).map(([k,g])=>`<button class="gcard${gameOpen(k)?"":" rg-lock"}" data-new="${k}" style="--x:${g.x}">${gameOpen(k)?"":`<span class="rg-soon">${RG.SOON}</span>`}<span class="ic">${g.ic}</span><b>${g.name}</b><span>${g.how}</span></button>`).join("")}</div>
     <span class="lab">Games right now</span>
     <div class="col" id="rooms">${rooms===null?'<div class="empty">Loading…</div>':open.length?open.map(r=>roomRow(r)).join(""):'<div class="empty">No games right now. Start one above: the players you pick get an invite on their phone.</div>'}</div></div>`;
   $("#out").onclick=async()=>{try{await RG.api("logout",{})}catch(e){}location.reload()};
   app.querySelectorAll("[data-new]").forEach(b=>b.onclick=()=>newGame(b.dataset.new));
-  app.querySelectorAll(".room").forEach(b=>b.onclick=()=>{if(b.dataset.g==="poker")location.href="online.html?room="+b.dataset.id;else openRoom(+b.dataset.id)});
+  app.querySelectorAll(".room").forEach(b=>b.onclick=()=>{if(b.dataset.soon&&b.dataset.g!=="poker"){RG.toast(RG.SOON);return}if(b.dataset.g==="poker")location.href="online.html?room="+b.dataset.id;else openRoom(+b.dataset.id)});
 }
 
 function newGame(game,keep){
+  if(!gameOpen(game)){RG.toast(RG.SOON);openRoom(null);return}
   const last=store.get("rg_play_last",{});
   form=Object.assign({game,players:(last.players||[]).filter(i=>people[i]&&i!==me.id),score:true,chips:last.chips||100,cat:"any",mind:last.mind||"quickmath",level:last.level||2},keep||{});
+  if(!RG.canPlay("mind:"+form.mind))form.mind=(MindGames.list.find(m=>RG.canPlay("mind:"+m.id))||{}).id||form.mind;
   mode="new";err="";const u=new URL(location.href);u.searchParams.set("new",game);u.searchParams.delete("room");history.replaceState(null,"",u);clearTimeout(timer);draw();window.scrollTo(0,0);
 }
 function drawNew(){
-  const f=form,g=GAMES[f.game];
+  const f=form,g=GAMES[f.game],gid=gidOf(f.game,f.mind);
   setTitle("New "+g.name,"Pick the players. They get an invite on their phone.");
-  const all=Object.values(people).filter(p=>p.active!==0),n=f.players.length+1;
+  f.players=f.players.filter(id=>RG.canPlay(gid,id)); // players this game is coming soon for can't be invited
+  const all=Object.values(people).filter(p=>p.active!==0),n=f.players.length+1,can=all.filter(p=>p.id!==me.id&&RG.canPlay(gid,p.id)).map(p=>p.id);
   let opts="";
   if(f.game==="poker")opts=`<div class="panel"><span class="lab">Chips each</span><div class="seg" id="chips">${[100,200,500].map(c=>`<button class="${c===f.chips?"on":""}" data-c="${c}">${c}</button>`).join("")}</div></div>`;
   if(f.game==="imposter")opts=`<div class="panel"><span class="lab">Word category</span><div class="seg" id="cat">${CATS.map(c=>`<button class="${c===f.cat?"on":""}" data-c="${esc(c)}">${c==="any"?"Surprise me":esc(c)}</button>`).join("")}</div></div>`;
-  if(f.game==="race")opts=`<div class="panel"><span class="lab">Mind game</span><div class="minds" id="minds">${MindGames.list.map(m=>`<button class="${m.id===f.mind?"on":""}" data-m="${m.id}">${esc(m.name)}<small>${esc(m.skill)}</small></button>`).join("")}</div>
+  if(f.game==="race")opts=`<div class="panel"><span class="lab">Mind game</span><div class="minds" id="minds">${MindGames.list.map(m=>RG.canPlay("mind:"+m.id)?`<button class="${m.id===f.mind?"on":""}" data-m="${m.id}">${esc(m.name)}<small>${esc(m.skill)}</small></button>`:`<button class="soon" data-soon="1">${esc(m.name)}${SN}</button>`).join("")}</div>
     <span class="lab">Level</span><div class="seg" id="lvl">${[1,2,3,4,5].map(l=>`<button class="${l===f.level?"on":""}" data-l="${l}">${l}</button>`).join("")}</div>
     <p class="muted" style="margin:0;font-size:13.5px">${esc((MindGames.list.find(m=>m.id===f.mind)||{}).how||"")} Fastest finisher wins; ${window.bonusPer?`every ${window.bonusPer} seconds left is 1 extra coin.`:"seconds left decide the order."}</p></div>`;
   app.innerHTML=`<div class="col">${opts}
-    <div class="panel"><div class="row" style="justify-content:space-between"><span class="lab">Who's playing</span><button class="chip" id="allp">${f.players.length===all.length-1?"Clear":"Everyone"}</button></div>
-      <div class="who" id="who">${all.map(p=>`<button data-p="${esc(p.id)}" class="${p.id===me.id||f.players.includes(p.id)?"on":""}" style="--x:${esc(p.color)}" ${p.id===me.id?"disabled":""}>${av(p.id,44)}${esc(p.name)}${p.id===me.id?"<small class='muted' style='font-size:11px'>you</small>":""}</button>`).join("")}</div>
+    <div class="panel"><div class="row" style="justify-content:space-between"><span class="lab">Who's playing</span><button class="chip" id="allp">${f.players.length&&f.players.length===can.length?"Clear":"Everyone"}</button></div>
+      <div class="who" id="who">${all.map(p=>{const ok=p.id===me.id||RG.canPlay(gid,p.id);return `<button data-p="${esc(p.id)}" class="${p.id===me.id||f.players.includes(p.id)?"on":ok?"":"soon"}" style="--x:${esc(p.color)}" ${p.id===me.id||!ok?"disabled":""}>${av(p.id,44)}${esc(p.name)}${p.id===me.id?"<small class='muted' style='font-size:11px'>you</small>":ok?"":SN}</button>`}).join("")}</div>
       <label class="tog"><input type="checkbox" id="score" ${f.score?"checked":""}> Count for the scoreboard</label></div>
     ${err?`<div class="err">${esc(err)}</div>`:""}
     <button class="go wide" id="create" style="--x:${g.x}" ${busy||n<g.min?"disabled":""}>${n<g.min?`Pick at least ${g.min-1} other player${g.min>2?"s":""}`:`Open the lobby for ${n} players`}</button>
     <button class="go ghost sm" id="cancel">Back</button></div>`;
-  const seg=(id,key,conv)=>{const el=$("#"+id);if(el)el.onclick=e=>{const b=e.target.closest("button");if(!b)return;f[key]=conv(b.dataset[Object.keys(b.dataset)[0]]);draw()}};
+  const seg=(id,key,conv)=>{const el=$("#"+id);if(el)el.onclick=e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.soon){RG.toast(RG.SOON);return}f[key]=conv(b.dataset[Object.keys(b.dataset)[0]]);draw()}};
   seg("chips","chips",Number);seg("cat","cat",String);seg("minds","mind",String);seg("lvl","level",Number);
   $("#who").onclick=e=>{const b=e.target.closest("button");if(!b||b.disabled)return;const id=b.dataset.p,i=f.players.indexOf(id);if(i>=0)f.players.splice(i,1);else f.players.push(id);draw()};
-  $("#allp").onclick=()=>{f.players=f.players.length===all.length-1?[]:all.map(p=>p.id).filter(i=>i!==me.id);draw()};
+  $("#allp").onclick=()=>{f.players=f.players.length===can.length?[]:can.slice();draw()};
   $("#score").onchange=e=>{f.score=e.target.checked};
   $("#cancel").onclick=()=>openRoom(null);
   $("#create").onclick=async()=>{if(busy)return;busy=true;err="";draw();

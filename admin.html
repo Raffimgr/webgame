@@ -78,6 +78,21 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 .colors button.on{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--x)}
 .empty{color:var(--mut);text-align:center;padding:18px}
 .hint{color:var(--mut);font-size:13px;margin:0}
+#t-set{display:flex;flex-direction:column;gap:16px}
+.alist{display:flex;flex-direction:column;gap:8px}
+.ar{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:8px 12px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh)}
+.ar b{font-weight:650;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ar b small{display:block;font-weight:500;color:var(--mut);font-size:12px}
+.tg{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:56px;font-size:11.5px;font-weight:700;color:var(--mut)}
+.tg:disabled{opacity:.45;cursor:default}
+.sw{position:relative;width:48px;height:28px;border-radius:99px;background:#3a3f48;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#eef1f6;transition:transform .2s}
+.sw.on{background:var(--acc)}
+.sw.on::after{transform:translateX(20px)}
+.og{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.ogi{display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 10px;border-radius:14px;background:var(--well);box-shadow:var(--well-sh);font-weight:600;font-size:14px;text-align:left}
+.ogi .chk{width:26px;height:26px;border-radius:8px}
+.ogi.on .chk{background:var(--acc);color:var(--ink)}
 </style>
 </head>
 <body>
@@ -95,8 +110,8 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 (async function(){
 const {api,av,esc,toast}=RG;
 const COLORS=["#d4f09a","#f7b8d2","#aab7ff","#ffe08a","#ffbf99","#ff9fb8","#7ee8f0","#9df0c8","#d8c39a","#c9a7ff","#7be08a","#ff8f70"];
-let me,players=[],events=[],coins=[];
-try{({me}=await RG.login({admin:true}))}catch(e){document.querySelector(".wrap").innerHTML=`<div class="panel"><h2>Can't reach the server</h2><p class="hint">${esc(e.message)} The admin page only works on the website itself.</p><a class="btn" href="games.html">Home</a></div>`;return}
+let me,players=[],events=[],coins=[],access={nofeed:[],nogames:[],open:[]};
+try{const r=await RG.login({admin:true});me=r.me;if(r.state.access)access=r.state.access}catch(e){document.querySelector(".wrap").innerHTML=`<div class="panel"><h2>Can't reach the server</h2><p class="hint">${esc(e.message)} The admin page only works on the website itself.</p><a class="btn" href="games.html">Home</a></div>`;return}
 document.getElementById("who").innerHTML=`${av(me,22)} ${esc(me.name)} · <button id="out" style="color:#9aa3b3;font-weight:600">Log out</button>`;
 document.getElementById("out").onclick=async()=>{try{await api("logout",{})}catch(x){}location.reload()};
 
@@ -271,10 +286,31 @@ function editPlayer(p){
   draw();document.body.appendChild(s);
 }
 
+/* ---------- access: who can use the Feed and the Games ----------
+   Feed off: the Trip Feed says Coming soon. Games off: every game still shows, but only the games ticked under
+   "Games open to everyone" can be played; the rest say Coming soon. Admins always have everything. */
+function accessHTML(){
+  const sw=(p,k,label)=>{const adm=!!p.is_admin,on=adm||!access[k].includes(p.id);
+    return `<button class="tg" data-acc="${k}" data-p="${esc(p.id)}" aria-pressed="${on}" aria-label="${label} for ${esc(p.name)}" ${adm?"disabled":""}><span class="sw${on?" on":""}"></span>${label}</button>`};
+  const off=players.filter(p=>p.active&&!p.is_admin&&access.nogames.includes(p.id)).map(p=>p.name);
+  return `<div class="panel"><h2>Who can use the Feed and the Games</h2><p class="hint">Turn Games off and that person still sees every game, but can only play the games ticked below. The rest say Coming soon. Admins always have everything.</p>
+    <div class="alist">${players.filter(p=>p.active).map(p=>`<div class="ar">${av(p,36)}<b>${esc(p.name)}${p.is_admin?"<small>Admin, always on</small>":""}</b>${sw(p,"nofeed","Feed")}${sw(p,"nogames","Games")}</div>`).join("")}</div></div>
+  <div class="panel"><h2>Games open to everyone</h2><p class="hint">${off.length?`Games off for ${esc(off.join(", ").replace(/, ([^,]*)$/," and $1"))}: they can play only what's ticked here.`:"Nobody has Games off right now. What you tick here stays playable for anyone you turn Games off for."}</p>
+    ${RG.ACCESS_GAMES.map(([grp,list])=>`<div class="lab">${esc(grp)}</div><div class="og">${list.map(([id,name])=>{const on=access.open.includes(id);return `<button class="ogi${on?" on":""}" data-open="${id}" aria-pressed="${on}"><span class="chk">✓</span>${esc(name)}</button>`}).join("")}</div>`).join("")}</div>`;
+}
+let accSave=Promise.resolve(); // one save at a time, in the order they were tapped
+function saveAccess(){const copy=JSON.parse(JSON.stringify(access));accSave=accSave.then(()=>api("settings_save",{access:copy})).then(()=>toast("Saved."),x=>toast(x.message))}
+function drawAccess(){
+  const el=document.getElementById("acc");if(!el)return;el.innerHTML=accessHTML();
+  const flip=(l,v)=>{const i=l.indexOf(v);if(i>=0)l.splice(i,1);else l.push(v);drawAccess();saveAccess()};
+  el.querySelectorAll("[data-acc]").forEach(b=>b.onclick=()=>flip(access[b.dataset.acc],b.dataset.p));
+  el.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>flip(access.open,b.dataset.open));
+}
+
 /* ---------- settings ---------- */
 function drawSettings(){
   const el=document.getElementById("t-set");
-  el.innerHTML=`<div class="panel"><h2>Coins for each place</h2><p class="hint">Every game gives coins by place. Places past the last box get nothing. Changing this re-counts every game already recorded.</p>
+  el.innerHTML=`<div id="acc" style="display:flex;flex-direction:column;gap:16px"></div><div class="panel"><h2>Coins for each place</h2><p class="hint">Every game gives coins by place. Places past the last box get nothing. Changing this re-counts every game already recorded.</p>
     <div class="coins-ed" id="ce">${coins.map((c,i)=>`<label>${RG.ordinal(i+1)}<input class="in" type="number" min="0" inputmode="numeric" value="${c}"></label>`).join("")}</div>
     <div class="actions" style="justify-content:flex-start"><button class="btn sm" id="cadd">＋ Place</button><button class="btn sm" id="cdel">− Place</button><span style="flex:1"></span><button class="btn main" id="csave">Save coins</button></div></div>
   <div class="panel"><h2>Backup</h2><p class="hint">Download every player, game and score as one file (photos stay on the server).</p><div class="actions" style="justify-content:flex-start"><a class="btn" href="api.php?a=export" download>Download backup</a></div></div>
@@ -282,6 +318,7 @@ function drawSettings(){
   (async()=>{const h=el.querySelector("#fr-h"),b=el.querySelector("#fr");
     const paint=on=>{h.textContent=on?"raffaelco.com sends visitors straight to the games.":"raffaelco.com does not open the games. Use raffaelco.com/ridge-games/.";b.textContent=on?"Stop sending raffaelco.com here":"Make raffaelco.com open the games";b.hidden=false;b.onclick=async()=>{b.disabled=true;try{const r=await api("settings_save",{front:!on});paint(r.front);toast("Saved.")}catch(x){toast(x.message)}b.disabled=false}};
     try{const r=await api("front");if(!r.possible){h.textContent="Only available on the real website.";return}paint(r.front)}catch(x){h.textContent=x.message}})();
+  drawAccess();
   const read=()=>[...el.querySelectorAll("#ce input")].map(i=>+i.value||0);
   el.querySelector("#cadd").onclick=()=>{coins=[...read(),0];drawSettings()};
   el.querySelector("#cdel").onclick=()=>{coins=read().slice(0,-1);if(!coins.length)coins=[10];drawSettings()};

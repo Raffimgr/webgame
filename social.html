@@ -122,7 +122,7 @@ textarea{width:100%;border:0;border-radius:14px;padding:11px 13px;background:var
   </div>
   <div id="feed"></div>
 </div>
-<script src="rg.js?v=4"></script>
+<script src="rg.js?v=5"></script>
 <script src="talk.js?v=3"></script>
 <script>
 (()=>{
@@ -325,6 +325,7 @@ async function boot(){
   try{const r=await RG.login();me={id:r.me.id,name:r.me.name,is_admin:+r.me.is_admin===1};
     if(r.state&&r.state.players)r.state.players.forEach(p=>people[p.id]=p);
     const w=$("#who");w.hidden=false;w.innerHTML=RG.av(r.me,22)+" "+esc(r.me.name);
+    if(!RG.canFeed()){$("#feed").innerHTML=`<div class="empty"><span class="rg-soon">${RG.SOON}</span><br><br>The Trip Feed isn't open for you yet.</div>`;return} // Admin > Access
     Talk.setMe(me,people);await Talk.load();await refresh(true);$("#shareBtn").hidden=false;$("#tagr").innerHTML=tagChips([],me.id);
     try{const c=new AbortController();setTimeout(()=>c.abort(),6000);videoOn=(await fetch(media+"/ping?deep=1",{signal:c.signal})).ok}catch(e){videoOn=false}
     setInterval(()=>{if(!document.hidden&&!busy)refresh(false).catch(()=>{})},45000);

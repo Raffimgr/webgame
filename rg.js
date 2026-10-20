@@ -24,6 +24,10 @@ const CSS=`
 .rg-nav a.on{color:#2ec4b6;background:rgba(46,196,182,.13)}
 .rg-nav a.on .rg-av{box-shadow:0 0 0 2px #2ec4b6}
 .rg-nav b{position:absolute;top:2px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:#ff5a5f;color:#fff;font:800 11px/18px "Inter",system-ui;text-align:center;box-shadow:0 0 0 2px #1b1d22}
+.rg-soon,.rg-lock>.rg-soon{display:inline-block;padding:4px 10px;border-radius:99px;background:#ffd23f;color:#15181e;font:800 11px/1.2 "Inter",system-ui;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+.rg-lock{position:relative}
+.rg-lock>:not(.rg-soon){opacity:.45;filter:grayscale(.5)}
+.rg-lock>.rg-soon{position:absolute;top:12px;right:12px;z-index:1}
 html.rg-nav-on .rg-gate{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))}
 html.rg-nav-on .rg-card{max-height:calc(100vh - 110px)}
 html.rg-nav-on body{padding-bottom:calc(68px + env(safe-area-inset-bottom,0px))}
@@ -85,7 +89,7 @@ function toast(msg){const t=document.createElement("div");t.className="rg-toast"
 
 /* Login screen. Resolves with the logged-in player. admin:true = only the admin may pass. */
 async function login({admin=false}={}){
-  const s=await api("state");
+  const s=await api("state");setAccess(s);
   if(s.me&&(!admin||s.me.is_admin))return {me:s.me,state:s};
   return new Promise(resolve=>{
     const g=document.createElement("div");g.className="rg-gate";
@@ -115,7 +119,8 @@ async function login({admin=false}={}){
           if(needSetup){if(pw!==f.password2.value)throw new Error("The two passwords don't match.");r=await api("setup",{password:pw})}
           else r=await api("login",{id:pick.id,password:pw});
           if(admin&&!r.me.is_admin)throw new Error("That profile is not the admin.");
-          g.remove();window.dispatchEvent(new Event("rg-login"));resolve({me:r.me,state:await api("state")});
+          const s2=await api("state");setAccess(s2);
+          g.remove();window.dispatchEvent(new Event("rg-login"));resolve({me:r.me,state:s2});
         }catch(x){err.textContent=x.message;btn.disabled=false}
       };
     };
@@ -180,5 +185,21 @@ const GAMES={
 };
 if(window.MindGames)GAMES["Mind games"]=MindGames.list.map(g=>g.name);
 
-window.RG={api,av,esc,toast,login,shrinkPhoto,shrinkAvatar,PERIODS,inPeriod,parseLocal,nowLocal,fmtDate,ordinal,GAMES};
+/* Who may play what (Admin > Settings > Access). A player whose games are off plays only the games ticked as open;
+   the rest show "Coming soon". A mind race counts as the mind game it races on. Admins always have everything.
+   Before login (or with no server) nothing is locked. */
+const ACCESS_GAMES=[
+  ["Play together",[["play:poker","Poker on phones"],["play:imposter","Imposter"],["play:trivia","Trivia race"],["play:reaction","Last One Standing"],["play:likely","Most Likely To"]]],
+  ["Mind Games (alone or in a Mind race)",window.MindGames?MindGames.list.map(g=>["mind:"+g.id,g.name]):[]],
+  ["Card Games on one iPad",[["cards:poker","Texas Hold'em"],["cards:highcard","High Card Showdown"],["cards:hilo","Higher or Lower"],["cards:blackjack","Blackjack vs Dealer"]]],
+  ["The grand game",[["crown","The Road to the Crown"]]]];
+let acc=null,accMe=null;const accPeople={};
+function setAccess(s){acc=s.access||null;accMe=s.me||null;(s.players||[]).forEach(p=>accPeople[p.id]=p)}
+function locked(pid,list){const p=pid?accPeople[pid]:accMe;return !!(acc&&p&&!+p.is_admin&&acc[list].includes(p.id))}
+const canPlay=(gid,pid)=>!locked(pid,"nogames")||acc.open.includes(gid);
+const canFeed=pid=>!locked(pid,"nofeed");
+const canAny=prefix=>!locked(null,"nogames")||acc.open.some(g=>g.startsWith(prefix)); // e.g. "mind:": at least one mind game
+const SOON="Coming soon";
+
+window.RG={api,av,esc,toast,login,canPlay,canFeed,canAny,ACCESS_GAMES,SOON,shrinkPhoto,shrinkAvatar,PERIODS,inPeriod,parseLocal,nowLocal,fmtDate,ordinal,GAMES};
 })();

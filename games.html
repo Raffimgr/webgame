@@ -81,7 +81,7 @@ a.door:focus-visible{box-shadow:var(--raise-sh),0 0 0 3px var(--x)}
   <a class="adm" href="./">&larr; Shenandoah Guide</a>
   <a class="adm" href="admin.html" id="adm" hidden>Admin</a>
 </div>
-<script src="rg.js?v=4"></script>
+<script src="rg.js?v=5"></script>
 <script>
 (async function(){
   // Everyone logs in first: tap your name, type the password.
@@ -90,6 +90,9 @@ a.door:focus-visible{box-shadow:var(--raise-sh),0 0 0 3px var(--x)}
     const {me}=await RG.login();
     who.innerHTML=`<span class="me">${RG.av(me,38)}<span>Playing as <b>${RG.esc(me.name)}</b></span><button id="out">Log out</button></span>`;
     document.getElementById("adm").hidden=!me.is_admin;
+    // Admin > Access: a door with nothing inside this player may play says Coming soon (it still opens, to see the games).
+    const shut={"play.html":!RG.canAny("play:")&&!RG.canAny("mind:"),"map.html":!RG.canPlay("crown"),"mind.html":!RG.canAny("mind:"),"cards.html":!RG.canAny("cards:")&&!RG.canPlay("play:poker")};
+    document.querySelectorAll("a.door").forEach(d=>{if(!shut[d.getAttribute("href")])return;d.classList.add("rg-lock");d.insertAdjacentHTML("beforeend",`<span class="rg-soon">${RG.SOON}</span>`)});
     document.getElementById("out").onclick=async()=>{try{await RG.api("logout",{})}catch(e){}location.reload()};
     // Invites: a game someone started with me in it shows up here, with a Join button.
     const box=document.getElementById("inv"),people={};

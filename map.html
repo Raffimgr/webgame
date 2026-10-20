@@ -768,6 +768,14 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
 });
 $("scrim").onclick=()=>{if(!locked)shut()};document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!locked&&$("arena").hidden)shut()});
 
+function soon(){const d=document.createElement("div");d.style.cssText="position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:16px;background:#1b1d22";
+  d.innerHTML=`<div style="max-width:420px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+    <span style="padding:5px 12px;border-radius:99px;background:#ffd23f;color:#15181e;font:800 12px Inter,system-ui;letter-spacing:.05em;text-transform:uppercase">Coming soon</span>
+    <h2 style="margin:0;font:600 30px/1.15 Fredoka,Inter,system-ui;color:#eef1f6">The Road to the Crown</h2>
+    <p style="margin:0;color:#9aa3b3">This game isn't open for you yet.</p>
+    <a href="games.html" style="margin-top:6px;padding:12px 20px;border-radius:15px;background:#2ec4b6;color:#15181e;font:700 15px Inter,system-ui;text-decoration:none">Back to the games</a></div>`;
+  document.body.appendChild(d)}
+
 // ---------- start: resume the saved game, or set up a new one ----------
 (async function(){
   const saved=loadSaved();
@@ -777,7 +785,9 @@ $("scrim").onclick=()=>{if(!locked)shut()};document.addEventListener("keydown",e
   try{const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),4000);
     const r=await fetch("api.php?a=state",{credentials:"same-origin",signal:ctl.signal});clearTimeout(to);const j=await r.json();
     if(j&&Array.isArray(j.players)&&j.players.length){PEOPLE={};j.players.forEach(p=>PEOPLE[p.id]={name:p.name,short:p.short||String(p.name).slice(0,2),color:p.color||"#9aa3b3",avatar:p.avatar||""})}
-    ME=j&&j.me||null}catch(e){}
+    ME=j&&j.me||null;
+    // Admin > Access: a player whose games are off, and for whom this game isn't ticked as open, sees Coming soon
+    const a=j&&j.access;if(ME&&!+ME.is_admin&&a&&a.nogames.includes(ME.id)&&!a.open.includes("crown")){soon();return}}catch(e){}
   if(!S)setup();
 })();
 })();

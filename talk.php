@@ -34,6 +34,7 @@ try {
     foreach ($db->query('SELECT item, pid FROM likes ORDER BY at') as $r) $items[$r['item']]['likes'][] = $r['pid'];
     foreach ($db->query('SELECT id, item, pid, body, at FROM comments ORDER BY id') as $r)
       $items[$r['item']]['comments'][] = ['id' => (int)$r['id'], 'by' => $r['pid'], 'body' => $r['body'], 'at' => (int)$r['at']];
+    if (!guide_can_feed($pid)) $items = array_filter($items, fn($k) => !str_starts_with((string)$k, 'po-'), ARRAY_FILTER_USE_KEY); // feed posts' likes and comments
     foreach ($items as &$it) $it += ['likes' => [], 'comments' => []];
     out(['items' => (object)$items]);
   }
@@ -50,6 +51,7 @@ try {
   }
   $item = clean_item($b['item'] ?? '');
   if ($item === '') fail('Bad request.');
+  if (str_starts_with($item, 'po-') && !guide_can_feed($pid)) fail('Coming soon: the Trip Feed isn\'t open for you yet.', 403);
   if ($act === 'like') {
     $d = $db->prepare('DELETE FROM likes WHERE item=? AND pid=?'); $d->execute([$item, $pid]);
     if ($d->rowCount() === 0) $db->prepare('INSERT INTO likes (item, pid, at) VALUES (?, ?, ?)')->execute([$item, $pid, time()]);

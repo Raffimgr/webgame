@@ -119,6 +119,23 @@ function coins_for(int $place): int { $t = coins_table(); return $place >= 1 && 
 const DEFAULT_BONUS_PER = 10; // timed games: 1 extra coin for every this many seconds left (0 = off)
 function bonus_per(): int { return max(0, (int)setting('bonus_per', DEFAULT_BONUS_PER)); }
 
+/* Admin > Settings > Access. nofeed: players who can't open the trip feed. nogames: players who can only play the games in open
+   (ids like play:imposter, mind:liquidsort, cards:blackjack, crown); every other game shows them "Coming soon". Admins can always do everything. */
+function access_conf(): array {
+  $a = setting('access', []);
+  $a = is_array($a) ? $a : [];
+  $list = fn($k) => array_values(array_filter((array)($a[$k] ?? []), 'is_string'));
+  return ['nofeed' => $list('nofeed'), 'nogames' => $list('nogames'), 'open' => $list('open')];
+}
+function can_play(array $p, string $gid): bool {
+  if ((int)($p['is_admin'] ?? 0)) return true;
+  $a = access_conf();
+  return !in_array($p['id'], $a['nogames'], true) || in_array($gid, $a['open'], true);
+}
+/* A mind race counts as the mind game it races on. */
+function room_gid(string $game, string $mind = ''): string { return $game === 'race' ? 'mind:' . $mind : 'play:' . $game; }
+const SOON = 'Coming soon: this game isn\'t open for you yet.';
+
 function me(): ?array {
   if (empty($_SESSION['pid'])) return null;
   $s = db()->prepare('SELECT id,name,short,color,avatar,is_admin FROM players WHERE id=? AND active=1'); $s->execute([$_SESSION['pid']]);
@@ -273,6 +290,7 @@ function room_card(array $r): array {
   $st = $r['state']; $l = $st['lobby'] ?? ['invited' => [], 'ready' => []];
   $c = ['id' => (int)$r['id'], 'game' => $r['game'], 'label' => room_label($r), 'host' => $r['host'], 'status' => $r['status'], 'members' => lobby_ids($r), 'invited' => $l['invited'], 'ready' => array_keys($l['ready'])];
   if ($r['game'] === 'poker') $c += ['chips' => $st['chips'], 'hand_no' => $st['hand_no'], 'seats' => array_column($st['seats'], 'id')];
+  if ($r['game'] === 'race') $c['mind'] = $st['mind'];
   return $c;
 }
 
@@ -311,7 +329,7 @@ switch ($a) {
 case 'state': // who am I, who can log in, is the admin password set yet
   front_auto();
   $adminSet = (int)db()->query('SELECT COUNT(*) FROM players WHERE is_admin=1 AND pass_hash IS NOT NULL')->fetchColumn() > 0;
-  out(['me' => me(), 'players' => players_public(), 'admin_ready' => $adminSet, 'coins' => coins_table(), 'bonus_per' => bonus_per()]);
+  out(['me' => me(), 'players' => players_public(), 'admin_ready' => $adminSet, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'access' => access_conf()]);
 
 case 'players':
   front_auto();
@@ -494,7 +512,13 @@ case 'settings_save':
   }
   if (isset($b['bonus_per'])) db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['bonus_per', json_encode(max(0, min(600, (int)$b['bonus_per'])))]);
   if (array_key_exists('front', $b)) front_set(!empty($b['front']));
-  out(['ok' => 1, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'front' => front_on()]);
+  if (isset($b['access']) && is_array($b['access'])) {
+    $ids = array_column(players_public(true), 'id');
+    $who = fn($k) => array_values(array_unique(array_filter((array)($b['access'][$k] ?? []), fn($x) => is_string($x) && in_array($x, $ids, true))));
+    $open = array_values(array_unique(array_filter((array)($b['access']['open'] ?? []), fn($x) => is_string($x) && preg_match('/^(crown|(play|mind|cards):[a-z]{2,20})$/', $x))));
+    db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['access', json_encode(['nofeed' => $who('nofeed'), 'nogames' => $who('nogames'), 'open' => array_slice($open, 0, 200)])]);
+  }
+  out(['ok' => 1, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'front' => front_on(), 'access' => access_conf()]);
 
 case 'front':
   need_admin(); out(['front' => front_on(), 'possible' => front_file() !== null]);
@@ -522,6 +546,7 @@ case 'invites': // games someone asked me to join (the home page shows them)
     $l = $r['state']['lobby'] ?? null;
     if (!$l || !in_array($m['id'], $l['invited'], true) || in_array($m['id'], lobby_ids($r), true)) continue;
     if ($r['status'] === 'playing' && $r['game'] !== 'poker') continue; // too late to join
+    if (!can_play($m, room_gid($r['game'], (string)($r['state']['mind'] ?? '')))) continue;
     $list[] = room_card($r);
   }
   out(['invites' => $list]);
@@ -531,8 +556,12 @@ case 'room_create':
   $m = need_login(); $b = body();
   $game = (string)($b['game'] ?? 'poker');
   if ($game !== 'poker' && !in_array($game, PARTY_GAMES, true)) fail('Unknown game.');
-  $known = array_column(players_public(), 'id');
-  $invite = array_values(array_unique(array_filter(is_array($b['invite'] ?? null) ? $b['invite'] : [], fn($x) => is_string($x) && in_array($x, $known, true))));
+  $gid = room_gid($game, (string)($b['mind'] ?? ''));
+  if (!can_play($m, $gid)) fail(SOON, 403);
+  $known = array_column(players_public(), null, 'id');
+  $invite = array_values(array_unique(array_filter(is_array($b['invite'] ?? null) ? $b['invite'] : [], fn($x) => is_string($x) && isset($known[$x]))));
+  $locked = array_filter($invite, fn($x) => !can_play($known[$x], $gid));
+  if ($locked) fail('This game is coming soon for ' . implode(' and ', array_map(fn($x) => $known[$x]['name'], $locked)) . ', so they can\'t be invited yet.');
   if (!in_array($m['id'], $invite, true)) array_unshift($invite, $m['id']);
   if (count($invite) < 2) fail('Pick at least one other player.');
   try {
@@ -564,6 +593,7 @@ case 'room_leave':
   $m = need_login(); $id = (int)(body()['id'] ?? 0);
   room_out(room_change($id, function (&$r) use ($m, $a) {
     if (!in_array($r['status'], ['lobby', 'playing'], true)) throw new RuntimeException('This game is over.');
+    if ($a === 'room_join' && !can_play($m, room_gid($r['game'], (string)($r['state']['mind'] ?? '')))) throw new RuntimeException(SOON);
     $playing = $r['status'] === 'playing';
     if ($r['game'] === 'poker') { if ($a === 'room_join') room_sit($r['state'], $m, $playing); else room_stand($r['state'], $m['id'], $playing); }
     else {
@@ -662,7 +692,9 @@ case 'room_again': // host: the same game again with the same players; everyone'
   if ($old['status'] !== 'done') fail('Finish this game first.');
   if (!empty($old['state']['lobby']['next'])) room_out(room_load((int)$old['state']['lobby']['next']), $m);
   $st0 = $old['state']; $l = $st0['lobby'];
-  $invite = array_values(array_unique(array_merge([$m['id']], lobby_ids($old))));
+  $known = array_column(players_public(), null, 'id'); $gid = room_gid($old['game'], (string)($old['state']['mind'] ?? ''));
+  if (!can_play($m, $gid)) fail(SOON, 403);
+  $invite = array_values(array_filter(array_unique(array_merge([$m['id']], lobby_ids($old))), fn($x) => isset($known[$x]) && can_play($known[$x], $gid)));
   if ($old['game'] === 'poker') { $st = room_new_state((int)$st0['chips']); room_sit($st, $m, false); }
   else { $st = party_new($old['game'], $old['game'] === 'imposter' ? ['cat' => $st0['pick']] : $st0); party_join($st, $m); }
   $st['lobby'] = ['invited' => $invite, 'ready' => [], 'start_at' => null, 'score' => $l['score'] ?? true, 'when' => clean_when(body()['when'] ?? ''), 'event_id' => null, 'next' => null];
