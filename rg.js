@@ -42,7 +42,7 @@ const st=document.createElement("style");st.textContent=CSS;document.head.append
    It stays above the login screen, so someone who isn't logged in can still switch pages. */
 (function(){
   const here={"":"trip","index.html":"trip","games.html":"games","social.html":"feed","chat.html":"chat","plan.html":"plan","profile.html":"me",
-    "play.html":"games","online.html":"games","mind.html":"games","cards.html":"games","map.html":"games","scores.html":"games"}[location.pathname.split("/").pop()];
+    "play.html":"games","online.html":"games","mind.html":"games","cards.html":"games","map.html":"games","scores.html":"games","admin.html":"me"}[location.pathname.split("/").pop()];
   if(!here)return;
   const items=[["trip","./","\u{1F3D4}️","Trip"],["games","games.html","\u{1F3B2}","Games"],["feed","social.html","\u{1F4F8}","Feed"],
     ["chat","chat.html","\u{1F4AC}","Chat"],["plan","plan.html","\u{1F4CB}","To-do"],["me","profile.html","\u{1F464}","Me"]];

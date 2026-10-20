@@ -78,6 +78,7 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
 .colors button.on{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--x)}
 .empty{color:var(--mut);text-align:center;padding:18px}
 .hint{color:var(--mut);font-size:13px;margin:0}
+html.rg-nav-on .sheet{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))}
 #t-set{display:flex;flex-direction:column;gap:16px}
 .alist{display:flex;flex-direction:column;gap:8px}
 .ar{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:8px 12px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh)}
@@ -105,7 +106,7 @@ select.in{appearance:none;-webkit-appearance:none;background-image:linear-gradie
   <section id="t-set" hidden></section>
 </div>
 <script src="mind.js"></script>
-<script src="rg.js"></script>
+<script src="rg.js?v=7"></script>
 <script>
 (async function(){
 const {api,av,esc,toast}=RG;
@@ -290,6 +291,7 @@ function editPlayer(p){
    Feed off: the Trip Feed says Coming soon. Games off: every game still shows, but only the games ticked under
    "Games open to everyone" can be played; the rest say Coming soon. Admins always have everything. */
 function accessHTML(){
+  if(!RG.ACCESS_GAMES)return `<div class="panel"><h2>Who can use the Feed and the Games</h2><p class="hint">This page is out of date. Close it and open Admin again.</p></div>`;
   const sw=(p,k,label)=>{const adm=!!p.is_admin,on=adm||!access[k].includes(p.id);
     return `<button class="tg" data-acc="${k}" data-p="${esc(p.id)}" aria-pressed="${on}" aria-label="${label} for ${esc(p.name)}" ${adm?"disabled":""}><span class="sw${on?" on":""}"></span>${label}</button>`};
   const off=players.filter(p=>p.active&&!p.is_admin&&access.nogames.includes(p.id)).map(p=>p.name);
