@@ -122,19 +122,22 @@ html.rg-nav-on .sheet{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)
 .ll-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 12px;border-radius:14px;background:var(--well);box-shadow:var(--well-sh)}
 .ll-row b{font-weight:650}
 .ll-row .ll-d{display:block;color:var(--mut);font-size:12.5px}
-.ll-row time{font-weight:700;font-variant-numeric:tabular-nums;font-size:14px}
+.ll-row time{font-weight:700;font-variant-numeric:tabular-nums;font-size:14px;text-align:right}
+.ll-row time small{display:block;color:var(--mut);font-size:12px;font-weight:600}
 .ll-k{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px;background:var(--dim)}
 .ll-k.login{background:var(--acc)}.ll-k.logout{background:#ff8f8f}
+.top #logBtn{margin-left:auto}.top #logBtn.on{background:var(--acc);color:var(--ink)}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><h1>Admin <small>Record games, members, passwords and settings</small></h1><span class="pill" id="who"></span><a class="pill" href="scores.html">Dashboard</a><a class="pill" href="games.html">Home</a></div>
+  <div class="top"><h1>Admin <small>Record games, members, passwords and settings</small></h1><span class="pill" id="who"></span><a class="pill" href="scores.html">Dashboard</a><a class="pill" href="games.html">Home</a><button class="pill" id="logBtn">🕘 Who logged in</button></div>
   <div class="tabs" id="tabs"><button data-t="rec" class="on">Record</button><button data-t="ev">Game log</button><button data-t="pl">Members</button><button data-t="set">Settings</button></div>
   <section id="t-rec"></section>
   <section id="t-ev" hidden></section>
   <section id="t-pl" hidden></section>
   <section id="t-set" hidden></section>
+  <section id="t-log" hidden><div id="loginLog" style="display:flex;flex-direction:column;gap:16px"></div></section>
 </div>
 <script src="mind.js"></script>
 <script src="rg.js?v=10"></script>
@@ -155,7 +158,9 @@ const coinFor=pl=>pl>=1&&pl<=coins.length?coins[pl-1]:0;
 
 /* ---------- tabs ---------- */
 const tabs=document.getElementById("tabs");
-function show(t){tabs.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));["rec","ev","pl","set"].forEach(k=>document.getElementById("t-"+k).hidden=k!==t);({rec:drawRec,ev:drawEvents,pl:drawPlayers,set:drawSettings})[t]()}
+// the login log has its own button at the top right (Raffi, 2026-10-21), not a panel in Settings
+const logBtn=document.getElementById("logBtn");logBtn.onclick=()=>show("log");
+function show(t){tabs.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));logBtn.classList.toggle("on",t==="log");["rec","ev","pl","set","log"].forEach(k=>document.getElementById("t-"+k).hidden=k!==t);({rec:drawRec,ev:drawEvents,pl:drawPlayers,set:drawSettings,log:drawLoginLog})[t]()}
 tabs.onclick=e=>{const b=e.target.closest("button");if(b)show(b.dataset.t)};
 
 /* ---------- record form ---------- */
@@ -385,27 +390,38 @@ function accessHTML(){
 let accSave=Promise.resolve(); // one save at a time, in the order they were tapped
 function saveAccess(){const copy=JSON.parse(JSON.stringify(access));accSave=accSave.then(()=>api("settings_save",{access:copy})).then(()=>toast("Saved."),x=>toast(x.message))}
 /* ---------- login log: who logged in or opened the app (loginlog.php), newest first ---------- */
-let llWho="",llShow=60;
+let llWho="",llShow=60,llShowE=40;
 async function drawLoginLog(){const el=document.getElementById("loginLog");if(!el)return;
   el.innerHTML=`<div class="panel"><h2>Who logged in</h2><p class="hint">Loading…</p></div>`;
-  let log;try{log=(await api("login_log")).log}catch(x){el.querySelector(".hint").textContent=x.message;return}
+  let log,earlier;try{const r=await api("login_log");log=r.log;earlier=r.earlier||{rows:[],before:0}}catch(x){el.querySelector(".hint").textContent=x.message;return}
   const KIND={login:"Logged in with password",open:"Opened the app",logout:"Logged out"};
+  const DID={chat:["chat message","chat messages"],feed:["Feed post","Feed posts"],like:["like","likes"],comment:["comment","comments"],todo:["To-do change","To-do changes"],game:["online game started","online games started"]};
   const day=t=>{const d=new Date(t*1000),n=new Date(),y=new Date(n.getFullYear(),n.getMonth(),n.getDate()-1);
     return d.toDateString()===n.toDateString()?"Today":d.toDateString()===y.toDateString()?"Yesterday":d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})};
   const time=t=>new Date(t*1000).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
-  const last={};log.forEach(r=>{if(!last[r.pid])last[r.pid]=r.at});
-  const who=Object.keys(last);
-  const paint=()=>{const rows=log.filter(r=>!llWho||r.pid===llWho),shown=rows.slice(0,llShow);let d="";
+  // before the log started: one row per member per day, from what they did that day
+  const days={};earlier.rows.forEach(r=>{const k=new Date(r.at*1000).toDateString()+"|"+r.pid,d=days[k]||(days[k]={pid:r.pid,at:r.at,last:r.last,n:{}});
+    d.at=Math.min(d.at,r.at);d.last=Math.max(d.last,r.last);d.n[r.kind]=(d.n[r.kind]||0)+r.n});
+  const eRows=Object.values(days).sort((a,b)=>b.last-a.last);
+  const last={};log.forEach(r=>{if(!last[r.pid])last[r.pid]=r.at});eRows.forEach(r=>{if(!last[r.pid]||r.last>last[r.pid])last[r.pid]=r.last});
+  const who=Object.keys(last).sort((a,b)=>last[b]-last[a]);
+  const paint=()=>{const rows=log.filter(r=>!llWho||r.pid===llWho),shown=rows.slice(0,llShow),er=eRows.filter(r=>!llWho||r.pid===llWho),eShown=er.slice(0,llShowE);let d="",e="";
     el.innerHTML=`<div class="panel"><h2>Who logged in</h2><p class="hint">Every login and every time someone opens the app (once per half hour), for the last 90 days. Times are this device's time. Only admins see this.</p>
-      ${log.length?`<div class="lab">Last seen · tap a name to see only theirs</div><div class="ll-last">${who.map(id=>{const p=P(id);return `<button data-ll="${esc(id)}" class="${llWho===id?"on":""}">${av(p,30)}<span><b>${esc(p.name)}</b><small>${day(last[id])}, ${time(last[id])}</small></span></button>`}).join("")}</div>
-      ${llWho?`<div class="actions" style="justify-content:flex-start"><button class="btn sm" id="llAll">Show everyone</button></div>`:""}
-      <div class="alist">${shown.map(r=>{const p=P(r.pid),h=day(r.at)!==d?`<div class="day" style="margin-top:6px">${esc(d=day(r.at))}</div>`:"";
-        return h+`<div class="ll-row">${av(p,32)}<div><b>${esc(p.name)}</b><span class="ll-d"><i class="ll-k ${r.kind}"></i>${KIND[r.kind]||esc(r.kind)}${r.device?" · "+esc(r.device):""}</span></div><time>${time(r.at)}</time></div>`}).join("")}</div>
-      ${rows.length>shown.length?`<div class="actions" style="justify-content:flex-start"><button class="btn sm" id="llMore">Show older (${rows.length-shown.length} more)</button></div>`:""}`
-      :`<p class="hint" style="margin:0">Nobody has logged in since the log was turned on. New logins show up here.</p>`}</div>`;
-    el.querySelectorAll("[data-ll]").forEach(b=>b.onclick=()=>{llWho=llWho===b.dataset.ll?"":b.dataset.ll;llShow=60;paint()});
-    const a=el.querySelector("#llAll");if(a)a.onclick=()=>{llWho="";llShow=60;paint()};
-    const m=el.querySelector("#llMore");if(m)m.onclick=()=>{llShow+=100;paint()}};
+      ${who.length?`<div class="lab">Last seen · tap a name to see only theirs</div><div class="ll-last">${who.map(id=>{const p=P(id);return `<button data-ll="${esc(id)}" class="${llWho===id?"on":""}">${av(p,30)}<span><b>${esc(p.name)}</b><small>${day(last[id])}, ${time(last[id])}</small></span></button>`}).join("")}</div>
+      ${llWho?`<div class="actions" style="justify-content:flex-start"><button class="btn sm" id="llAll">Show everyone</button></div>`:""}`:""}
+      ${shown.length?`<div class="alist">${shown.map(r=>{const p=P(r.pid),h=day(r.at)!==d?`<div class="day" style="margin-top:6px">${esc(d=day(r.at))}</div>`:"";
+        return h+`<div class="ll-row">${av(p,32)}<div><b>${esc(p.name)}</b><span class="ll-d"><i class="ll-k ${r.kind}"></i>${KIND[r.kind]||esc(r.kind)}${r.device?" · "+esc(r.device):""}</span></div><time>${time(r.at)}</time></div>`}).join("")}</div>`
+      :`<p class="hint" style="margin:0">${llWho?"No logins from them since the log was turned on.":"Nobody has logged in since the log was turned on. New logins show up here."}</p>`}
+      ${rows.length>shown.length?`<div class="actions" style="justify-content:flex-start"><button class="btn sm" id="llMore">Show older (${rows.length-shown.length} more)</button></div>`:""}</div>
+      ${er.length?`<div class="panel"><h2>Before the log started</h2><p class="hint">Logins have only been recorded since ${esc(day(earlier.before).replace(/^(Today|Yesterday)$/,x=>x.toLowerCase()))}, ${esc(time(earlier.before))}. Before that, this shows when each member was using the app, from their chat messages, Feed posts, likes, comments, To-do changes and online games.</p>
+      <div class="alist">${eShown.map(r=>{const p=P(r.pid),h=day(r.at)!==e?`<div class="day" style="margin-top:6px">${esc(e=day(r.at))}</div>`:"",
+        what=Object.keys(DID).filter(k=>r.n[k]).map(k=>`${r.n[k]} ${DID[k][r.n[k]===1?0:1]}`).join(" · "),t=time(r.at),t2=time(r.last);
+        return h+`<div class="ll-row">${av(p,32)}<div><b>${esc(p.name)}</b><span class="ll-d"><i class="ll-k"></i>${esc(what)}</span></div><time>${t}${t===t2?"":`<small>to ${t2}</small>`}</time></div>`}).join("")}</div>
+      ${er.length>eShown.length?`<div class="actions" style="justify-content:flex-start"><button class="btn sm" id="llMoreE">Show older (${er.length-eShown.length} more)</button></div>`:""}</div>`:""}`;
+    el.querySelectorAll("[data-ll]").forEach(b=>b.onclick=()=>{llWho=llWho===b.dataset.ll?"":b.dataset.ll;llShow=60;llShowE=40;paint()});
+    const a=el.querySelector("#llAll");if(a)a.onclick=()=>{llWho="";llShow=60;llShowE=40;paint()};
+    const m=el.querySelector("#llMore");if(m)m.onclick=()=>{llShow+=100;paint()};
+    const m2=el.querySelector("#llMoreE");if(m2)m2.onclick=()=>{llShowE+=60;paint()}};
   paint()}
 
 function drawAccess(){
@@ -435,7 +451,7 @@ function drawCrown(){const el=document.getElementById("crownBox");if(!el)return;
 /* ---------- settings ---------- */
 function drawSettings(){
   const el=document.getElementById("t-set");
-  el.innerHTML=`<div id="acc" style="display:flex;flex-direction:column;gap:16px"></div><div id="loginLog"></div><div id="crownBox"></div><div class="panel"><h2>Coins for each place</h2><p class="hint">Every game gives coins by place. Places past the last box get nothing. Changing this re-counts every game already recorded.</p>
+  el.innerHTML=`<div id="acc" style="display:flex;flex-direction:column;gap:16px"></div><div id="crownBox"></div><div class="panel"><h2>Coins for each place</h2><p class="hint">Every game gives coins by place. Places past the last box get nothing. Changing this re-counts every game already recorded.</p>
     <div class="coins-ed" id="ce">${coins.map((c,i)=>`<label>${RG.ordinal(i+1)}<input class="in" type="number" min="0" inputmode="numeric" value="${c}"></label>`).join("")}</div>
     <div class="actions" style="justify-content:flex-start"><button class="btn sm" id="cadd">＋ Place</button><button class="btn sm" id="cdel">− Place</button><span style="flex:1"></span><button class="btn main" id="csave">Save coins</button></div></div>
   <div class="panel"><h2>Backup</h2><p class="hint">Download every member, game and score as one file (photos stay on the server).</p><div class="actions" style="justify-content:flex-start"><a class="btn" href="api.php?a=export" download>Download backup</a></div></div>
@@ -443,7 +459,7 @@ function drawSettings(){
   (async()=>{const h=el.querySelector("#fr-h"),b=el.querySelector("#fr");
     const paint=on=>{h.textContent=on?"raffaelco.com sends visitors straight to the games.":"raffaelco.com does not open the games. Use raffaelco.com/DM/.";b.textContent=on?"Stop sending raffaelco.com here":"Make raffaelco.com open the games";b.hidden=false;b.onclick=async()=>{b.disabled=true;try{const r=await api("settings_save",{front:!on});paint(r.front);toast("Saved.")}catch(x){toast(x.message)}b.disabled=false}};
     try{const r=await api("front");if(!r.possible){h.textContent="Only available on the real website.";return}paint(r.front)}catch(x){h.textContent=x.message}})();
-  drawAccess();drawCrown();drawLoginLog();
+  drawAccess();drawCrown();
   const read=()=>[...el.querySelectorAll("#ce input")].map(i=>+i.value||0);
   el.querySelector("#cadd").onclick=()=>{coins=[...read(),0];drawSettings()};
   el.querySelector("#cdel").onclick=()=>{coins=read().slice(0,-1);if(!coins.length)coins=[10];drawSettings()};

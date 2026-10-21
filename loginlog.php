@@ -2,7 +2,9 @@
 /* Ridge Games: the login log in Admin > Settings (Sako asked, 2026-10-21): who logged in or opened the app, and when.
    Kept in ridge-data/logins.sqlite, outside the web folder; only admins can read it (api.php?a=login_log).
    Rows: login (typed their password), open (came back while still logged in; at most one per 30 minutes per member), logout.
-   Kept for 90 days. Logging never stops anyone from logging in: every error here is swallowed. Included by api.php. */
+   Kept for 90 days. Logging never stops anyone from logging in: every error here is swallowed. Included by api.php.
+   Logins weren't recorded before this log went live (2026-10-21), so log_earlier() rebuilds when each member was using the app
+   before then from what they did: chat messages, Feed posts, likes, comments, To-do changes and online games they started. */
 
 declare(strict_types=1);
 if (!defined('RG_API')) { http_response_code(404); exit; }
@@ -56,4 +58,31 @@ function log_list(): array {
     $s->execute([time() - LOG_KEEP_DAYS * 86400]);
     return array_map(fn($r) => ['pid' => $r['pid'], 'kind' => $r['kind'], 'at' => (int)$r['at'], 'device' => $r['device']], $s->fetchAll());
   } catch (Throwable $e) { return []; }
+}
+
+/* Activity from before the log's first row, last 90 days, in hourly buckets: pid, kind, at (first), last, n.
+   Uses nt_open() from notify.php, which api.php includes too. */
+function log_earlier(): array {
+  try { $before = (int)log_db()->query('SELECT MIN(at) FROM log')->fetchColumn() ?: time(); } catch (Throwable $e) { $before = time(); }
+  $from = time() - LOG_KEEP_DAYS * 86400; $rows = [];
+  $add = function (?PDO $db, string $kind, string $sql) use (&$rows, $from, $before) {
+    if (!$db) return;
+    try { $s = $db->prepare($sql); $s->execute([$from, $before]); foreach ($s->fetchAll(PDO::FETCH_NUM) as [$pid, $at]) if ($pid !== '') $rows[] = [(string)$pid, $kind, (int)$at]; } catch (Throwable $e) {}
+  };
+  $add(nt_open('chat'), 'chat', 'SELECT pid, at FROM msgs WHERE at>=? AND at<?');
+  $add(nt_open('social'), 'feed', 'SELECT pid, MIN(at) FROM posts WHERE at>=? AND at<? GROUP BY grp');
+  $add($t = nt_open('talk'), 'like', 'SELECT pid, at FROM likes WHERE at>=? AND at<?');
+  $add($t, 'comment', 'SELECT pid, at FROM comments WHERE at>=? AND at<?');
+  $add($p = nt_open('plan'), 'todo', 'SELECT "by", at FROM items WHERE at>=? AND at<?');
+  // items imported as already done carry done_at = at and the assignee as done_by, so they say nothing about that person
+  $add($p, 'todo', "SELECT done_by, done_at FROM items WHERE done_at>=? AND done_at<? AND done_by<>'' AND done_at<>at");
+  $add(db(), 'game', 'SELECT host, created_at FROM rooms WHERE created_at>=? AND created_at<?');
+  $b = [];
+  foreach ($rows as [$pid, $kind, $at]) {
+    $k = $pid . '|' . $kind . '|' . intdiv($at, 3600);
+    if (!isset($b[$k])) $b[$k] = ['pid' => $pid, 'kind' => $kind, 'at' => $at, 'last' => $at, 'n' => 0];
+    $b[$k]['at'] = min($b[$k]['at'], $at); $b[$k]['last'] = max($b[$k]['last'], $at); $b[$k]['n']++;
+  }
+  $b = array_values($b); usort($b, fn($x, $y) => $y['last'] <=> $x['last']);
+  return ['before' => $before, 'rows' => $b];
 }

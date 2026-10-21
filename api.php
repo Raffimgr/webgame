@@ -588,8 +588,8 @@ case 'settings_save':
   }
   out(['ok' => 1, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'front' => front_on(), 'access' => access_conf(), 'crown' => crown_conf()]);
 
-case 'login_log': // Admin > Settings: who logged in or opened the app, newest first
-  need_admin(); out(['log' => log_list()]);
+case 'login_log': // Admin > Who logged in: logins and app opens newest first, plus what members did before the log started
+  need_admin(); out(['log' => log_list(), 'earlier' => log_earlier()]);
 
 case 'front':
   need_admin(); out(['front' => front_on(), 'possible' => front_file() !== null]);
