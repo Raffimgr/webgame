@@ -1,0 +1,59 @@
+<?php
+/* Ridge Games: the login log in Admin > Settings (Sako asked, 2026-10-21): who logged in or opened the app, and when.
+   Kept in ridge-data/logins.sqlite, outside the web folder; only admins can read it (api.php?a=login_log).
+   Rows: login (typed their password), open (came back while still logged in; at most one per 30 minutes per member), logout.
+   Kept for 90 days. Logging never stops anyone from logging in: every error here is swallowed. Included by api.php. */
+
+declare(strict_types=1);
+if (!defined('RG_API')) { http_response_code(404); exit; }
+
+const LOG_KEEP_DAYS = 90;
+const LOG_VISIT_GAP = 1800; // a new "opened the app" row only after 30 quiet minutes
+
+function log_db(): PDO {
+  static $pdo = null;
+  if ($pdo) return $pdo;
+  $f = data_dir() . '/logins.sqlite';
+  $pdo = new PDO('sqlite:' . $f, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+  $pdo->exec('PRAGMA busy_timeout=3000');
+  $pdo->exec('CREATE TABLE IF NOT EXISTS log (id INTEGER PRIMARY KEY AUTOINCREMENT, pid TEXT NOT NULL, kind TEXT NOT NULL, at INTEGER NOT NULL, device TEXT NOT NULL DEFAULT "")');
+  $pdo->exec('CREATE INDEX IF NOT EXISTS log_pid_at ON log (pid, at)');
+  @chmod($f, 0600);
+  return $pdo;
+}
+
+/* A short name for the device from the browser's User-Agent. iPads ask for the desktop site, so they look like a Mac. */
+function log_device(): string {
+  $ua = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+  if (stripos($ua, 'iPhone') !== false) return 'iPhone';
+  if (stripos($ua, 'iPad') !== false) return 'iPad';
+  if (stripos($ua, 'Android') !== false) return stripos($ua, 'Mobile') !== false ? 'Android phone' : 'Android tablet';
+  if (stripos($ua, 'Macintosh') !== false) return 'iPad or Mac';
+  if (stripos($ua, 'Windows') !== false) return 'Windows computer';
+  if (stripos($ua, 'CrOS') !== false) return 'Chromebook';
+  return $ua === '' ? '' : 'Other device';
+}
+
+function log_add(string $pid, string $kind): void {
+  try {
+    $db = log_db();
+    $db->prepare('INSERT INTO log (pid, kind, at, device) VALUES (?, ?, ?, ?)')->execute([$pid, $kind, time(), log_device()]);
+    if (random_int(1, 50) === 1) $db->prepare('DELETE FROM log WHERE at < ?')->execute([time() - LOG_KEEP_DAYS * 86400]);
+  } catch (Throwable $e) {}
+}
+
+/* Called when a logged-in member loads a page (api.php?a=state). */
+function log_visit(string $pid): void {
+  try {
+    $s = log_db()->prepare('SELECT MAX(at) FROM log WHERE pid=?'); $s->execute([$pid]);
+    if (time() - (int)$s->fetchColumn() >= LOG_VISIT_GAP) log_add($pid, 'open');
+  } catch (Throwable $e) {}
+}
+
+function log_list(): array {
+  try {
+    $s = log_db()->prepare('SELECT pid, kind, at, device FROM log WHERE at >= ? ORDER BY at DESC, id DESC LIMIT 3000');
+    $s->execute([time() - LOG_KEEP_DAYS * 86400]);
+    return array_map(fn($r) => ['pid' => $r['pid'], 'kind' => $r['kind'], 'at' => (int)$r['at'], 'device' => $r['device']], $s->fetchAll());
+  } catch (Throwable $e) { return []; }
+}

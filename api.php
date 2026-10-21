@@ -81,6 +81,8 @@ function db(): PDO {
 define('RG_API', 1);
 require __DIR__ . '/poker.php';
 require __DIR__ . '/party.php';
+require __DIR__ . '/loginlog.php';
+require __DIR__ . '/notify.php';
 const ROOM_IDLE = 43200; // rooms quiet for 12 hours drop off the list
 const SKIP_AFTER = 60;   // the host may skip a player whose turn has lasted this many seconds
 
@@ -318,6 +320,22 @@ function lobby_finish(array &$r): void {
 }
 
 /* One row for the lists (open games, invites). */
+/* Games someone asked $m to join that are still waiting for them (the Games page and the bell show them). */
+function my_invites(array $m): array {
+  $rows = db()->prepare("SELECT * FROM rooms WHERE status IN ('lobby','playing') AND updated_at>? ORDER BY id DESC LIMIT 30");
+  $rows->execute([time() - 3600]);
+  $list = [];
+  foreach ($rows->fetchAll() as $r) {
+    $r['state'] = json_decode($r['state'], true);
+    $l = $r['state']['lobby'] ?? null;
+    if (!$l || !in_array($m['id'], $l['invited'], true) || in_array($m['id'], lobby_ids($r), true)) continue;
+    if ($r['status'] === 'playing' && $r['game'] !== 'poker') continue; // too late to join
+    if (!can_play($m, room_gid($r['game'], (string)($r['state']['mind'] ?? '')))) continue;
+    $list[] = room_card($r) + ['at' => (int)$r['created_at']];
+  }
+  return $list;
+}
+
 function room_card(array $r): array {
   $st = $r['state']; $l = $st['lobby'] ?? ['invited' => [], 'ready' => []];
   $c = ['id' => (int)$r['id'], 'game' => $r['game'], 'label' => room_label($r), 'host' => $r['host'], 'status' => $r['status'], 'members' => lobby_ids($r), 'invited' => $l['invited'], 'ready' => array_keys($l['ready'])];
@@ -360,6 +378,7 @@ switch ($a) {
 
 case 'state': // who am I, who can log in, is the admin password set yet
   front_auto();
+  if (!empty($_SESSION['pid'])) log_visit((string)$_SESSION['pid']);
   $adminSet = (int)db()->query('SELECT COUNT(*) FROM players WHERE is_admin=1 AND pass_hash IS NOT NULL')->fetchColumn() > 0;
   out(['me' => me(), 'players' => players_public(), 'screens' => players_public(false, true), 'admin_ready' => $adminSet, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'access' => access_conf(), 'crown' => crown_conf()]);
 
@@ -375,7 +394,7 @@ case 'setup': // first run only: the admin sets his own password
   if (mb_strlen($pw) < 6) fail('Use at least 6 characters.');
   $adm = db()->query('SELECT id FROM players WHERE is_admin=1 ORDER BY sort LIMIT 1')->fetchColumn();
   db()->prepare('UPDATE players SET pass_hash=? WHERE id=?')->execute([password_hash($pw, PASSWORD_DEFAULT), $adm]);
-  session_regenerate_id(true); $_SESSION['pid'] = $adm;
+  session_regenerate_id(true); $_SESSION['pid'] = $adm; log_add((string)$adm, 'login');
   out(['ok' => 1, 'me' => me()]);
 
 case 'login':
@@ -386,11 +405,12 @@ case 'login':
   $p = $s->fetch();
   if (!$p || !$p['pass_hash']) { note_attempt($lid); fail($p ? 'No password yet. Ask the admin to set one.' : 'Wrong name or password.', 401); }
   if (!password_verify((string)($b['password'] ?? ''), $p['pass_hash'])) { note_attempt($lid); fail('Wrong password.', 401); }
-  session_regenerate_id(true); $_SESSION['pid'] = $p['id'];
+  session_regenerate_id(true); $_SESSION['pid'] = $p['id']; log_add($p['id'], 'login');
   out(['ok' => 1, 'me' => me()]);
 
 case 'logout':
   if (!$post) fail('Use POST.');
+  if (!empty($_SESSION['pid'])) log_add((string)$_SESSION['pid'], 'logout');
   $_SESSION = []; session_destroy();
   setcookie(session_name(), '', ['expires' => time() - 3600, 'path' => $cookiePath, 'secure' => $https, 'httponly' => true, 'samesite' => 'Lax']);
   out(['ok' => 1]);
@@ -568,6 +588,9 @@ case 'settings_save':
   }
   out(['ok' => 1, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'front' => front_on(), 'access' => access_conf(), 'crown' => crown_conf()]);
 
+case 'login_log': // Admin > Settings: who logged in or opened the app, newest first
+  need_admin(); out(['log' => log_list()]);
+
 case 'front':
   need_admin(); out(['front' => front_on(), 'possible' => front_file() !== null]);
 
@@ -585,19 +608,15 @@ case 'room_list':
   out(['rooms' => array_map('room_card', array_map(function ($r) { $r['state'] = json_decode($r['state'], true); return $r; }, $rows->fetchAll()))]);
 
 case 'invites': // games someone asked me to join (the home page shows them)
-  $m = need_login();
-  $rows = db()->prepare("SELECT * FROM rooms WHERE status IN ('lobby','playing') AND updated_at>? ORDER BY id DESC LIMIT 30");
-  $rows->execute([time() - 3600]);
-  $list = [];
-  foreach ($rows->fetchAll() as $r) {
-    $r['state'] = json_decode($r['state'], true);
-    $l = $r['state']['lobby'] ?? null;
-    if (!$l || !in_array($m['id'], $l['invited'], true) || in_array($m['id'], lobby_ids($r), true)) continue;
-    if ($r['status'] === 'playing' && $r['game'] !== 'poker') continue; // too late to join
-    if (!can_play($m, room_gid($r['game'], (string)($r['state']['mind'] ?? '')))) continue;
-    $list[] = room_card($r);
-  }
-  out(['invites' => $list]);
+  out(['invites' => my_invites(need_login())]);
+
+case 'notify': // the bell next to your name (notify.php); ?count=1 also sends who you are, for the bottom bar
+  $m = need_login(); $r = notify_items($m);
+  out(isset($_GET['count']) ? ['n' => $r['n'], 'chat' => $r['chat'], 'me' => $m] : $r + ['people' => players_public()]);
+
+case 'notify_seen': // you opened the bell
+  if (!$post) fail('Use POST.');
+  notify_mark(need_login()['id']); out(['ok' => 1]);
 
 case 'room_create':
   if (!$post) fail('Use POST.');

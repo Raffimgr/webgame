@@ -30,6 +30,29 @@ const CSS=`
 .rg-lock>:not(.rg-soon){opacity:.45;filter:grayscale(.5)}
 .rg-lock>.rg-soon{position:absolute;top:12px;right:12px;z-index:1}
 html.rg-playing .rg-nav{display:none}
+.rg-bell{position:relative;flex:none;display:inline-grid;place-items:center;width:40px;height:40px;border:0;border-radius:50%;cursor:pointer;background:#2a2e35;color:#eef1f6;font-size:19px;line-height:1;box-shadow:4px 4px 10px rgba(0,0,0,.45),-2px -2px 6px rgba(255,255,255,.04)}
+.rg-me{display:inline-flex;align-items:center;gap:8px;margin-left:auto;min-width:0}
+.top.rg-wrap{flex-wrap:wrap;justify-content:flex-end}.top.rg-wrap>h1{flex-basis:100%}
+.rg-bell:focus-visible{outline:2px solid #2ec4b6;outline-offset:2px}
+.rg-bell.float{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));z-index:40}
+.rg-bell b{position:absolute;top:-3px;right:-4px;min-width:19px;height:19px;padding:0 5px;border-radius:99px;background:#ff5a5f;color:#fff;font:800 11px/19px "Inter",system-ui;text-align:center;box-shadow:0 0 0 2px #1b1d22}
+.rg-bell.ring{animation:rg-ring .9s ease 1}
+@keyframes rg-ring{0%,100%{transform:rotate(0)}20%{transform:rotate(-14deg)}40%{transform:rotate(12deg)}60%{transform:rotate(-8deg)}80%{transform:rotate(4deg)}}
+@media (prefers-reduced-motion:reduce){.rg-bell.ring{animation:none}}
+html.rg-playing .rg-bell,html.rg-playing .rg-np{display:none}
+.rg-np{position:fixed;z-index:70;right:max(12px,env(safe-area-inset-right,0px));width:min(380px,calc(100vw - 24px));display:flex;flex-direction:column;background:#2a2e35;color:#eef1f6;border-radius:22px;box-shadow:0 24px 60px rgba(0,0,0,.6);font-family:"Inter",system-ui,sans-serif;overflow:hidden}
+.rg-np header{display:flex;align-items:center;gap:10px;padding:14px 14px 10px 18px}
+.rg-np header h3{margin:0;flex:1;font:600 19px "Fredoka","Inter",system-ui}
+.rg-np header button{border:0;background:#202328;color:#9aa3b3;width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer}
+.rg-np .rg-nl{overflow:auto;padding:0 8px 10px;display:flex;flex-direction:column;gap:4px}
+.rg-np a{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 10px;border-radius:15px;color:inherit;text-decoration:none}
+.rg-np a:hover,.rg-np a:focus-visible{background:#33383f}
+.rg-np a.new{background:rgba(46,196,182,.1)}
+.rg-np a p{margin:0;font-size:14px;line-height:1.35}
+.rg-np a p small{display:block;color:#9aa3b3;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rg-np time{color:#9aa3b3;font-size:12px;font-weight:600;white-space:nowrap}
+.rg-np a.new time{color:#2ec4b6}
+.rg-np .rg-ne{margin:4px 10px 12px;color:#9aa3b3;font-size:14px;line-height:1.45}
 html.rg-nav-on:not(.rg-playing) .rg-gate{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))}
 html.rg-nav-on:not(.rg-playing) .rg-card{max-height:calc(100vh - 110px)}
 html.rg-nav-on:not(.rg-playing) body{padding-bottom:calc(68px + env(safe-area-inset-bottom,0px))}
@@ -40,6 +63,7 @@ const st=document.createElement("style");st.textContent=CSS;document.head.append
 /* Bottom bar (like Instagram's) to switch between the Shenandoah Guide (the front page), the games home, the trip feed, the group chat,
    the to-do list and your profile. Also on the game pages (Games lit up), where RG.playing(true) hides it while a game is being played.
    The Chat button shows how many messages you haven't read yet; the Me button shows your picture once you are logged in.
+   Next to your name (top right) is the bell: what's new for you from the chat, the Feed and game invites (notify.php).
    It stays above the login screen, so someone who isn't logged in can still switch pages. */
 (function(){
   const here={"":"trip","index.html":"trip","games.html":"games","social.html":"feed","chat.html":"chat","plan.html":"plan","profile.html":"me",
@@ -47,19 +71,54 @@ const st=document.createElement("style");st.textContent=CSS;document.head.append
   if(!here||window.top!==window)return; // pages shown inside the Score screen have no bar
   const items=[["trip","./","\u{1F3D4}️","Trip"],["games","games.html","\u{1F3B2}","Games"],["feed","social.html","\u{1F4F8}","Feed"],
     ["chat","chat.html","\u{1F4AC}","Chat"],["plan","plan.html","\u{1F4CB}","To-do"],["me","profile.html","\u{1F464}","Me"]];
-  let nav=null,shownMe=false;
+  let nav=null,shownMe=false,bell=null,people=null;
   const add=()=>{nav=document.createElement("nav");nav.className="rg-nav";nav.setAttribute("aria-label","Main");
     nav.innerHTML=items.map(([k,href,icon,label])=>`<a href="${href}" data-k="${k}"${k===here?' class="on" aria-current="page"':""}><span>${icon}</span>${label}</a>`).join("");
     document.body.appendChild(nav);document.documentElement.classList.add("rg-nav-on");check()};
+  // the bell (notify.php via api.php): next to your name where the page shows it, else at the start of the page's top row, else in the top right corner
+  function placeBell(){bell=document.createElement("button");bell.type="button";bell.className="rg-bell";bell.setAttribute("aria-label","Notifications");bell.innerHTML="\u{1F514}";
+    const name=document.querySelector(".top #who,.top #user"),h1=document.querySelector(".top>h1"),head=document.querySelector(".head");
+    if(name){const w=document.createElement("span");w.className="rg-me";name.replaceWith(w);w.append(bell,name)}
+    else if(h1){const top=h1.parentNode;top.appendChild(bell);if(h1.offsetWidth<200)top.classList.add("rg-wrap")}
+    else if(head)head.appendChild(bell);
+    else{bell.classList.add("float");document.body.appendChild(bell);document.documentElement.classList.add("rg-bell-float")}
+    bell.onclick=e=>{e.stopPropagation();document.querySelector(".rg-np")?closePanel():openPanel()}}
+  function setCount(n){if(!bell)return;let b=bell.querySelector("b");const was=b?+b.dataset.n:0;
+    if(!n){if(b)b.remove();bell.setAttribute("aria-label","Notifications");return}
+    if(!b){b=document.createElement("b");bell.appendChild(b)}b.dataset.n=n;b.textContent=n>9?"9+":n;bell.setAttribute("aria-label",`Notifications, ${n} new`);
+    if(n>was){bell.classList.remove("ring");void bell.offsetWidth;bell.classList.add("ring")}}
   async function check(){
     if(document.hidden)return;
-    try{const r=await fetch("chat.php?badge=1"+(shownMe?"":"&me=1"),{credentials:"same-origin"});if(!r.ok)return;const j=await r.json();
+    try{const r=await fetch("api.php?a=notify&count=1",{credentials:"same-origin"});
+      if(!r.ok){if(bell){bell.remove();bell=null}return}const j=await r.json();
       if(j.me&&!shownMe){shownMe=true;nav.querySelector('[data-k="me"]>span').innerHTML=av(j.me,24)}
+      if(j.me&&!+j.me.screen&&!bell)placeBell();
+      setCount(j.n);
       const c=nav.querySelector('[data-k="chat"]');let b=c.querySelector("b");
-      if(here==="chat"||!j.n){if(b)b.remove();return}
-      if(!b){b=document.createElement("b");c.appendChild(b)}b.textContent=j.n>9?"9+":j.n;
+      if(here==="chat"||!j.chat){if(b)b.remove();return}
+      if(!b){b=document.createElement("b");c.appendChild(b)}b.textContent=j.chat>9?"9+":j.chat;
     }catch(e){}
   }
+  const ago=t=>{const s=Date.now()/1000-t;if(s<60)return "now";if(s<3600)return Math.floor(s/60)+"m";if(s<86400)return Math.floor(s/3600)+"h";
+    const d=new Date(t*1000),y=new Date();y.setDate(y.getDate()-1);return d.toDateString()===y.toDateString()?"Yesterday":d.toLocaleDateString(undefined,{weekday:"short"})};
+  const names=ids=>{const n=ids.map(id=>esc((people[id]||{name:"Someone"}).name));return n.length<3?n.join(" and "):`${n[0]}, ${n[1]} and ${n.length-2} more`};
+  const line=it=>{const who=`<b>${names(it.by)}</b>`,q=it.text?`<small>\u201C${esc(it.text)}\u201D</small>`:"";
+    return {chat:`${who} sent ${it.count===1?"a new message":it.count+" new messages"} in the group chat`,post:`${who} shared ${esc(it.what)} on the Feed${q}`,
+      tag:`${who} tagged you in a post${q}`,like:`${who} liked your post${q}`,comment:`${who} commented on your post${q}`,
+      invite:`${who} invited you to play ${esc(it.text)}<small>Tap to join</small>`}[it.kind]||""};
+  function closePanel(){const p=document.querySelector(".rg-np");if(p)p.remove();document.removeEventListener("click",outside,true);removeEventListener("keydown",onKey)}
+  const outside=e=>{const p=document.querySelector(".rg-np");if(p&&!p.contains(e.target)&&!bell.contains(e.target))closePanel()};
+  const onKey=e=>{if(e.key==="Escape")closePanel()};
+  async function openPanel(){const p=document.createElement("div");p.className="rg-np";p.setAttribute("role","dialog");p.setAttribute("aria-label","Notifications");
+    const r=bell.getBoundingClientRect(),t=Math.max(8,r.bottom+8);p.style.top=t+"px";p.style.maxHeight=`calc(100vh - ${t+90}px)`;
+    p.innerHTML=`<header><h3>Notifications</h3><button type="button" aria-label="Close">\u2715</button></header><div class="rg-nl"><p class="rg-ne">Loading\u2026</p></div>`;
+    document.body.appendChild(p);p.querySelector("header button").onclick=closePanel;
+    setTimeout(()=>document.addEventListener("click",outside,true));addEventListener("keydown",onKey);
+    try{const j=await api("notify");people={};(j.people||[]).forEach(x=>people[x.id]=x);const l=p.querySelector(".rg-nl");
+      l.innerHTML=j.items.length?j.items.map(it=>`<a href="${esc(it.href)}" class="${it.new?"new":""}">${av(people[it.by[0]]||{short:"?",color:"#9aa3b3"},40)}<p>${line(it)}</p><time>${ago(it.at)}</time></a>`).join("")
+        :`<p class="rg-ne">Nothing new yet. Chat messages, new Feed posts, likes and comments on your posts, and game invites show up here.</p>`;
+      if(j.n){await api("notify_seen",{});setCount(0)}
+    }catch(e){p.querySelector(".rg-nl").innerHTML=`<p class="rg-ne">${esc(e.message)}</p>`}}
   window.addEventListener("rg-login",()=>{shownMe=false;check()});
   setInterval(check,30000);document.addEventListener("visibilitychange",check);
   document.body?add():document.addEventListener("DOMContentLoaded",add);
