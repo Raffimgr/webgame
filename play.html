@@ -618,6 +618,7 @@ function drawDone(){
   const q=new URLSearchParams(location.search),id=+q.get("room"),nw=q.get("new");
   const pre=(q.get("players")||"").split(",").filter(i=>people[i]&&i!==me.id); // e.g. from the map: play.html?new=imposter&players=rasha,sofia
   const keep=pre.length?{players:pre}:{};["mind","level","cat","chips"].forEach(k=>{const v=q.get(k);if(v)keep[k]=/^\d+$/.test(v)?+v:v});
+  if(q.get("score")==="0")keep.score=false; // opened from The Road to the Crown: practice, the crown game gives the coins
   if(id>0)openRoom(id);else if(nw&&GAMES[nw])newGame(nw,keep);else openRoom(null);
 })();
 })();

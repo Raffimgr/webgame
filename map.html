@@ -313,7 +313,7 @@ function options(){if(!S||!canAct())return[];const t=cur();if(S.over||t.frozen)r
 const meId=()=>ME&&ME.id;
 const amIn=()=>!WATCH&&!!ROOM&&!!ME&&(ROOM.players||[]).some(p=>p.id===ME.id);
 // this phone can move: it's in the game, its team is up, and nobody else is in the middle of a stop
-const canAct=()=>amIn()&&ROOM.status==="playing"&&!!S&&!S.over&&cur().ids.includes(ME.id)&&(!S.live||S.live.by===ME.id);
+const canAct=()=>amIn()&&ROOM.status==="playing"&&!!S&&!S.over&&cur().ids.includes(ME.id)&&!S.frozenP[ME.id]&&(!S.live||S.live.by===ME.id);
 const tpTxt=l=>l>0?` (+${l} time points)`:"";
 
 // ---------- saving: the game lives on the server; every move sends the whole map (push), and every phone polls for the newest one ----------
@@ -429,7 +429,8 @@ function lobbySide(){
     ${btn}${host?`<button class="go g sm" id="lbCancel">Cancel this game</button>`:joined.includes(me)&&!WATCH?`<button class="go g sm" id="lbLeave">Leave the lobby</button>`:""}</div>`}
 function watchHint(){const t=cur(),L=S.live;
   if(L&&N[L.at]){const n=N[L.at];return `<div class="live-note">🎮 ${nm(L.by)} is playing ${n.g?esc(n.g[0]):esc(n.name)} at ${esc(n.name)}</div>`}
-  return `<div class="hint">${esc(t.name)}'s turn: ${esc(t.ids.map(id=>pp(id).name).join(", "))} pick${t.ids.length>1?"":"s"} the next stop on their phone.${amIn()?"":" You're watching."}</div>`}
+  const free=t.ids.filter(id=>!S.frozenP[id]);
+  return `<div class="hint">${esc(t.name)}'s turn: ${esc(free.map(id=>pp(id).name).join(", "))} pick${free.length>1?"":"s"} the next stop on their phone.${amIn()?(S.frozenP[meId()]&&t.ids.includes(meId())?" <b style=\"color:#bfe9ff\">You're frozen, so you sit out this turn.</b>":""):" You're watching."}</div>`}
 function side(){
   if(!S||!ROOM||ROOM.status==="lobby"){$("side").innerHTML=lobbySide();return}
   const t=cur(),o=other(),max=dist("T");
@@ -523,10 +524,10 @@ function stop(id){if(!canAct())return;const n=N[id],t=cur(),o=other(),ty=n.mind?
   if(n.type==="vote"){moveTo(t,id);
     open(head(`Royal vote · ${ORDER[id]===14?"first":"last"} vote before the castle`,1)+`<p class="hint" style="margin:0">${esc(t.name)} reached ${esc(n.name)}. Everyone votes in secret (whisper it to the host, or write it on a scrap of paper). The player with the most votes is frozen and sits out their team's next turn.</p>
       <span class="lab">Who got the most votes?</span><div class="pgrid">${everyone().map(p=>{const last=teamOf(p).ids.every(i=>i===p||S.frozenP[i]);return avBtn(p,`data-vote="${esc(p)}"`,S.frozenP[p]||last,S.frozenP[p]?"Frozen":last?"Last one in":"")}).join("")}</div>`,1);return}
-  if(n.type==="game")open(head("Game stop")+dev+sitNote+`<p class="hint" style="margin:0">${esc(t.name)} plays. Win to move onto this stop, lose to stay put.</p>${playBtn(n)}<div class="row2"><button class="go g" data-res="win">We won</button><button class="go g" data-res="lose">We lost</button></div>`);
-  if(n.type==="chal")open(head("Challenge · shorter road, higher risk")+dev+sitNote+`<div class="vs"><span style="color:${t.x}">${esc(t.name)}</span><span>VS</span><span style="color:${o.x}">${esc(o.name)}</span></div><p class="hint" style="margin:0">Winner moves forward. Loser's whole team freezes for one turn.</p>${playBtn(n)}<div class="row2"><button class="go g" data-res="cw">${esc(t.name)} won</button><button class="go g" data-res="cl">${esc(o.name)} won</button></div>`);
-  if(n.type==="show")open(head("Showdown · everyone plays")+dev+`<p class="hint" style="margin:0">All ${everyone().length} players play an elimination game. The last one standing earns their team 2 steps.</p>${playBtn(n)}<span class="lab">Who was the last one standing?</span><div class="pgrid">${everyone().map(p=>avBtn(p,`data-surv="${esc(p)}"`)).join("")}</div>`);
-  if(n.type==="castle")open(head("The castle gates · final challenge")+dev+sitNote+`<p class="hint" style="margin:0">Win this and ${esc(t.name)} takes the castle, then one of you is crowned. Lose and you fall back one stop.</p>${playBtn(n)}<div class="row2"><button class="go g" data-res="fw">We won</button><button class="go g" data-res="fl">We lost</button></div>`);
+  if(n.type==="game")open(head("Game stop")+dev+sitNote+`<p class="hint" style="margin:0">${esc(t.name)} plays. Win to move onto this stop, lose to stay put.</p>${playBtn(n)}${byHand(n)?`<div class="row2"><button class="go g" data-res="win">We won</button><button class="go g" data-res="lose">We lost</button></div>`:""}`);
+  if(n.type==="chal")open(head("Challenge · shorter road, higher risk")+dev+sitNote+`<div class="vs"><span style="color:${t.x}">${esc(t.name)}</span><span>VS</span><span style="color:${o.x}">${esc(o.name)}</span></div><p class="hint" style="margin:0">Winner moves forward. Loser's whole team freezes for one turn.</p>${playBtn(n)}${byHand(n)?`<div class="row2"><button class="go g" data-res="cw">${esc(t.name)} won</button><button class="go g" data-res="cl">${esc(o.name)} won</button></div>`:""}`);
+  if(n.type==="show")open(head("Showdown · everyone plays")+dev+`<p class="hint" style="margin:0">All ${everyone().length} players play an elimination game. The last one standing earns their team 2 steps.</p>${playBtn(n)}${byHand(n)?`<span class="lab">Who was the last one standing?</span><div class="pgrid">${everyone().map(p=>avBtn(p,`data-surv="${esc(p)}"`)).join("")}</div>`:""}`);
+  if(n.type==="castle")open(head("The castle gates · final challenge")+dev+sitNote+`<p class="hint" style="margin:0">Win this and ${esc(t.name)} takes the castle, then one of you is crowned. Lose and you fall back one stop.</p>${playBtn(n)}${byHand(n)?`<div class="row2"><button class="go g" data-res="fw">We won</button><button class="go g" data-res="fl">We lost</button></div>`:""}`);
 }
 function result(r,left){const id=pend,n=N[id],t=cur(),o=other();shut();left=Math.max(0,left|0);
   if(left&&(r==="win"||r==="fw"))t.tp+=left;else left=0;
@@ -542,21 +543,23 @@ function survive(p){const w=teamOf(p),t=cur();shut();moveTo(t,pend);stepForward(
 // the throne duel: two players of the winning team, Tap Race on this iPad or a Mind race on phones; then the host crowns the winner
 let duel=[],duelWin=null;
 function crownSheet(t,keep){t=t||S.teams.find(x=>x.at==="S");if(!t)return;
-  const many=t.ids.length>1,rows=duelWin&&t.ids.includes(duelWin)?[duelWin,...t.ids.filter(i=>i!==duelWin)]:t.ids;
+  const many=t.ids.length>1,rows=!many?t.ids:duelWin&&t.ids.includes(duelWin)?[duelWin]:duel.length===2?duel:[]; // only a duelist can be crowned (the winner, once the Tap Race is played)
   open(`<div class="sh-top"><span class="ic" style="--x:#f5b300">♛</span><span class="t"><b>Throne duel</b><small>${esc(t.name)} holds the castle. ${many?"One last 1v1 game between its players decides who wears the crown.":"Its only player wears the crown."}</small></span></div>
   ${many?`<div class="info well"><span><b>Pick two duelists</b> · ${duel.length}/2 picked</span><div class="chips">${t.ids.map(id=>`<button class="chip${duel.includes(id)?" on":""}" data-duel="${esc(id)}">${avH(id,32)}${esc(pp(id).name)}</button>`).join("")}</div></div>
-  <div class="row2"><button class="go p" id="duelGo" style="--x:#ffd23f" ${duel.length===2?"":"disabled"}>Tap Race on this phone</button><a class="go g" target="_blank" rel="noopener" href="play.html?new=race&amp;players=${encodeURIComponent((duel.length===2?duel:t.ids).join(","))}&amp;mind=${pick(MindGames.list).id}&amp;level=5">Mind race on phones</a></div>`:""}
-  <span class="lab">Crown the winner</span>${rows.map(id=>`<div class="crownrow well">${avH(id)}<b>${esc(pp(id).name)}${id===duelWin?' <span class="tag" style="--x:var(--gold)">Won the duel</span>':""}</b><button class="go p" style="--x:#f5b300" data-crown="${esc(id)},King">King</button><button class="go p" style="--x:#f7b8d2" data-crown="${esc(id)},Queen">Queen</button></div>`).join("")}`,1,keep)}
+  <div class="row2"><button class="go p" id="duelGo" style="--x:#ffd23f" ${duel.length===2?"":"disabled"}>Tap Race on this phone</button><a class="go g" target="_blank" rel="noopener" href="play.html?new=race&amp;score=0&amp;players=${encodeURIComponent((duel.length===2?duel:t.ids).join(","))}&amp;mind=${pick(MindGames.list).id}&amp;level=5">Mind race on phones</a></div>`:""}
+  <span class="lab">Crown the winner</span>${many&&!rows.length?`<p class="hint" style="margin:0">Pick two duelists and play the duel first. Then crown whoever won it.</p>`:""}${many&&!duelWin&&rows.length?`<p class="hint" style="margin:0">Played the Mind race on phones? Crown whoever won it.</p>`:""}${rows.map(id=>`<div class="crownrow well">${avH(id)}<b>${esc(pp(id).name)}${id===duelWin?' <span class="tag" style="--x:var(--gold)">Won the duel</span>':""}</b><button class="go p" style="--x:#f5b300" data-crown="${esc(id)},King">King</button><button class="go p" style="--x:#f7b8d2" data-crown="${esc(id)},Queen">Queen</button></div>`).join("")}`,1,keep)}
 function crown(id,title){const t=teamOf(id);S.over=`Long live ${title} ${pp(id).name}! ${t.name} took the castle.`;S.crowned={id,title};S.live=null;duel=[];duelWin=null;
   log(pp(id).name+" was crowned "+title,t.x);const P=places();push({final:P.order.map((x,i)=>({id:x,place:P.places[i],bonus:bonusOf(teamOf(x))}))});render();burst();summed=1;summary()}
 function places(){const id=S.crowned.id,t=teamOf(id),o=S.teams.find(x=>x!==t),rest=t.ids.filter(x=>x!==id);
   return {t,o,order:[id,...rest,...o.ids],places:[1,...rest.map(()=>2),...o.ids.map(()=>3)]}}
-const bonusOf=t=>Math.floor((t.tp|0)/10);
+// time points: 1 bonus coin each per N points (Admin > Settings, usually 10), at most BONUS_MAX per game so the crown still matters most
+const BONUS_MAX=3,bonusPer=()=>ROOM&&ROOM.bonus_per!=null?+ROOM.bonus_per:10;
+const bonusOf=t=>{const per=bonusPer();return per>0?Math.min(BONUS_MAX,Math.floor((t.tp|0)/per)):0};
 function feeNote(){const f=(ROOM&&ROOM.fees)||{},ids=Object.keys(f).filter(k=>f[k]>0&&S&&everyone().includes(k));return ids.length?`<p class="hint" style="margin:0">Paid for player swaps: ${ids.map(k=>`${esc(pp(k).name)} −${f[k]}`).join(", ")} coins.</p>`:""}
 function summary(){if(!S||!S.crowned)return;const {id,title}=S.crowned,P=places(),t=P.t,o=P.o;
   const url=`admin.html?record=1&game=${encodeURIComponent(GAME_NAME)}&order=${P.order.map(encodeURIComponent).join(",")}&places=${P.places.join(",")}&bonus=${P.order.map(x=>bonusOf(teamOf(x))).join(",")}`;const canNew=amIn()||!WATCH;
   const row=(pl,ids,note)=>ids.length?`<div class="plrow well"><span class="pl">${pl}</span><span class="ppl">${ids.map(x=>avH(x,0,"",pp(x).name)).join("")}</span><span class="nm">${esc(ids.map(x=>pp(x).name).join(", "))}</span><small>${note}</small></div>`:"";
-  const tl=tm=>`${esc(tm.name)} · ${tm.tp} time points = ${bonusOf(tm)} bonus coin${bonusOf(tm)===1?"":"s"} each`;
+  const tl=tm=>`${esc(tm.name)} · ${tm.tp} time points = ${bonusOf(tm)} bonus coin${bonusOf(tm)===1?"":"s"} each${bonusOf(tm)===BONUS_MAX?" (the most)":""}`;
   open(`<div class="win"><svg width="84" height="58" viewBox="0 0 26 18" aria-hidden="true"><path d="M2 16 L4 5 L9 10 L13 2 L17 10 L22 5 L24 16Z" fill="#ffd23f" stroke="#b07a00" stroke-width=".8"/><circle cx="13" cy="12" r="1.6" fill="#e5484d"/><circle cx="7" cy="13" r="1.2" fill="#3b6fa0"/><circle cx="19" cy="13" r="1.2" fill="#3b6fa0"/></svg>
    ${avH(id,64)}<div class="big" style="color:#ffd23f">Long live ${title} ${esc(pp(id).name)}!</div>
    <p class="hint" style="margin:0">${esc(t.name)} took the castle. Final places for the scoreboard:</p>
@@ -582,10 +585,12 @@ const TIMED=new Set(["Charades","Heads Up","Taboo","Pictionary","Memory Match","
 
 // ---------- playable games ----------
 const PLAY={"Air Hockey":airHockey,"Charades":charades,"Heads Up":headsUp,"Taboo":taboo,"Pictionary":pictionary,"Memory Match":memoryMatch,"Trivia Sprint":triviaSprint,"Trivia Battle":triviaBattle,"Tap Race":n=>tapRace(cur(),other(),`Tap Race · ${esc(n.name)}`,(i,sc)=>{const w=i?other():cur(),l=i?cur():other();arenaOver(w.name+" wins!",w.x,`${sc[0]} to ${sc[1]} taps. ${esc(w.name)} moves forward and ${esc(l.name)} freezes for a turn.`,i?"cl":"cw")}),"Quick Draw":quickDraw,"Last One Standing":lastStanding,"Mind Gauntlet":mindStop};POOL.mind.forEach(m=>PLAY[m[0]]=mindStop);
-// games played on everyone's own phone through Play together; the host enters the result here
+// games played on everyone's own phone through Play together; the host enters the result here.
+// They open as practice (score=0): the coins come from the crown game, so they don't count twice on the scoreboard.
 const PHONE={
-  "Imposter":{url:()=>"play.html?new=imposter&players="+encodeURIComponent(ready(S.teams[0]).concat(ready(S.teams[1])).join(",")),how:()=>`Everyone in both teams plays Imposter on their own phone. If the imposter gets away, the imposter's team wins this challenge. If the imposter is caught, the other team wins.`},
-  "Mind Race":{url:()=>`play.html?new=race&players=${encodeURIComponent(everyone().join(","))}&mind=${pick(MindGames.list).id}&level=${lvl(pend)}`,how:()=>`Everyone plays the same mind game on their own phone at the same moment. The best player is the last one standing.`}};
+  "Imposter":{url:()=>"play.html?new=imposter&score=0&players="+encodeURIComponent(ready(S.teams[0]).concat(ready(S.teams[1])).join(",")),how:()=>`Everyone in both teams plays Imposter on their own phone. If the imposter gets away, the imposter's team wins this challenge. If the imposter is caught, the other team wins.`},
+  "Mind Race":{url:()=>`play.html?new=race&score=0&players=${encodeURIComponent(everyone().join(","))}&mind=${pick(MindGames.list).id}&level=${lvl(pend)}`,how:()=>`Everyone plays the same mind game on their own phone at the same moment. The best player is the last one standing.`}};
+const byHand=n=>!PLAY[n.g[0]]; // only games played outside this page (on everyone's phone) need the result tapped in
 function playBtn(n){const g=n.g[0];if(PLAY[g])return `<button class="go p" data-demo style="--x:#ffd23f">Play ${esc(g)} now</button>`;
   const ph=PHONE[g];return `<p class="hint" style="margin:0">${esc(ph.how())} It opens Play together in a new tab: everyone taps Ready on their phone. When it's over, come back here and tap the result.</p><a class="go p" target="_blank" rel="noopener" href="${esc(ph.url())}" style="--x:#ffd23f">Open ${esc(g)} on everyone's phone</a>`}
 let loop=null,cleanup=null,onQuit=null;
@@ -612,7 +617,7 @@ function mindPlay(o){const t=cur();let left=0;
 function mindStop(n){const fin=n.type==="castle";
   mindPlay({game:fin?pick(MindGames.list).id:n.mind,level:fin?5:lvl(pend),mid:fin?"Mind Gauntlet · the castle gate":esc(n.g[0])+" · "+esc(n.name),end:(win,l)=>result(win?(fin?"fw":"win"):(fin?"fl":"lose"),l)})}
 function thaw(){mindPlay({game:pick(MindGames.list).id,level:1,mid:"Thaw game · win to play this turn",end:(win,l)=>{const t=cur();t.frozen=0;
-  if(win){t.tp+=l;log(t.name+" won the Thaw and is back in"+tpTxt(l),t.x);S.live=null;render();toast(t.name+" thawed out. Tap a glowing stop")}else{log(t.name+" lost the Thaw and sat out a frozen turn",t.x);endTurn()}}})}
+  if(win){log(t.name+" won the Thaw and is back in",t.x);S.live=null;render();toast(t.name+" thawed out. Tap a glowing stop")}else{log(t.name+" lost the Thaw and sat out a frozen turn",t.x);endTurn()}}})}
 
 // word card games: one player holds the iPad, the team guesses against the clock
 function cardGame(n,c){const t=cur(),deck=MindGames.deck(c.key,c.deck);let got=0,skip=0,tm=null,gone=false;

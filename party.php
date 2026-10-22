@@ -478,9 +478,9 @@ function crown_move(array &$st, array $m, bool $host, array $b): bool {
       if (!can_play($pp[$in], 'crown')) throw new RuntimeException('This game is coming soon for ' . $pp[$in]['name'] . ', so they can\'t join yet.');
       party_leave($st, $out); $st['players'][] = ['id' => $in, 'name' => $pp[$in]['name']];
     }
-    $fee = crown_conf()['fee'];
-    foreach ($st['teams'][$ti] as $p) $st['fees'][$p] = ($st['fees'][$p] ?? 0) + $fee;
     $st['teams'][$ti][array_search($out, $st['teams'][$ti], true)] = $in;
+    $fee = crown_conf()['fee']; // everyone on the team after the swap pays, the new player too
+    foreach ($st['teams'][$ti] as $p) $st['fees'][$p] = ($st['fees'][$p] ?? 0) + $fee;
   }
   foreach ([0, 1] as $i) { // the map's teams must be the server's teams
     $a = array_values(array_map('strval', (array)($board['S']['teams'][$i]['ids'] ?? []))); $c = $st['teams'][$i]; sort($a); sort($c);
@@ -492,7 +492,9 @@ function crown_move(array &$st, array $m, bool $host, array $b): bool {
     foreach ($b['final'] as $f) {
       $id = (string)($f['id'] ?? '');
       if (!in_array($id, $all, true) || in_array($id, array_column($st['final'], 'id'), true)) continue;
-      $st['final'][] = ['id' => $id, 'place' => max(1, min(3, (int)($f['place'] ?? 3))), 'bonus' => max(0, min(1000, (int)($f['bonus'] ?? 0))), 'fee' => (int)($st['fees'][$id] ?? 0), 'score' => null];
+      $place = max(1, min(3, (int)($f['place'] ?? 3))); $bonus = max(0, min(3, (int)($f['bonus'] ?? 0)));
+      $fee = min((int)($st['fees'][$id] ?? 0), coins_for($place) + $bonus); // swap fees can take a game's coins down to 0, never below
+      $st['final'][] = ['id' => $id, 'place' => $place, 'bonus' => $bonus, 'fee' => $fee, 'score' => null];
     }
     return true;
   }
