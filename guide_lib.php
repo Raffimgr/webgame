@@ -39,6 +39,7 @@ function guide_login(): string {
   $pdo = new PDO('sqlite:' . $dir . '/ridge.sqlite', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
   $s = $pdo->prepare('SELECT 1 FROM players WHERE id=? AND active=1'); $s->execute([$pid]);
   if (!$s->fetchColumn()) fail('Please log in.', 401);
+  require_once __DIR__ . '/loginlog.php'; log_active((string)$pid); // for the admin's Log: pages left open still count
   return (string)$pid;
 }
 
