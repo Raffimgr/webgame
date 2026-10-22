@@ -180,6 +180,9 @@ function clean_avatar($a): ?string {
   return $a;
 }
 
+/* Profile pictures are for members: someone who isn't logged in (the login screen) gets initials only (Sako, 2026-10-22). */
+function players_for(?array $me, array $list): array { return $me ? $list : array_map(fn($p) => ['avatar' => null] + $p, $list); }
+
 /* The members. The Score screen (screen=1) is left out unless $all (the admin's Members list) or $screens (only screens, for the login page). */
 function players_public(bool $all = false, bool $screens = false): array {
   $q = 'SELECT id,name,short,color,avatar,is_admin,active,screen,(pass_hash IS NOT NULL) AS has_pass FROM players'
@@ -381,11 +384,12 @@ case 'state': // who am I, who can log in, is the admin password set yet
   front_auto();
   if (!empty($_SESSION['pid'])) log_visit((string)$_SESSION['pid']);
   $adminSet = (int)db()->query('SELECT COUNT(*) FROM players WHERE is_admin=1 AND pass_hash IS NOT NULL')->fetchColumn() > 0;
-  out(['me' => me(), 'players' => players_public(), 'screens' => players_public(false, true), 'admin_ready' => $adminSet, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'access' => access_conf(), 'crown' => crown_conf()]);
+  $me = me();
+  out(['me' => $me, 'players' => players_for($me, players_public()), 'screens' => players_for($me, players_public(false, true)), 'admin_ready' => $adminSet, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'access' => access_conf(), 'crown' => crown_conf()]);
 
 case 'players':
   front_auto();
-  out(['players' => players_public()]);
+  out(['players' => players_for(me(), players_public())]);
 
 case 'setup': // first run only: the admin sets his own password
   if (!$post) fail('Use POST.');
