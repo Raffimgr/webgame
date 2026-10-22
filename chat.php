@@ -9,6 +9,7 @@
    POST {act:"seen", id}           -> {ok}    you have read everything up to id   (POSTs need the X-RG header) */
 
 require __DIR__ . '/guide_lib.php';
+require __DIR__ . '/push.php'; // phone notifications for new messages
 
 const KEEP = 300;
 
@@ -79,6 +80,7 @@ try {
     $db->prepare('INSERT INTO msgs (pid, body, at) VALUES (?, ?, ?)')->execute([$pid, $body, time()]);
     $id = (int)$db->lastInsertId();
     $db->prepare('INSERT INTO seen (pid, mid) VALUES (?, ?) ON CONFLICT(pid) DO UPDATE SET mid=excluded.mid')->execute([$pid, $id]);
+    push_chat($pid, $body);
     out(['rev' => bump($db), 'msg' => msg_row(get_msg($db, $id), [])]);
   }
   if ($act === 'heart') {

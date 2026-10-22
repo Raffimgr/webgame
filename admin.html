@@ -99,6 +99,10 @@ html.rg-nav-on .sheet{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)
 .ar{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:8px;align-items:center;padding:8px 12px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh)}
 .ar b{font-weight:650;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .ar b small{display:block;font-weight:500;color:var(--mut);font-size:12px}
+/* Settings > Phone notifications: one switch per kind, then the phones that have them on */
+.nr{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-radius:16px;background:var(--well);box-shadow:var(--well-sh);text-align:left;width:100%}
+.nr>span:first-child{font-size:22px;width:30px;text-align:center}
+.nr b{font-weight:650}.nr b small{display:block;font-weight:500;color:var(--mut);font-size:12.5px}
 .tg{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:50px;font-size:11.5px;font-weight:700;color:var(--mut)}
 .tg:disabled{opacity:.45;cursor:default}
 .sw{position:relative;width:48px;height:28px;border-radius:99px;background:#3a3f48;transition:background .2s}
@@ -140,7 +144,7 @@ html.rg-nav-on .sheet{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)
   <section id="t-log" hidden><div id="loginLog" style="display:flex;flex-direction:column;gap:16px"></div></section>
 </div>
 <script src="mind.js"></script>
-<script src="rg.js?v=10"></script>
+<script src="rg.js?v=11"></script>
 <script>
 (async function(){
 const {api,av,esc,toast}=RG;
@@ -449,9 +453,27 @@ function drawCrown(){const el=document.getElementById("crownBox");if(!el)return;
   el.querySelectorAll("[data-fee]").forEach(b=>b.onclick=()=>{crown.fee=+b.dataset.fee;drawCrown();save()})}
 
 /* ---------- settings ---------- */
+/* ---------- phone notifications (push.php): which kinds are sent; each member turns them on from the bell on their own phone ---------- */
+const PUSH_KINDS=[["chat","\u{1F4AC}","Chat messages","Every new message in the group chat"],["post","\u{1F4F8}","New Feed posts","When someone shares photos or videos"],
+  ["tag","\u{1F3F7}\uFE0F","Tagged in a post","When someone tags you in a Feed post"],["like","\u2764\uFE0F","Likes on your posts","When someone likes a post you shared"],
+  ["comment","\u{1F5E8}\uFE0F","Comments on your posts","When someone comments on a post you shared"],["invite","\u{1F3B2}","Game invites","When someone invites you to an online game"]];
+let pushConf=null,pushPhones=[],pushSave=Promise.resolve();
+async function drawPushSet(){const el=document.getElementById("pushBox");if(!el)return;
+  if(!pushConf){el.innerHTML=`<div class="panel"><h2>Phone notifications</h2><p class="hint">Loading…</p></div>`;
+    try{const r=await api("push_admin");pushConf=r.push;pushPhones=r.phones||[]}catch(x){el.querySelector(".hint").textContent=x.message;return}}
+  const on=k=>!pushConf.off.includes(k),when=t=>{const d=new Date(t*1000),n=new Date();
+    return d.toDateString()===n.toDateString()?"today "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}):d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})};
+  el.innerHTML=`<div class="panel"><h2>Phone notifications</h2><p class="hint">Pick what gets sent to phones. Each member turns notifications on from the \u{1F514} next to their name, on their own phone. Anyone with the Feed or Chat turned off below doesn't get those.</p>
+    <div class="alist">${PUSH_KINDS.map(([k,icon,name,sub])=>`<button class="nr" data-pk="${k}" aria-pressed="${on(k)}"><span>${icon}</span><b>${name}<small>${sub}</small></b><span class="sw${on(k)?" on":""}"></span></button>`).join("")}</div>
+    <div class="lab" style="margin-top:6px">Phones with notifications on<span class="n">${pushPhones.length}</span></div>
+    ${pushPhones.length?`<div class="alist">${pushPhones.map(f=>`<div class="ll-row">${av(P(f.pid),32)}<div><b>${esc(P(f.pid).name)}</b><span class="ll-d">${esc(f.device||"Phone")} · turned on ${when(f.at)}${f.ok_at?" · last one sent "+when(f.ok_at):""}</span></div><time></time></div>`).join("")}</div>`
+      :`<p class="hint">No phones yet. They show up here once someone turns notifications on.</p>`}</div>`;
+  el.querySelectorAll("[data-pk]").forEach(b=>b.onclick=()=>{const k=b.dataset.pk,i=pushConf.off.indexOf(k);if(i>=0)pushConf.off.splice(i,1);else pushConf.off.push(k);drawPushSet();
+    const c={off:pushConf.off.slice()};pushSave=pushSave.then(()=>api("settings_save",{push:c})).then(()=>toast("Saved."),x=>toast(x.message))})}
+
 function drawSettings(){
   const el=document.getElementById("t-set");
-  el.innerHTML=`<div id="acc" style="display:flex;flex-direction:column;gap:16px"></div><div id="crownBox"></div><div class="panel"><h2>Coins for each place</h2><p class="hint">Every game gives coins by place. Places past the last box get nothing. Changing this re-counts every game already recorded.</p>
+  el.innerHTML=`<div id="pushBox"></div><div id="acc" style="display:flex;flex-direction:column;gap:16px"></div><div id="crownBox"></div><div class="panel"><h2>Coins for each place</h2><p class="hint">Every game gives coins by place. Places past the last box get nothing. Changing this re-counts every game already recorded.</p>
     <div class="coins-ed" id="ce">${coins.map((c,i)=>`<label>${RG.ordinal(i+1)}<input class="in" type="number" min="0" inputmode="numeric" value="${c}"></label>`).join("")}</div>
     <div class="actions" style="justify-content:flex-start"><button class="btn sm" id="cadd">＋ Place</button><button class="btn sm" id="cdel">− Place</button><span style="flex:1"></span><button class="btn main" id="csave">Save coins</button></div></div>
   <div class="panel"><h2>Backup</h2><p class="hint">Download every member, game and score as one file (photos stay on the server).</p><div class="actions" style="justify-content:flex-start"><a class="btn" href="api.php?a=export" download>Download backup</a></div></div>
@@ -459,7 +481,7 @@ function drawSettings(){
   (async()=>{const h=el.querySelector("#fr-h"),b=el.querySelector("#fr");
     const paint=on=>{h.textContent=on?"raffaelco.com sends visitors straight to the games.":"raffaelco.com does not open the games. Use raffaelco.com/DM/.";b.textContent=on?"Stop sending raffaelco.com here":"Make raffaelco.com open the games";b.hidden=false;b.onclick=async()=>{b.disabled=true;try{const r=await api("settings_save",{front:!on});paint(r.front);toast("Saved.")}catch(x){toast(x.message)}b.disabled=false}};
     try{const r=await api("front");if(!r.possible){h.textContent="Only available on the real website.";return}paint(r.front)}catch(x){h.textContent=x.message}})();
-  drawAccess();drawCrown();
+  pushConf=null;drawPushSet();drawAccess();drawCrown();
   const read=()=>[...el.querySelectorAll("#ce input")].map(i=>+i.value||0);
   el.querySelector("#cadd").onclick=()=>{coins=[...read(),0];drawSettings()};
   el.querySelector("#cdel").onclick=()=>{coins=read().slice(0,-1);if(!coins.length)coins=[10];drawSettings()};

@@ -83,6 +83,7 @@ require __DIR__ . '/poker.php';
 require __DIR__ . '/party.php';
 require __DIR__ . '/loginlog.php';
 require __DIR__ . '/notify.php';
+require __DIR__ . '/push.php';
 const ROOM_IDLE = 43200; // rooms quiet for 12 hours drop off the list
 const SKIP_AFTER = 60;   // the host may skip a player whose turn has lasted this many seconds
 
@@ -582,6 +583,10 @@ case 'settings_save':
     $open = array_values(array_unique(array_filter((array)($b['access']['open'] ?? []), fn($x) => is_string($x) && preg_match('/^(crown|(play|mind|cards):[a-z]{2,20})$/', $x))));
     db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['access', json_encode(['nofeed' => $who('nofeed'), 'nochat' => $who('nochat'), 'nogames' => $who('nogames'), 'open' => array_slice($open, 0, 200)])]);
   }
+  if (isset($b['push']) && is_array($b['push'])) {
+    $off = array_values(array_intersect(array_filter((array)($b['push']['off'] ?? []), 'is_string'), PUSH_KINDS));
+    db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['push', json_encode(['off' => $off])]);
+  }
   if (isset($b['crown']) && is_array($b['crown'])) {
     $off = array_values(array_unique(array_filter((array)($b['crown']['off'] ?? []), fn($x) => is_string($x) && preg_match('/^[A-Za-z][A-Za-z \'-]{1,39}$/', $x))));
     db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')->execute(['crown', json_encode(['off' => array_slice($off, 0, 60), 'fee' => max(0, min(50, (int)($b['crown']['fee'] ?? CROWN_FEE)))])]);
@@ -613,6 +618,27 @@ case 'invites': // games someone asked me to join (the home page shows them)
 case 'notify': // the bell next to your name (notify.php); ?count=1 also sends who you are, for the bottom bar
   $m = need_login(); log_active($m['id']); $r = notify_items($m);
   out(isset($_GET['count']) ? ['n' => $r['n'], 'chat' => $r['chat'], 'me' => $m] : $r + ['people' => players_public()]);
+
+case 'push_key': // phone notifications (push.php): the server's public key, for turning them on
+  need_login(); $off = push_conf()['off']; out(['key' => push_keys()['pub'], 'off' => $off, 'any' => count($off) < count(PUSH_KINDS)]);
+
+case 'push_sub': // this phone wants notifications for whoever is logged in on it
+  if (!$post) fail('Use POST.');
+  $m = need_login(); if ((int)($m['screen'] ?? 0)) fail('The Score screen doesn\'t get notifications.');
+  try { push_subscribe($m['id'], (array)(body()['sub'] ?? []), log_device()); } catch (InvalidArgumentException $e) { fail($e->getMessage()); }
+  out(['ok' => 1]);
+
+case 'push_unsub':
+  if (!$post) fail('Use POST.');
+  push_unsubscribe(need_login()['id'], (string)(body()['endpoint'] ?? '')); out(['ok' => 1]);
+
+case 'push_test': // sent right away, so the phone can say whether it worked
+  if (!$post) fail('Use POST.');
+  $m = need_login();
+  out(['sent' => push_send([$m['id']], ['title' => '🔔 Notifications are on', 'body' => 'This is how news from the Shenandoah Cabin app will look, ' . $m['name'] . '.', 'url' => './', 'tag' => 'rg-test', 'kind' => 'test'])]);
+
+case 'push_admin': // Admin > Settings > Phone notifications
+  need_admin(); out(['push' => push_conf(), 'phones' => push_phones()]);
 
 case 'notify_seen': // you opened the bell
   if (!$post) fail('Use POST.');
@@ -653,7 +679,10 @@ case 'room_create':
   $st['lobby'] = ['invited' => $invite, 'ready' => [], 'start_at' => null, 'score' => ($b['score'] ?? true) !== false, 'when' => clean_when($b['when'] ?? ''), 'event_id' => null, 'next' => null];
   $t = time();
   db()->prepare('INSERT INTO rooms(game,host,status,state,created_at,updated_at) VALUES(?,?,?,?,?,?)')->execute([$game, $m['id'], 'lobby', json_encode($st), $t, $t]);
-  room_out(room_load((int)db()->lastInsertId()), $m);
+  $room = room_load((int)db()->lastInsertId());
+  push_later(array_diff($invite, [$m['id']]), 'invite', ['title' => '🎲 ' . $m['name'] . ' invited you to play', 'body' => room_label($room) . ' · tap to join',
+    'url' => ($game === 'poker' ? 'online.html' : ($game === 'crown' ? 'map.html' : 'play.html')) . '?room=' . $room['id'], 'tag' => 'rg-room-' . $room['id']]);
+  room_out($room, $m);
 
 case 'room_state': // cheap when nothing changed: {same:1}
   $m = need_login(); $id = (int)($_GET['id'] ?? 0);
