@@ -309,7 +309,7 @@ const ready=t=>t.ids.filter(id=>!S.frozenP[id]);
 const pp=id=>(S&&S.people&&S.people[id])||PEOPLE[id]||{name:id,short:String(id).slice(0,2).toUpperCase(),color:"#9aa3b3"};
 const avH=(id,size,cls,title)=>{const p=pp(id);return `<span class="av${cls?" "+cls:""}" style="--x:${esc(p.color)}${size?`;width:${size}px;height:${size}px;font-size:${Math.round(size*.32)}px`:""}"${title?` title="${esc(title)}"`:""}>${p.avatar?`<img src="${esc(p.avatar)}" alt="">`:esc(p.short)}</span>`};
 function log(t,x){S.log.unshift([t,x||cur().x])}
-function options(){if(!S||!canAct())return[];const t=cur();if(S.over||t.frozen)return[];return N[t.at].next}
+function options(){if(!S||!canAct())return[];const t=cur();if(S.over||t.frozen||S.vote)return[];return N[t.at].next}
 const meId=()=>ME&&ME.id;
 const amIn=()=>!WATCH&&!!ROOM&&!!ME&&(ROOM.players||[]).some(p=>p.id===ME.id);
 // this phone can move: it's in the game, its team is up, and nobody else is in the middle of a stop
@@ -319,10 +319,10 @@ const tpTxt=l=>l>0?` (+${l} time points)`:"";
 // ---------- saving: the game lives on the server; every move sends the whole map (push), and every phone polls for the newest one ----------
 const boardJSON=()=>JSON.stringify({N,S});
 function push(extra){if(!ROOM||ROOM.status!=="playing"||!amIn()||!S)return;const j=boardJSON();if(j===SENT&&!extra)return;SENT=j;
-  pushQ=pushQ.then(async()=>{try{const r=await RG.api("room_move",Object.assign({id:RID,do:"sync",bv:BV,board:JSON.parse(j)},extra||{}));ROOM=r.room;BV=r.room.bv}
+  pushQ=pushQ.then(async()=>{try{const r=await RG.api("room_move",Object.assign({id:RID,do:"sync",bv:BV,board:JSON.parse(j)},extra||{}));ROOM=r.room;BV=r.room.bv;if(extra&&extra.vote_open)voteSheet()}
     catch(e){toast(e.message);closeArena();shut();BV=-1;await poll()}})}
 function claim(id){if(S.live&&S.live.by===meId())return;S.live={by:meId(),at:id};push()}
-function release(){if(S&&S.live&&S.live.by===meId()&&$("arena").hidden){S.live=null;render()}}
+function release(){if(S&&S.live&&S.live.by===meId()&&$("arena").hidden&&!S.vote){S.live=null;render()}} // during a Royal vote the stop stays taken
 const busy=()=>!$("arena").hidden||(S&&S.live&&S.live.by===meId()&&$("sheet").classList.contains("on"));
 
 // ---------- map art ----------
@@ -427,7 +427,9 @@ function lobbySide(){
   return `<div class="card raise turn"><span class="lab">Lobby</span><div class="who"><span><b>The Road to the Crown</b><small>${host?"When everyone is ready, start the game.":`Waiting for ${nm(ROOM.host)} to start.`} ${rdy.length} of ${inv.length} ready.</small></span></div>
     ${[0,1].map(i=>`<div class="lbteam" style="--x:${TEAMX[i]}"><span class="lab">${esc(ROOM.names[i])}</span>${ROOM.teams[i].map(row).join("")}</div>`).join("")}
     ${btn}${host?`<button class="go g sm" id="lbCancel">Cancel this game</button>`:joined.includes(me)&&!WATCH?`<button class="go g sm" id="lbLeave">Leave the lobby</button>`:""}</div>`}
-function watchHint(){const t=cur(),L=S.live;
+function watchHint(){const t=cur(),L=S.live,v=ROOM&&ROOM.vote;
+  if(S.vote&&!(v&&!v.result))return `<div class="live-note">🗳️ Royal vote at ${esc((N[S.vote.at]||{}).name||"the gate")}: counting…</div>`;
+  if(v&&!v.result)return `<div class="live-note">🗳️ Royal vote at ${esc((N[v.at]||{}).name||"the gate")}: ${v.voted.length} of ${v.who.length} voted</div>`;
   if(L&&N[L.at]){const n=N[L.at];return `<div class="live-note">🎮 ${nm(L.by)} is playing ${n.g?esc(n.g[0]):esc(n.name)} at ${esc(n.name)}</div>`}
   const free=t.ids.filter(id=>!S.frozenP[id]);
   return `<div class="hint">${esc(t.name)}'s turn: ${esc(free.map(id=>pp(id).name).join(", "))} pick${free.length>1?"":"s"} the next stop on their phone.${amIn()?(S.frozenP[meId()]&&t.ids.includes(meId())?" <b style=\"color:#bfe9ff\">You're frozen, so you sit out this turn.</b>":""):" You're watching."}</div>`}
@@ -447,7 +449,7 @@ function side(){
   else if(t.frozen)act=`<div class="hint">${esc(t.name)} is frozen. Win a quick Thaw game (a level 1 mind game) to play this turn anyway, or skip it.</div><div class="row2"><button class="go p" id="thawGo">Play the Thaw</button><button class="go g" id="skip">Skip turn</button></div>`;
   else if(S.free)act=`<div class="hint">Double power-up: take a free extra step. Tap a glowing stop.</div>`;
   else act=`<div class="hint">Tap a glowing stop on the map to play it.${N[t.at].next.length>1?" The road splits here, so pick your way.":""}${out.length?` <b style="color:#bfe9ff">${esc(out.join(" and "))} sit${out.length>1?"":"s"} out this turn.</b>`:""}</div>${t.powers.includes("steal")&&o.hist.length?`<button class="go g" id="useSteal">Use Steal on ${esc(o.name)}</button>`:""}`;
-  if(!S.over&&!canAct())act=watchHint();
+  if(!S.over&&(S.vote||!canAct()))act=watchHint();
   $("side").innerHTML=`<div class="card raise turn" style="--x:${t.x}"><span class="lab">${amIn()?"Now playing":"Watching"}</span><div class="who"><span class="dot"></span><span><b>${S.over?"Game over":esc(t.name)+"'s turn"}</b><small>${esc(S.teams[0].name)} vs ${esc(S.teams[1].name)}</small></span></div>${act}</div>
     ${S.teams.map(team).join("")}
     <div class="card well"><span class="lab">Royal chronicle</span><div class="log" style="margin-top:8px">${S.log.map(l=>`<div><i style="--x:${l[1]}"></i><span>${esc(l[0])}</span></div>`).join("")||'<span>No moves yet.</span>'}</div></div>`;
@@ -470,7 +472,7 @@ function endTurn(){S.live=null;if(S.free){render();return}
 const X='<button class="x well" data-shut aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>';
 let locked=false;
 function open(h,lock,keepScroll){locked=!!lock;const sh=$("sheet"),y=sh.scrollTop;sh.innerHTML=h;sh.classList.add("on");$("scrim").classList.add("on");sh.scrollTop=keepScroll?y:0;navSync()}
-function shut(){locked=false;$("sheet").classList.remove("on");$("scrim").classList.remove("on");navSync()}
+function shut(){locked=false;voteShown=0;$("sheet").classList.remove("on");$("scrim").classList.remove("on");navSync()}
 function navSync(){if(window.RG)RG.playing(WATCH||!$("arena").hidden)} // the bottom bar hides while a challenge is played
 const avBtn=(id,attr,dis,note)=>`<button class="pbtn" ${attr} ${dis?"disabled":""}>${avH(id)}${esc(pp(id).name)}<small>${esc(note||teamOf(id).name)}</small></button>`;
 
@@ -522,8 +524,10 @@ function stop(id){if(!canAct())return;const n=N[id],t=cur(),o=other(),ty=n.mind?
   if(n.type==="event"){moveTo(t,id);const e=EVENTS[n.ev];if(n.ev==="tail")stepForward(t,1);else freeze(t);log(t.name+": "+e.t+" at "+n.name,t.x);
     open(head("Surprise event",1)+`<div class="info well"><span><b>${e.t}</b></span><span>${e.d}</span></div><button class="go p" data-done style="--x:#b48cff">OK</button>`,1);return}
   if(n.type==="vote"){moveTo(t,id);
-    open(head(`Royal vote · ${ORDER[id]===14?"first":"last"} vote before the castle`,1)+`<p class="hint" style="margin:0">${esc(t.name)} reached ${esc(n.name)}. Everyone votes in secret (whisper it to the host, or write it on a scrap of paper). The player with the most votes is frozen and sits out their team's next turn.</p>
-      <span class="lab">Who got the most votes?</span><div class="pgrid">${everyone().map(p=>{const last=teamOf(p).ids.every(i=>i===p||S.frozenP[i]);return avBtn(p,`data-vote="${esc(p)}"`,S.frozenP[p]||last,S.frozenP[p]?"Frozen":last?"Last one in":"")}).join("")}</div>`,1);return}
+    const allowed=everyone().filter(p=>!S.frozenP[p]&&!teamOf(p).ids.every(i=>i===p||S.frozenP[i])); // not frozen already, not the last one in
+    if(!allowed.length){log("Royal vote at "+n.name+": nobody can be frozen this time","#e0459b");
+      open(head("Royal vote",1)+`<p class="hint" style="margin:0">Every team is down to its last player, so nobody can be frozen this time.</p><button class="go p" data-done style="--x:#e0459b">OK</button>`,1);return}
+    S.vote={at:id};push({vote_open:{allowed}});render();return}
   if(n.type==="game")open(head("Game stop")+dev+sitNote+`<p class="hint" style="margin:0">${esc(t.name)} plays. Win to move onto this stop, lose to stay put.</p>${playBtn(n)}${byHand(n)?`<div class="row2"><button class="go g" data-res="win">We won</button><button class="go g" data-res="lose">We lost</button></div>`:""}`);
   if(n.type==="chal")open(head("Challenge · shorter road, higher risk")+dev+sitNote+`<div class="vs"><span style="color:${t.x}">${esc(t.name)}</span><span>VS</span><span style="color:${o.x}">${esc(o.name)}</span></div><p class="hint" style="margin:0">Winner moves forward. Loser's whole team freezes for one turn.</p>${playBtn(n)}${byHand(n)?`<div class="row2"><button class="go g" data-res="cw">${esc(t.name)} won</button><button class="go g" data-res="cl">${esc(o.name)} won</button></div>`:""}`);
   if(n.type==="show")open(head("Showdown · everyone plays")+dev+`<p class="hint" style="margin:0">All ${everyone().length} players play an elimination game. The last one standing earns their team 2 steps.</p>${playBtn(n)}${byHand(n)?`<span class="lab">Who was the last one standing?</span><div class="pgrid">${everyone().map(p=>avBtn(p,`data-surv="${esc(p)}"`)).join("")}</div>`:""}`);
@@ -539,6 +543,25 @@ function result(r,left){const id=pend,n=N[id],t=cur(),o=other();shut();left=Math
   else if(r==="fl"){back(t);log(t.name+" lost at the castle gates and fell back",t.x);maybePower(t)}
   endTurn()}
 function survive(p){const w=teamOf(p),t=cur();shut();moveTo(t,pend);stepForward(w,2);log("Showdown at "+N[pend].name+": "+pp(p).name+" survived, "+w.name+" jumped 2 stops",w.x);endTurn()}
+
+// ---------- the Royal vote: everyone votes in secret on their own phone; the server counts ----------
+let voteShown=0,voteDone=0;
+function voteSheet(){const v=ROOM&&ROOM.vote;if(!v||!S||!amIn())return;const me=meId(),n=N[v.at]||{name:"the gate"},t=cur();
+  const left=v.who.filter(p=>!v.voted.includes(p)),canCount=v.voted.length>0&&(t.ids.includes(me)||ROOM.host===me);
+  const top=`<div class="sh-top"><span class="ic" style="--x:#e0459b">♛</span><span class="t"><b>Royal vote at ${esc(n.name)}</b><small>Secret: nobody sees who you picked. The most votes is frozen for one turn.</small></span>${v.mine||!v.who.includes(me)?X:""}</div>`;
+  if(!v.who.includes(me))open(top+`<p class="hint" style="margin:0">You have nobody to vote for this time. ${v.voted.length} of ${v.who.length} voted.</p>`,0,true);
+  else if(!v.mine)open(top+`<span class="lab">Who should be frozen?</span><div class="pgrid">${v.allowed.filter(p=>p!==me).map(p=>avBtn(p,`data-rv="${esc(p)}"`)).join("")}</div>`,1,true);
+  else open(top+`<p class="hint" style="margin:0">You voted for <b>${nm(v.mine)}</b>. ${v.voted.length} of ${v.who.length} voted${left.length?`, waiting for ${esc(left.map(p=>pp(p).name).join(", "))}`:""}.</p>
+    ${canCount?`<button class="go g" id="rvCount">Count the votes now</button>`:""}`,0,true);
+  voteShown=v.round}
+async function castVote(target){try{const r=await RG.api("room_move",{id:RID,do:"vote",target});gotRoom(r.room)}catch(e){toast(e.message)}}
+// the result is on the server: the phone of the team that landed on the stop puts the freeze on the map
+function voteResult(v){const p=v.result,n=N[v.at]||{name:"the gate"};
+  if(voteDone!==v.round){voteDone=v.round;toast(`${pp(p).name} was voted out and frozen for one turn${v.tie?" (a tie, drawn by lot)":""}`);if($("sheet").classList.contains("on")&&voteShown===v.round)shut()}
+  const me=meId(),mine=S.live?S.live.by===me||!everyone().includes(S.live.by):cur().ids.includes(me);
+  if(!S.vote||!amIn()||!cur().ids.includes(me)||!mine)return;
+  S.frozenP[p]=teamOf(p)===cur()?"next":1;S.vote=null;
+  log(`Royal vote at ${n.name}: ${pp(p).name} is frozen for a turn (${v.count} vote${v.count===1?"":"s"}${v.tie?", tie drawn by lot":""})`,"#e0459b");endTurn()}
 
 // the throne duel: two players of the winning team, Tap Race on this iPad or a Mind race on phones; then the host crowns the winner
 let duel=[],duelWin=null;
@@ -837,8 +860,9 @@ document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)r
   else if(b.id==="lbLeave")act("room_leave").then(()=>openRoom(0));
   else if(d.done!==undefined){shut();endTurn()}
   else if(d.res)result(d.res,0);
-  else if(d.vote){const p=d.vote,tm=teamOf(p);S.frozenP[p]=tm===cur()?"next":1;shut();log("Royal vote at "+N[pend].name+": "+pp(p).name+" is frozen for a turn","#e0459b");toast(pp(p).name+" was voted out and frozen for one turn");endTurn()}
   else if(d.surv)survive(d.surv);
+  else if(d.rv)castVote(d.rv);
+  else if(b.id==="rvCount")RG.api("room_move",{id:RID,do:"vote_close"}).then(r=>gotRoom(r.room)).catch(e=>toast(e.message));
   else if(d.crown){const i=d.crown.lastIndexOf(",");crown(d.crown.slice(0,i),d.crown.slice(i+1))}
   else if(d.mv){if(!RG.canPlay("crown",d.mv))return;const g=SU.g[d.mv];SU.g[d.mv]=g===0?1:g===1?-1:0;drawSetup()}
   else if(d.duel){const id=d.duel;duel=duel.includes(id)?duel.filter(x=>x!==id):duel.concat(id).slice(-2);crownSheet(null,true)}
@@ -879,6 +903,9 @@ function gotRoom(r){const was=ROOM;ROOM=r;RID=r.id;const me=meId();
     if(r.bv!==BV&&!busy()){N=r.board.N;S=r.board.S;BV=r.bv;SENT=boardJSON();REMOTE=true;render();REMOTE=false;
       if(!S.over&&canAct()&&S.teams.some(t=>t.at==="S")&&!$("sheet").classList.contains("on"))crownSheet();}
     else side();
+    const v=r.vote;
+    if(v&&S&&!S.over){const on=$("sheet").classList.contains("on");if(v.result)voteResult(v);else if(amIn()&&$("arena").hidden&&(on?voteShown===v.round:!v.mine&&v.who.includes(meId())))voteSheet()}
+    else if(!v&&voteShown&&$("sheet").classList.contains("on")&&!busy()){voteShown=0;shut()}
     if(S&&S.over&&S.crowned&&(!summed||(was&&!was.event_id&&r.event_id&&$("sheet").classList.contains("on")))){summed=1;summary()}
     return}
   if(r.status==="playing"&&!r.board&&r.host===me&&!WATCH&&!setupSent){setupSent=1;firstBoard();return}

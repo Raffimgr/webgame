@@ -393,7 +393,7 @@ function party_begin(string $game, array &$st): void {
     foreach ($st['teams'] as &$t) $t = array_values(array_intersect($t, $ids));
     unset($t);
     if (!$st['teams'][0] || !$st['teams'][1]) throw new RuntimeException('Each team needs at least one player in the lobby.');
-    $st['board'] = null; $st['bv'] = 0; $st['fees'] = [];
+    $st['board'] = null; $st['bv'] = 0; $st['fees'] = []; $st['vote'] = null;
   }
   if ($game === 'race') { $st['seed'] = random_int(1, 2147483646); $st['results'] = []; }
   if ($game === 'imposter') {
@@ -457,8 +457,32 @@ function party_pick(string $key, array $all, int $n): array {
 /* The Road to the Crown: a phone sends the whole map after its move (bv = the board version it started from, so two phones can't both move).
    swap {out, in}: out leaves the team, in takes their place (a trade when in is on the other team); everyone on that team pays the fee,
    taken off their coins for this game. final [{id, place, bonus}] once someone is crowned: the game is over. */
+/* Royal vote: everyone in the game votes in secret on their own phone; the most votes is frozen (a tie is drawn by lot).
+   The server keeps the votes, so no phone ever sees who voted for whom. */
+function crown_tally(array &$v): void {
+  $n = array_count_values($v['votes']); $top = max($n); $tied = array_keys($n, $top);
+  $v['result'] = $tied[random_int(0, count($tied) - 1)]; $v['count'] = $top; $v['tie'] = count($tied) > 1;
+}
 function crown_move(array &$st, array $m, bool $host, array $b): bool {
-  if ((string)($b['do'] ?? '') !== 'sync') throw new RuntimeException('Unknown move.');
+  $do = (string)($b['do'] ?? '');
+  if ($do === 'vote' || $do === 'vote_close') {
+    $v = &$st['vote'];
+    if (empty($v) || $v['result'] !== null) throw new RuntimeException('There is no vote going on.');
+    if ($do === 'vote') {
+      $t = (string)($b['target'] ?? '');
+      if (!in_array($m['id'], $v['who'], true)) throw new RuntimeException("You don't vote in this one.");
+      if ($t === $m['id'] || !in_array($t, $v['allowed'], true)) throw new RuntimeException('Pick someone else.');
+      $v['votes'][$m['id']] = $t;
+      if (count($v['votes']) >= count($v['who'])) crown_tally($v);
+    } else { // count now, without waiting for the last votes: the team whose turn it is (or the host)
+      $turn = (int)($st['board']['S']['turn'] ?? 0);
+      if (!$host && !in_array($m['id'], $st['teams'][$turn] ?? [], true)) throw new RuntimeException('Only the team whose turn it is can count the votes.');
+      if (!$v['votes']) throw new RuntimeException('Nobody has voted yet.');
+      crown_tally($v);
+    }
+    return false;
+  }
+  if ($do !== 'sync') throw new RuntimeException('Unknown move.');
   if ((int)($b['bv'] ?? -1) !== (int)$st['bv']) throw new RuntimeException('The map moved on: someone else played first.');
   $board = $b['board'] ?? null;
   if (!is_array($board) || !is_array($board['N'] ?? null) || !is_array($board['S'] ?? null) || !is_array($board['S']['teams'] ?? null) || count($board['S']['teams']) !== 2) throw new RuntimeException('That map is broken.');
@@ -487,6 +511,12 @@ function crown_move(array &$st, array $m, bool $host, array $b): bool {
     if ($a !== $c) throw new RuntimeException("The teams on the map don't match. Reload and try again.");
   }
   $st['board'] = $board; $st['bv']++;
+  if (!empty($b['vote_open']) && is_array($b['vote_open']) && !empty($board['S']['vote'])) { // a team landed on a Royal vote stop
+    $ids = array_merge($st['teams'][0], $st['teams'][1]);
+    $allowed = array_values(array_intersect(array_map('strval', (array)($b['vote_open']['allowed'] ?? [])), $ids));
+    $who = array_values(array_filter($ids, fn($p) => count(array_diff($allowed, [$p])) > 0)); // you can't vote for yourself
+    $st['vote'] = ['round' => $st['bv'], 'at' => (string)($board['S']['vote']['at'] ?? ''), 'who' => $who, 'allowed' => $allowed, 'votes' => [], 'result' => null, 'count' => 0, 'tie' => false];
+  } elseif (empty($board['S']['vote']) && !empty($st['vote']) && $st['vote']['result'] !== null) $st['vote'] = null; // the freeze is on the map now
   if (!empty($b['final']) && is_array($b['final']) && !empty($board['S']['over'])) {
     $all = array_merge($st['teams'][0], $st['teams'][1]); $st['final'] = [];
     foreach ($b['final'] as $f) {
@@ -751,10 +781,16 @@ function party_rank(string $game, array &$st): void {
 }
 
 /* What one phone may see. */
+/* what a phone sees of the Royal vote: who has voted and its own vote, never anyone else's */
+function crown_vote_view(?array $v, ?string $me): ?array {
+  if (!$v) return null;
+  return ['round' => $v['round'], 'at' => $v['at'], 'who' => $v['who'], 'allowed' => $v['allowed'], 'voted' => array_keys($v['votes']),
+    'mine' => $me !== null ? ($v['votes'][$me] ?? null) : null, 'result' => $v['result'], 'count' => $v['count'], 'tie' => $v['tie']];
+}
 function party_view(string $game, array $st, ?string $me, bool $live): array {
   $ids = array_column($st['players'], 'id'); $in = in_array($me, $ids, true);
   $v = ['players' => $st['players'], 'final' => $st['final']];
-  if ($game === 'crown') return $v + ['teams' => $st['teams'], 'names' => $st['names'], 'board' => $st['board'], 'bv' => $st['bv'], 'fees' => (object)$st['fees'], 'fee' => crown_conf()['fee']];
+  if ($game === 'crown') return $v + ['teams' => $st['teams'], 'names' => $st['names'], 'board' => $st['board'], 'bv' => $st['bv'], 'fees' => (object)$st['fees'], 'fee' => crown_conf()['fee'], 'vote' => crown_vote_view($st['vote'] ?? null, $me)];
   if ($game === 'race') {
     $v += ['mind' => $st['mind'], 'name' => $st['name'], 'level' => $st['level'], 'seed' => $live ? $st['seed'] : 0,
       'done_ids' => array_keys($st['results']), 'results' => $st['final'] ? $st['results'] : (isset($st['results'][$me]) ? [$me => $st['results'][$me]] : [])];
