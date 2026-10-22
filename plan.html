@@ -161,6 +161,8 @@ function formHTML(it){it=it||{kind:"buy",title:"",grp:"",notes:"",who:person&&pe
 
 /* the third column: short notes are where to get it ("Wegmans"); otherwise the due date, or a mark that there are notes */
 const SEC_COLORS=["#ff9f43","#2ec4b6","#6fc04a","#b392f0","#5cc8ee","#ff7b6b","#ffd23f","#ff8fb1"];
+/* Show by Place (Sako, 2026-10-22): the same short note, so everything for Wegmans sits together; spelling and case don't matter */
+const placeOf=it=>{const n=(it.notes||"").trim();return n&&n.length<=40&&!n.includes("\n")?n.replace(/\s+/g," "):""};
 function where(it){const n=(it.notes||"").trim();
   if(n&&n.length<=40&&!n.includes("\n"))return [n,""];if(it.due)return [fmtDue(it.due),!it.done&&it.due<today()?"late":""];return [n?"\u{1F4DD}":"",""]}
 function itemHTML(it){
@@ -191,23 +193,26 @@ function draw(){
   $("#people").innerHTML=`<button data-person="" class="${person?"":"on"}"><span class="ev">\u{1F465}</span>Everyone</button>`
     +ppl.map(p=>`<button data-person="${esc(p.id)}" class="${person===p.id?"on":""}">${RG.av(p,38)}${p.id===me.id?"Me":esc(p.name)}<small>${left(p.id)} to do</small></button>`).join("")
     +(nobody?`<button data-person="-" class="${person==="-"?"on":""}"><span class="ev">\u{1F64B}</span>Nobody yet<small>${nobody} to do</small></button>`:"");
-  $("#sortr").innerHTML=`Show by <button data-sort="grp" class="${sortBy==="grp"?"on":""}">Section</button><button data-sort="who" class="${sortBy==="who"?"on":""}">Person</button><button data-sort="due" class="${sortBy==="due"?"on":""}">Date</button>`;
+  $("#sortr").innerHTML=`Show by <button data-sort="grp" class="${sortBy==="grp"?"on":""}">Section</button><button data-sort="who" class="${sortBy==="who"?"on":""}">Person</button><button data-sort="due" class="${sortBy==="due"?"on":""}">Date</button><button data-sort="place" class="${sortBy==="place"?"on":""}">Place</button>`;
   const show=mine.filter(i=>(filter==="all"||(filter==="open"?!i.who&&!i.done:i.kind===filter))&&(!person||(person==="-"?!i.who:i.who===person)));
   const byDue=(a,b)=>(a.due||"9999")<(b.due||"9999")?-1:(a.due||"9999")>(b.due||"9999")?1:a.id-b.id;
   /* in each group, what still needs doing comes first, then what's done */
   const block=(list,c)=>{const todo=list.filter(i=>!i.done).sort(byDue),fin=list.filter(i=>i.done).sort((a,b)=>a.id-b.id);return `<div class="items${c?" tinted":""}"${c?` style="--c:${esc(c)}"`:""}>${todo.concat(fin).map(itemHTML).join("")}</div>`};
   /* the lines between a section's items take its own soft color (in the order sections first appear on the list); by person, the person's color */
   const secs=[...new Set(mine.slice().sort((a,b)=>a.id-b.id).map(i=>i.grp).filter(Boolean))];
-  const tint=g=>sortBy==="grp"?(g?SEC_COLORS[secs.indexOf(g)%SEC_COLORS.length]:""):(people[g]?people[g].color:"");
+  const places=new Map();mine.forEach(i=>{const p=placeOf(i),k=p.toLowerCase();if(p&&!places.has(k))places.set(k,p)});
+  const pkeys=[...places.keys()].sort((a,b)=>a.localeCompare(b));
+  const tint=g=>sortBy==="grp"?(g?SEC_COLORS[secs.indexOf(g)%SEC_COLORS.length]:""):sortBy==="place"?(g?SEC_COLORS[pkeys.indexOf(g)%SEC_COLORS.length]:""):(people[g]?people[g].color:"");
   const head=(t,list,k)=>`<button class="ghd${shut.has(k)?" shut":""}" data-fold="${esc(k)}" aria-expanded="${!shut.has(k)}">${t} <small>${list.filter(i=>i.done).length} of ${list.length} done</small><span class="car">\u25BE</span></button>`;
   let h="";
   if(sortBy==="due"){const todo=show.filter(i=>!i.done).sort(byDue),fin=show.filter(i=>i.done).sort((a,b)=>b.done_at-a.done_at);
     h=(todo.length?`<div class="items">${todo.map(itemHTML).join("")}</div>`:"")+(fin.length?`<div class="lbl">Done (${fin.length})</div><div class="items" style="margin-top:8px">${fin.map(itemHTML).join("")}</div>`:"")}
   else{const groups=new Map();
-    show.slice().sort((a,b)=>a.id-b.id).forEach(i=>{const g=sortBy==="grp"?i.grp:i.who;if(!groups.has(g))groups.set(g,[]);groups.get(g).push(i)});
+    show.slice().sort((a,b)=>a.id-b.id).forEach(i=>{const g=sortBy==="grp"?i.grp:sortBy==="place"?placeOf(i).toLowerCase():i.who;if(!groups.has(g))groups.set(g,[]);groups.get(g).push(i)});
     let keys=[...groups.keys()];
-    if(sortBy==="who")keys.sort((a,b)=>!a?1:!b?-1:roster.findIndex(p=>p.id===a)-roster.findIndex(p=>p.id===b));else keys=keys.filter(Boolean).concat(groups.has("")?[""]:[]);
-    h=keys.map(g=>{const list=groups.get(g),t=sortBy==="grp"?`<i class="sd" style="--c:${tint(g)||"#59606c"}"></i>${g?esc(g):"Other"}`:(g?`${people[g]?RG.av(people[g],24):""} ${esc(name(g))}`:"\u{1F64B} Nobody yet");const k=`${cur}:${sortBy}:${g}`;return head(t,list,k)+(shut.has(k)?"":block(list,tint(g)))}).join("")}
+    if(sortBy==="who")keys.sort((a,b)=>!a?1:!b?-1:roster.findIndex(p=>p.id===a)-roster.findIndex(p=>p.id===b));
+    else if(sortBy==="place")keys.sort((a,b)=>!a?1:!b?-1:groups.get(b).length-groups.get(a).length||a.localeCompare(b)); // biggest store firstelse keys=keys.filter(Boolean).concat(groups.has("")?[""]:[]);
+    h=keys.map(g=>{const list=groups.get(g),t=sortBy==="grp"?`<i class="sd" style="--c:${tint(g)||"#59606c"}"></i>${g?esc(g):"Other"}`:sortBy==="place"?`<i class="sd" style="--c:${tint(g)||"#59606c"}"></i>${g?esc(places.get(g)):"No place set"}`:(g?`${people[g]?RG.av(people[g],24):""} ${esc(name(g))}`:"\u{1F64B} Nobody yet");const k=`${cur}:${sortBy}:${g}`;return head(t,list,k)+(shut.has(k)?"":block(list,tint(g)))}).join("")}
   $("#list").innerHTML=(show.length?h:mine.length?`<div class="empty">Nothing here \u{1F389}</div>`:"")
     +ideasHTML(mine);
 }
