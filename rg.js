@@ -53,6 +53,14 @@ html.rg-playing .rg-bell,html.rg-playing .rg-np{display:none}
 .rg-np time{color:#9aa3b3;font-size:12px;font-weight:600;white-space:nowrap}
 .rg-np a.new time{color:#2ec4b6}
 .rg-np .rg-ne{margin:4px 10px 12px;color:#9aa3b3;font-size:14px;line-height:1.45}
+.rg-pp{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:0 8px 8px;padding:10px 12px;border-radius:16px;background:#202328}
+.rg-pp>span{font-size:22px}
+.rg-pp p{flex:1;min-width:150px;margin:0;font-size:14px;line-height:1.35}
+.rg-pp p small{display:block;color:#9aa3b3;font-size:12.5px}
+.rg-pp div{display:flex;gap:6px;margin-left:auto}
+.rg-pp button{border:0;border-radius:99px;padding:8px 14px;font:700 13px "Inter",system-ui;cursor:pointer;background:#33383f;color:#eef1f6}
+.rg-pp button.go{background:#2ec4b6;color:#10241f}
+.rg-pp button:disabled{opacity:.55}
 html.rg-nav-on:not(.rg-playing) .rg-gate{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))}
 html.rg-nav-on:not(.rg-playing) .rg-card{max-height:calc(100vh - 110px)}
 html.rg-nav-on:not(.rg-playing) body{padding-bottom:calc(68px + env(safe-area-inset-bottom,0px))}
@@ -64,6 +72,7 @@ const st=document.createElement("style");st.textContent=CSS;document.head.append
    the to-do list and your profile. Also on the game pages (Games lit up), where RG.playing(true) hides it while a game is being played.
    The Chat button shows how many messages you haven't read yet; the Me button shows your picture once you are logged in.
    Next to your name (top right) is the bell: what's new for you from the chat, the Feed and game invites (notify.php).
+   The top of the bell's panel turns phone notifications on for this phone (push.php, sw.js), so the same news arrives when the app is closed.
    It stays above the login screen, so someone who isn't logged in can still switch pages. */
 (function(){
   const here={"":"trip","index.html":"trip","games.html":"games","social.html":"feed","chat.html":"chat","plan.html":"plan","profile.html":"me",
@@ -93,6 +102,7 @@ const st=document.createElement("style");st.textContent=CSS;document.head.append
       if(!r.ok){if(bell){bell.remove();bell=null}return}const j=await r.json();
       if(j.me&&!shownMe){shownMe=true;nav.querySelector('[data-k="me"]>span').innerHTML=av(j.me,24)}
       if(j.me&&!+j.me.screen&&!bell)placeBell();
+      if(j.me&&!+j.me.screen){pushMe=j.me.id;pushKeep()}
       setCount(j.n);
       const c=nav.querySelector('[data-k="chat"]');let b=c.querySelector("b");
       if(here==="chat"||!j.chat){if(b)b.remove();return}
@@ -111,8 +121,8 @@ const st=document.createElement("style");st.textContent=CSS;document.head.append
   const onKey=e=>{if(e.key==="Escape")closePanel()};
   async function openPanel(){const p=document.createElement("div");p.className="rg-np";p.setAttribute("role","dialog");p.setAttribute("aria-label","Notifications");
     const r=bell.getBoundingClientRect(),t=Math.max(8,r.bottom+8);p.style.top=t+"px";p.style.maxHeight=`calc(100vh - ${t+90}px)`;
-    p.innerHTML=`<header><h3>Notifications</h3><button type="button" aria-label="Close">\u2715</button></header><div class="rg-nl"><p class="rg-ne">Loading\u2026</p></div>`;
-    document.body.appendChild(p);p.querySelector("header button").onclick=closePanel;
+    p.innerHTML=`<header><h3>Notifications</h3><button type="button" aria-label="Close">\u2715</button></header><div class="rg-pp" hidden></div><div class="rg-nl"><p class="rg-ne">Loading\u2026</p></div>`;
+    document.body.appendChild(p);p.querySelector("header button").onclick=closePanel;drawPush(p.querySelector(".rg-pp"));
     setTimeout(()=>document.addEventListener("click",outside,true));addEventListener("keydown",onKey);
     try{const j=await api("notify");people={};(j.people||[]).forEach(x=>people[x.id]=x);const l=p.querySelector(".rg-nl");
       l.innerHTML=j.items.length?j.items.map(it=>`<a href="${esc(it.href)}" class="${it.new?"new":""}">${av(people[it.by[0]]||{short:"?",color:"#9aa3b3"},40)}<p>${line(it)}</p><time>${ago(it.at)}</time></a>`).join("")
@@ -124,9 +134,61 @@ const st=document.createElement("style");st.textContent=CSS;document.head.append
   document.body?add():document.addEventListener("DOMContentLoaded",add);
 })();
 
+/* Phone notifications (push.php sends them, sw.js shows them). Each phone turns them on from the bell's panel; they then arrive even
+   when the app is closed. On an iPhone they only work in the app opened from its home-screen icon (iOS 16.4 or newer).
+   Logging out turns them off on that phone. Once a day (or when someone else logs in) the phone tells the server again, in case it changed. */
+const PUSH_OK="serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window&&window.isSecureContext;
+const IS_IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const IS_HOME_APP=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+const b64u=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const unb64u=s=>Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((s.length+3)%4)),c=>c.charCodeAt(0));
+const pushMark=v=>{try{v?localStorage.setItem("rg-push",v):localStorage.removeItem("rg-push")}catch(e){}};
+async function pushSub(){
+  if(!PUSH_OK)return null;
+  try{const reg=await navigator.serviceWorker.getRegistration();return reg?await reg.pushManager.getSubscription():null}catch(e){return null}}
+async function pushSend(sub,me){ // (re)subscribe if the server's key changed, then tell the server which member this phone is for
+  const {key}=await api("push_key"),reg=await navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready);
+  if(sub&&sub.options.applicationServerKey&&b64u(sub.options.applicationServerKey)!==key){await sub.unsubscribe();sub=null}
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:unb64u(key)});
+  await api("push_sub",{sub:sub.toJSON()});pushMark(me+"|"+new Date().toDateString());}
+let pushKept=false,pushMe=null; // pushMe: who is logged in (set by the bell's check)
+async function pushKeep(){
+  if(pushKept||!PUSH_OK||Notification.permission!=="granted")return;pushKept=true;
+  let v="";try{v=localStorage.getItem("rg-push")||""}catch(e){}
+  if(v===pushMe+"|"+new Date().toDateString())return;
+  try{const sub=await pushSub();if(sub)await pushSend(sub,pushMe)}catch(e){}}
+async function pushOff(){
+  const sub=await pushSub();pushMark("");if(!sub)return;
+  try{await api("push_unsub",{endpoint:sub.endpoint})}catch(e){}
+  try{await sub.unsubscribe()}catch(e){}}
+async function drawPush(box){
+  const set=(html)=>{box.innerHTML=html;box.hidden=!html};
+  if(!PUSH_OK){
+    if(IS_IOS&&!IS_HOME_APP)set(`<span>\u{1F4F2}</span><p><b>Get these on your iPhone</b><small>Notifications only work in the app on your home screen. In Safari tap Share, then Add to Home Screen, then open the app from its icon.</small></p>`);
+    else if(IS_IOS)set(`<span>\u{1F4F2}</span><p><b>Notifications need a newer iPhone update</b><small>Update the iPhone to iOS 16.4 or newer in Settings, General, Software Update.</small></p>`);
+    return}
+  let conf;try{conf=await api("push_key")}catch(e){return}
+  if(!conf.any){set("");return} // the admin turned every kind off
+  const sub=await pushSub();
+  if(Notification.permission==="denied")set(`<span>\u{1F515}</span><p><b>Notifications are blocked on this phone</b><small>${IS_IOS?"Open the iPhone's Settings, then Notifications, then Shenandoah Cabin, and allow them.":"Allow notifications for this site in the browser's settings, then come back."}</small></p>`);
+  else if(sub)set(`<span>\u{1F4F2}</span><p><b>Phone notifications are on</b><small>They arrive even when the app is closed.</small></p><div><button type="button" data-p="test">Send a test</button><button type="button" data-p="off">Turn off</button></div>`);
+  else set(`<span>\u{1F4F2}</span><p><b>Get these on your phone</b><small>Even when the app is closed.</small></p><div><button type="button" class="go" data-p="on">Turn on</button></div>`);
+  box.querySelectorAll("button").forEach(b=>b.onclick=async e=>{e.stopPropagation();
+    const k=b.dataset.p;
+    // asked first, straight from the tap: iPhones only show the question when it comes right from a tap
+    const ask=k==="on"?Notification.requestPermission():null;
+    box.querySelectorAll("button").forEach(x=>x.disabled=true);
+    try{
+      if(k==="on"){if(await ask!=="granted"){drawPush(box);return}await pushSend(await pushSub(),pushMe);toast("Notifications are on for this phone")}
+      if(k==="off"){await pushOff();toast("Notifications are off for this phone")}
+      if(k==="test"){const r=await api("push_test",{});toast(r.sent?"Sent. It should show up in a moment.":"This phone didn't answer. Turn notifications off and on again.")}
+    }catch(x){toast(x.message||"That didn't work. Try again.")}
+    drawPush(box)})}
+
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 async function api(action,body,opts={}){
+  if(action==="logout")await pushOff(); // this phone stops getting that member's notifications
   const init={method:body===undefined?"GET":"POST",headers:{"X-RG":"1"},credentials:"same-origin"};
   if(body!==undefined){
     if(body instanceof Blob){init.body=body;init.headers["Content-Type"]=body.type||"application/octet-stream"}

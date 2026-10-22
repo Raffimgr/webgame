@@ -20,6 +20,7 @@
      GET  ?check=TICKET&key=KEY -> {ok:1, op:"put"|"del"}     GET ?view=TOKEN -> {ok:1, op:"view"} */
 
 require __DIR__ . '/guide_lib.php';
+require __DIR__ . '/push.php'; // phone notifications
 
 const MEDIA_URL = 'https://ridge-media.raffaelco.workers.dev';
 const PHOTO_MAX = 40 * 1048576;
@@ -213,15 +214,19 @@ try {
     $r = own_post($db, (int)($b['id'] ?? 0), $pid);
     if ($r['kind'] === 'photo' && !is_file(social_dir() . '/' . $r['id'] . '.jpg')) fail('The photo did not upload. Try again.');
     if (!empty($b['hold'])) { $db->prepare("UPDATE posts SET state='ready' WHERE id=? AND state='up'")->execute([$r['id']]); out(['ok' => 1]); }
+    $was = $db->prepare("SELECT COUNT(*) FROM posts WHERE grp=? AND state='live'"); $was->execute([$r['grp']]); $was = (int)$was->fetchColumn();
     $db->prepare("UPDATE posts SET state='live' WHERE id=?")->execute([$r['id']]);
+    if (!$was) push_post((int)$r['grp']); // a brand-new post, not a photo added to one already up
     out(['post' => one_post($db, (int)$r['grp'])]);
   }
   if ($act === 'publish') {
     $grp = (int)($b['grp'] ?? 0);
     own_group($db, $grp, $pid);
+    $was = $db->prepare("SELECT COUNT(*) FROM posts WHERE grp=? AND state='live'"); $was->execute([$grp]); $was = (int)$was->fetchColumn();
     $db->prepare("UPDATE posts SET state='live' WHERE grp=? AND state='ready'")->execute([$grp]);
     $post = one_post($db, $grp);
     if (!$post) fail('None of the photos uploaded. Try again.');
+    if (!$was) push_post($grp);
     out(['post' => $post]);
   }
   if ($act === 'edit') {

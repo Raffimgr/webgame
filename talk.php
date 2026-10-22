@@ -6,6 +6,7 @@
    POST {act:"del", id} removes a comment (whoever wrote it, or the admin). POSTs need the X-RG header; each answers with the updated item. */
 
 require __DIR__ . '/guide_lib.php';
+require __DIR__ . '/push.php'; // phone notifications
 
 function talk_db(): PDO {
   $f = data_dir() . '/talk.sqlite';
@@ -54,12 +55,13 @@ try {
   if (str_starts_with($item, 'po-') && !guide_can_feed($pid)) fail('Coming soon: the Trip Feed isn\'t open for you yet.', 403);
   if ($act === 'like') {
     $d = $db->prepare('DELETE FROM likes WHERE item=? AND pid=?'); $d->execute([$item, $pid]);
-    if ($d->rowCount() === 0) $db->prepare('INSERT INTO likes (item, pid, at) VALUES (?, ?, ?)')->execute([$item, $pid, time()]);
+    if ($d->rowCount() === 0) { $db->prepare('INSERT INTO likes (item, pid, at) VALUES (?, ?, ?)')->execute([$item, $pid, time()]); push_talk($item, $pid, 'like'); }
   } elseif ($act === 'say') {
     $body = trim(preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', (string)($b['body'] ?? '')) ?? '');
     if ($body === '') fail('Write something first.');
     $body = mb_substr($body, 0, 500);
     $db->prepare('INSERT INTO comments (item, pid, body, at) VALUES (?, ?, ?, ?)')->execute([$item, $pid, $body, time()]);
+    push_talk($item, $pid, 'comment', $body);
   } else fail('Bad request.');
   out(['item' => $item, 'data' => talk_item($db, $item)]);
 } catch (Throwable $e) {
