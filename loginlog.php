@@ -5,10 +5,12 @@
    fail (typed a wrong password) and nopass (tried to log in before the admin set them a password); both added 2026-10-22, Sako.
    Kept for 90 days. Logging never stops anyone from logging in: every error here is swallowed. Included by api.php.
    Logins weren't recorded before this log went live (2026-10-21), so log_earlier() rebuilds when each member was using the app
-   before then from what they did: chat messages, Feed posts, likes, comments, To-do changes and online games they started. */
+   before then from what they did: chat messages, Feed posts, likes, comments, To-do changes and online games they started.
+   2026-10-22 (Sako: Yazan read the chat but never showed up): a page left open on a phone never loads again, so "open" rows now also
+   come from what an open page keeps asking the server while it's on screen (the bell and chat checks, Feed, To-do): log_active(). */
 
 declare(strict_types=1);
-if (!defined('RG_API')) { http_response_code(404); exit; }
+if (get_included_files()[0] === __FILE__) { http_response_code(404); exit; } // included by api.php and guide_lib.php only
 
 const LOG_KEEP_DAYS = 90;
 const LOG_VISIT_GAP = 1800; // a new "opened the app" row only after 30 quiet minutes
@@ -52,6 +54,9 @@ function log_visit(string $pid): void {
     if (time() - (int)$s->fetchColumn() >= LOG_VISIT_GAP) log_add($pid, 'open');
   } catch (Throwable $e) {}
 }
+
+/* Called on the requests an open page makes by itself while it's on screen. The Score screen polls all day, so it only counts when it loads. */
+function log_active(string $pid): void { if ($pid !== 'screen') log_visit($pid); }
 
 function log_list(): array {
   try {

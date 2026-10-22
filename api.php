@@ -611,7 +611,7 @@ case 'invites': // games someone asked me to join (the home page shows them)
   out(['invites' => my_invites(need_login())]);
 
 case 'notify': // the bell next to your name (notify.php); ?count=1 also sends who you are, for the bottom bar
-  $m = need_login(); $r = notify_items($m);
+  $m = need_login(); log_active($m['id']); $r = notify_items($m);
   out(isset($_GET['count']) ? ['n' => $r['n'], 'chat' => $r['chat'], 'me' => $m] : $r + ['people' => players_public()]);
 
 case 'notify_seen': // you opened the bell
