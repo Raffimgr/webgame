@@ -125,7 +125,7 @@ html.rg-nav-on .sheet{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px)
 .ll-row time{font-weight:700;font-variant-numeric:tabular-nums;font-size:14px;text-align:right}
 .ll-row time small{display:block;color:var(--mut);font-size:12px;font-weight:600}
 .ll-k{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px;background:var(--dim)}
-.ll-k.login{background:var(--acc)}.ll-k.logout{background:#ff8f8f}
+.ll-k.login{background:var(--acc)}.ll-k.logout{background:#ff8f8f}.ll-k.fail,.ll-k.nopass{background:#ffd23f}
 .top #logBtn{margin-left:auto}.top #logBtn.on{background:var(--acc);color:var(--ink)}
 </style>
 </head>
@@ -394,7 +394,7 @@ let llWho="",llShow=60,llShowE=40;
 async function drawLoginLog(){const el=document.getElementById("loginLog");if(!el)return;
   el.innerHTML=`<div class="panel"><h2>Who logged in</h2><p class="hint">Loading…</p></div>`;
   let log,earlier;try{const r=await api("login_log");log=r.log;earlier=r.earlier||{rows:[],before:0}}catch(x){el.querySelector(".hint").textContent=x.message;return}
-  const KIND={login:"Logged in with password",open:"Opened the app",logout:"Logged out"};
+  const KIND={login:"Logged in with password",open:"Opened the app",logout:"Logged out",fail:"Typed a wrong password",nopass:"Tried to log in, but has no password yet"};
   const DID={chat:["chat message","chat messages"],feed:["Feed post","Feed posts"],like:["like","likes"],comment:["comment","comments"],todo:["To-do change","To-do changes"],game:["online game started","online games started"]};
   const day=t=>{const d=new Date(t*1000),n=new Date(),y=new Date(n.getFullYear(),n.getMonth(),n.getDate()-1);
     return d.toDateString()===n.toDateString()?"Today":d.toDateString()===y.toDateString()?"Yesterday":d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})};
@@ -406,7 +406,7 @@ async function drawLoginLog(){const el=document.getElementById("loginLog");if(!e
   const last={};log.forEach(r=>{if(!last[r.pid])last[r.pid]=r.at});eRows.forEach(r=>{if(!last[r.pid]||r.last>last[r.pid])last[r.pid]=r.last});
   const who=Object.keys(last).sort((a,b)=>last[b]-last[a]);
   const paint=()=>{const rows=log.filter(r=>!llWho||r.pid===llWho),shown=rows.slice(0,llShow),er=eRows.filter(r=>!llWho||r.pid===llWho),eShown=er.slice(0,llShowE);let d="",e="";
-    el.innerHTML=`<div class="panel"><h2>Who logged in</h2><p class="hint">Every login and every time someone opens the app (once per half hour), for the last 90 days. Times are this device's time. Only admins see this.</p>
+    el.innerHTML=`<div class="panel"><h2>Who logged in</h2><p class="hint">Every login, wrong password and time someone opens the app (once per half hour), for the last 90 days. Times are this device's time. Only admins see this.</p>
       ${who.length?`<div class="lab">Last seen · tap a name to see only theirs</div><div class="ll-last">${who.map(id=>{const p=P(id);return `<button data-ll="${esc(id)}" class="${llWho===id?"on":""}">${av(p,30)}<span><b>${esc(p.name)}</b><small>${day(last[id])}, ${time(last[id])}</small></span></button>`}).join("")}</div>
       ${llWho?`<div class="actions" style="justify-content:flex-start"><button class="btn sm" id="llAll">Show everyone</button></div>`:""}`:""}
       ${shown.length?`<div class="alist">${shown.map(r=>{const p=P(r.pid),h=day(r.at)!==d?`<div class="day" style="margin-top:6px">${esc(d=day(r.at))}</div>`:"";

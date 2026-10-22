@@ -1,7 +1,8 @@
 <?php
 /* Ridge Games: the login log in Admin > Settings (Sako asked, 2026-10-21): who logged in or opened the app, and when.
    Kept in ridge-data/logins.sqlite, outside the web folder; only admins can read it (api.php?a=login_log).
-   Rows: login (typed their password), open (came back while still logged in; at most one per 30 minutes per member), logout.
+   Rows: login (typed their password), open (came back while still logged in; at most one per 30 minutes per member), logout,
+   fail (typed a wrong password) and nopass (tried to log in before the admin set them a password); both added 2026-10-22, Sako.
    Kept for 90 days. Logging never stops anyone from logging in: every error here is swallowed. Included by api.php.
    Logins weren't recorded before this log went live (2026-10-21), so log_earlier() rebuilds when each member was using the app
    before then from what they did: chat messages, Feed posts, likes, comments, To-do changes and online games they started. */

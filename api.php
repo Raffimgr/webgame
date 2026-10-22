@@ -403,8 +403,8 @@ case 'login':
   if (rate_limited($lid)) fail('Too many wrong tries. Wait 15 minutes.', 429);
   $s = db()->prepare('SELECT id,pass_hash FROM players WHERE id=? AND active=1'); $s->execute([$lid]);
   $p = $s->fetch();
-  if (!$p || !$p['pass_hash']) { note_attempt($lid); fail($p ? 'No password yet. Ask the admin to set one.' : 'Wrong name or password.', 401); }
-  if (!password_verify((string)($b['password'] ?? ''), $p['pass_hash'])) { note_attempt($lid); fail('Wrong password.', 401); }
+  if (!$p || !$p['pass_hash']) { note_attempt($lid); if ($p) log_add($p['id'], 'nopass'); fail($p ? 'No password yet. Ask the admin to set one.' : 'Wrong name or password.', 401); }
+  if (!password_verify((string)($b['password'] ?? ''), $p['pass_hash'])) { note_attempt($lid); log_add($p['id'], 'fail'); fail('Wrong password.', 401); }
   session_regenerate_id(true); $_SESSION['pid'] = $p['id']; log_add($p['id'], 'login');
   out(['ok' => 1, 'me' => me()]);
 
