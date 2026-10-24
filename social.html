@@ -88,6 +88,14 @@ textarea{width:100%;border:0;border-radius:14px;padding:11px 13px;background:var
 .lb .sl video{height:auto;max-height:100%}
 .lb .x{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:16px;z-index:2}
 .lb .cnt{top:calc(22px + env(safe-area-inset-top,0px));left:16px;right:auto}
+.vsave{position:fixed;inset:0;z-index:75;background:rgba(10,11,14,.6);display:flex;align-items:flex-end;justify-content:center;padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
+.vsave .panel{width:min(420px,100%);text-align:center}
+.vsave b{font:600 20px var(--play)}
+.vsave .pst{margin:6px 0 0}
+.vsave .vbar{height:8px;border-radius:99px;background:#15181e;box-shadow:var(--in-sh);overflow:hidden;margin:14px 0 2px}
+.vsave .vbar i{display:block;height:100%;width:0;background:var(--teal);transition:width .3s}
+.vsave .row{display:flex;gap:10px;margin-top:16px}
+.vsave .row .btn{flex:1;justify-content:center;padding:13px;font-size:15px}
 /* likes and comments (talk.js) */
 .talk{display:flex;flex-direction:column;gap:8px;border-top:1px solid rgba(255,255,255,.07);padding-top:10px}
 .talk .tb{display:flex;gap:8px;flex-wrap:wrap}
@@ -291,20 +299,59 @@ function lightbox(p,i){const d=document.createElement("div");d.className="lb";
   d.querySelector(".x").onclick=close;addEventListener("keydown",key);document.body.appendChild(d);
   const t=d.querySelector(".trk");t.scrollLeft=i*t.clientWidth}
 /* Download keeps you in the app (Sako, 2026-10-24: downloading used to leave the app stuck on the picture with no way back).
-   iPhone: a photo goes to the share sheet, where Save Image puts it in Photos; a video opens in a separate viewer with Done to come back.
+   iPhone: a photo goes to the share sheet, where Save Image puts it in Photos; a video does the same with Save Video (see saveVideo).
    Elsewhere the file downloads in the background and the page stays where it was. */
 const IS_IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 async function photoBlob(it){if(!shareCache[it.id]){const r=await fetch(`social.php?f=${it.id}`,{credentials:"same-origin"});
   if(!r.ok)throw new Error("Couldn't get the photo. Try again.");shareCache[it.id]=await r.blob()}return shareCache[it.id]}
 async function download(it,p){
   if(!IS_IOS){const a=document.createElement("a");a.href=dlUrl(it);a.download=dlName(it);document.body.appendChild(a);a.click();a.remove();return}
-  if(it.kind!=="photo"){window.open(dlUrl(it),"_blank","noopener");return}
+  if(it.kind!=="photo"){saveVideo(it);return}
   const hold=()=>{lightbox(p,p.items.indexOf(it));RG.toast("Press and hold the photo, then tap Save to Photos.")};
   if(!navigator.canShare){hold();return}
   try{const file=new File([await photoBlob(it)],dlName(it),{type:"image/jpeg"});
     if(!navigator.canShare({files:[file]})){hold();return}
     await navigator.share({files:[file]})}
   catch(e){if(e.name==="AbortError")return;if(e.name==="NotAllowedError"){RG.toast("The photo is ready. Tap Download again to save it.");return}hold()}}
+/* Videos save the same way as photos (Sako, 2026-10-24): the app fetches the video from the media Worker with a progress bar, then
+   hands it to the share sheet, where Save Video puts it in Photos. The wait uses up the tap, and then the phone won't open the sheet
+   by itself, so a Save video button opens it with a fresh tap. Only the last video is kept in memory. Very big videos, and phones
+   that can't share files, still open in the separate viewer. */
+const VID_MAX=500*1048576;let vidCache=null;
+async function videoFile(it,onPart,signal){
+  if(vidCache&&vidCache.id===it.id)return vidCache.file;
+  vidCache=null;
+  const r=await fetch(videoUrl(it),{mode:"cors",cache:"no-store",signal});
+  if(!r.ok)throw new Error("video "+r.status);
+  const total=+r.headers.get("Content-Length")||it.size||0;let got=0;
+  const blob=r.body&&window.TransformStream
+    ?await new Response(r.body.pipeThrough(new TransformStream({transform(c,q){got+=c.byteLength;onPart(got,total);q.enqueue(c)}}))).blob()
+    :await r.blob();
+  const type=(r.headers.get("Content-Type")||"").split(";")[0].trim();
+  const file=new File([blob],dlName(it),{type:/^video\//.test(type)?type:"video/mp4"});
+  vidCache={id:it.id,file};return file}
+function vidSheet(onCancel){
+  const d=document.createElement("div");d.className="vsave";
+  d.innerHTML=`<div class="panel"><b>Saving the video</b><p class="pst">Getting it ready…</p><div class="vbar"><i></i></div><div class="row"><button class="btn ghost">Cancel</button></div></div>`;
+  const msg=d.querySelector(".pst"),bar=d.querySelector(".vbar"),row=d.querySelector(".row"),close=()=>d.remove();
+  row.firstChild.onclick=()=>{close();onCancel()};document.body.appendChild(d);
+  return {close,
+    pct:(got,total)=>{if(total){const n=Math.min(99,Math.floor(got*100/total));msg.textContent=`Getting it ready… ${n}%`;bar.firstChild.style.width=n+"%"}
+      else msg.textContent=`Getting it ready… ${(got/1048576).toFixed(1)} MB`},
+    step:(title,text,label,go)=>{d.querySelector("b").textContent=title;msg.textContent=text;bar.hidden=true;row.firstChild.textContent="Close";
+      const b=row.querySelector(".go")||row.appendChild(Object.assign(document.createElement("button"),{className:"btn go"}));
+      b.textContent=label;b.onclick=go}}}
+async function saveVideo(it){
+  const viewer=()=>window.open(dlUrl(it),"_blank","noopener");
+  if(!navigator.canShare||!window.File||it.size>VID_MAX||!navigator.canShare({files:[new File([""],dlName(it),{type:"video/mp4"})]})){viewer();return}
+  const ac=new AbortController(),s=vidSheet(()=>ac.abort());let file;
+  try{file=await videoFile(it,s.pct,ac.signal)}
+  catch(e){if(ac.signal.aborted)return;s.step("Couldn't get the video","Check the connection and try again, or open it to watch.","Open video",()=>{s.close();viewer()});return}
+  const go=async()=>{try{await navigator.share({files:[file]});s.close()}
+    catch(e){if(e.name==="AbortError"){s.close();return}
+      if(e.name==="NotAllowedError"){s.step("The video is ready","Tap Save video, then pick Save Video.","Save video",go);return}
+      s.step("Couldn't save the video","This phone can't save it from here. Open it to watch.","Open video",()=>{s.close();viewer()})}};
+  go()}
 /* Share sends the photo itself (to Messages, WhatsApp...) where the phone allows it, otherwise a link to the post (it opens for anyone logged in). */
 async function share(p,it){const url=new URL("social.html#po-"+p.id,location.href).href,text=p.cap||"From our Shenandoah trip";
   if(it.kind==="photo"&&navigator.canShare){try{

@@ -4,7 +4,8 @@
 
    GET  /ping                                   -> "ok" (the feed uses it to see whether video sharing is switched on)
    GET  /ping?deep=1                            -> "ok" only when social.php answers too; the result is also saved as _status.json in the bucket
-   GET  /f/<key>?v=<view token>[&dl=<name>]      -> the video (range requests work, so players can seek); dl= makes it a download
+   GET  /f/<key>?v=<view token>[&dl=<name>]      -> the video (range requests work, so players can seek); dl= makes it a download.
+                                                   The feed's own pages may also fetch it, to hand it to the iPhone share sheet (Save Video).
    PUT  /up/<key>?t=<ticket>                     -> stores a video up to 90 MB in one go
    POST /mp/<key>?t=<ticket>&action=create&type= -> starts a big upload in parts: {uploadId}
    PUT  /mp/<key>?t=<ticket>&uploadId=&part=N    -> one part (up to 90 MB): {partNumber, etag}
@@ -70,7 +71,8 @@ export default {
       if (!TOKEN_RE.test(v) || (await verify(env, "view=" + v)) !== "view") return fail("Please open this from the trip feed.", 403);
       const obj = method === "HEAD" ? await env.BUCKET.head(key) : await env.BUCKET.get(key, { range: req.headers, onlyIf: req.headers });
       if (obj === null) return fail("Not found.", 404);
-      const h = new Headers();
+      const h = new Headers(cors);
+      h.set("Vary", "Origin"); // the copy a <video> player got (no Origin) must not be reused for the feed's own fetch, or the other way round
       obj.writeHttpMetadata(h);
       h.set("ETag", obj.httpEtag);
       h.set("Accept-Ranges", "bytes");
