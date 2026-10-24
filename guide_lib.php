@@ -17,13 +17,11 @@ function data_dir(): string {
   return __DIR__ . '/data';
 }
 
-/* Returns the logged-in player's id, or answers 401. POSTs must carry the X-RG header. */
-function guide_login(): string {
-  header('Cache-Control: no-store');
-  header('X-Content-Type-Options: nosniff');
-  if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_SERVER['HTTP_X_RG'] ?? '') !== '1') fail('Bad request.');
+/* The logged-in member's id from the shared session (read only), or null. No cookie: no session is started at all,
+   so the login wall (gate.php) doesn't make a session file for every stranger's request. */
+function guide_pid(): ?string {
   $dir = data_dir();
-  if (!is_dir($dir)) fail('Not set up yet.', 404);
+  if (!is_dir($dir) || empty($_COOKIE['rgsess'])) return null;
   $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? '') == 443)
     || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') || (($_SERVER['HTTP_X_FORWARDED_SSL'] ?? '') === 'on');
   $cookiePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/') . '/';
@@ -33,12 +31,22 @@ function guide_login(): string {
   ini_set('session.use_only_cookies', '1');
   ini_set('session.gc_probability', '0');
   session_save_path($dir);
-  if (!session_start(['read_and_close' => true])) fail('Server problem. Try again.', 500);
+  if (!@session_start(['read_and_close' => true])) return null;
   $pid = $_SESSION['pid'] ?? null;
-  if (!$pid) fail('Please log in.', 401);
+  if (!is_string($pid) || $pid === '') return null;
   $pdo = new PDO('sqlite:' . $dir . '/ridge.sqlite', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
   $s = $pdo->prepare('SELECT 1 FROM players WHERE id=? AND active=1'); $s->execute([$pid]);
-  if (!$s->fetchColumn()) fail('Please log in.', 401);
+  return $s->fetchColumn() ? $pid : null;
+}
+
+/* Returns the logged-in player's id, or answers 401. POSTs must carry the X-RG header. */
+function guide_login(): string {
+  header('Cache-Control: no-store');
+  header('X-Content-Type-Options: nosniff');
+  if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_SERVER['HTTP_X_RG'] ?? '') !== '1') fail('Bad request.');
+  if (!is_dir(data_dir())) fail('Not set up yet.', 404);
+  $pid = guide_pid();
+  if ($pid === null) fail('Please log in.', 401);
   require_once __DIR__ . '/loginlog.php'; log_active((string)$pid); // for the admin's Log: pages left open still count
   return (string)$pid;
 }

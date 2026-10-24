@@ -1,16 +1,18 @@
-# Pages, scripts and styles change often: phones must check for a newer copy every time
-# (an unchanged file still comes back as a quick "not modified", so this costs almost nothing).
-<IfModule mod_headers.c>
-  <FilesMatch "\.(html|js|css)$">
-    Header set Cache-Control "no-cache"
-  </FilesMatch>
-</IfModule>
-
 # The site moved to raffaelco.com/DM/. In the old ridge-games copy, pages forward there (same path and query);
 # .php files keep answering, because the media Worker still checks logins at ridge-games/social.php.
+#
+# Login wall (Sako, 2026-10-24): every page, script and picture goes through gate.php, which hands it out only to members who
+# are logged in (strangers get the login screen). gate.php also sets the caching: pages and scripts are checked for a newer
+# copy every time, pictures are kept for a day, and nothing a member sees is kept by the host's cache.
+# .php files check the login themselves, so they are left alone here. (Folder listings are already off on the host.)
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteCond %{REQUEST_URI} ^/ridge-games(/|$)
   RewriteCond %{REQUEST_URI} !\.php$
   RewriteRule ^(.*)$ /DM/$1 [R=302,L]
+
+  RewriteRule ^$ gate.php?rgf=index.html [L,QSA]
+  RewriteCond %{REQUEST_URI} !\.php$
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^(.+)$ gate.php?rgf=$1 [L,QSA]
 </IfModule>

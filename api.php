@@ -385,7 +385,9 @@ case 'state': // who am I, who can log in, is the admin password set yet
   if (!empty($_SESSION['pid'])) log_visit((string)$_SESSION['pid']);
   $adminSet = (int)db()->query('SELECT COUNT(*) FROM players WHERE is_admin=1 AND pass_hash IS NOT NULL')->fetchColumn() > 0;
   $me = me();
-  out(['me' => $me, 'players' => players_for($me, players_public()), 'screens' => players_for($me, players_public(false, true)), 'admin_ready' => $adminSet, 'coins' => coins_table(), 'bonus_per' => bonus_per(), 'access' => access_conf(), 'crown' => crown_conf()]);
+  $who = ['me' => $me, 'players' => players_for($me, players_public()), 'screens' => players_for($me, players_public(false, true)), 'admin_ready' => $adminSet];
+  // the login screen only needs who can log in; the rest is for members (rg.js asks again right after logging in)
+  out($me ? $who + ['coins' => coins_table(), 'bonus_per' => bonus_per(), 'access' => access_conf(), 'crown' => crown_conf()] : $who);
 
 case 'players':
   front_auto();
