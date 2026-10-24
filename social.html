@@ -290,12 +290,25 @@ function lightbox(p,i){const d=document.createElement("div");d.className="lb";
   const close=()=>{d.remove();removeEventListener("keydown",key)},key=e=>{if(e.key==="Escape")close()};
   d.querySelector(".x").onclick=close;addEventListener("keydown",key);document.body.appendChild(d);
   const t=d.querySelector(".trk");t.scrollLeft=i*t.clientWidth}
-function download(it){const a=document.createElement("a");a.href=dlUrl(it);a.download=dlName(it);document.body.appendChild(a);a.click();a.remove()}
+/* Download keeps you in the app (Sako, 2026-10-24: downloading used to leave the app stuck on the picture with no way back).
+   iPhone: a photo goes to the share sheet, where Save Image puts it in Photos; a video opens in a separate viewer with Done to come back.
+   Elsewhere the file downloads in the background and the page stays where it was. */
+const IS_IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+async function photoBlob(it){if(!shareCache[it.id]){const r=await fetch(`social.php?f=${it.id}`,{credentials:"same-origin"});
+  if(!r.ok)throw new Error("Couldn't get the photo. Try again.");shareCache[it.id]=await r.blob()}return shareCache[it.id]}
+async function download(it,p){
+  if(!IS_IOS){const a=document.createElement("a");a.href=dlUrl(it);a.download=dlName(it);document.body.appendChild(a);a.click();a.remove();return}
+  if(it.kind!=="photo"){window.open(dlUrl(it),"_blank","noopener");return}
+  const hold=()=>{lightbox(p,p.items.indexOf(it));RG.toast("Press and hold the photo, then tap Save to Photos.")};
+  if(!navigator.canShare){hold();return}
+  try{const file=new File([await photoBlob(it)],dlName(it),{type:"image/jpeg"});
+    if(!navigator.canShare({files:[file]})){hold();return}
+    await navigator.share({files:[file]})}
+  catch(e){if(e.name==="AbortError")return;if(e.name==="NotAllowedError"){RG.toast("The photo is ready. Tap Download again to save it.");return}hold()}}
 /* Share sends the photo itself (to Messages, WhatsApp...) where the phone allows it, otherwise a link to the post (it opens for anyone logged in). */
 async function share(p,it){const url=new URL("social.html#po-"+p.id,location.href).href,text=p.cap||"From our Shenandoah trip";
   if(it.kind==="photo"&&navigator.canShare){try{
-    const b=shareCache[it.id]||(shareCache[it.id]=await (await fetch(`social.php?f=${it.id}`,{credentials:"same-origin"})).blob());
-    const file=new File([b],dlName(it),{type:"image/jpeg"});
+    const file=new File([await photoBlob(it)],dlName(it),{type:"image/jpeg"});
     if(navigator.canShare({files:[file]})){await navigator.share({files:[file],text});return}}
     catch(e){if(e.name==="AbortError")return;if(e.name==="NotAllowedError"){RG.toast("The photo is ready. Tap Share again to send it.");return}}}
   if(navigator.share){try{await navigator.share({title:"Trip Feed",text,url})}catch(e){}return}
@@ -317,7 +330,7 @@ document.addEventListener("click",async e=>{
       dropVids(j.vids);editing.delete(id);POSTS[id]=j.post;post.outerHTML=postHTML(j.post);RG.toast("Saved ✔")}
     catch(err){sv.disabled=false;RG.toast(err.message)}return}
   const a=t.closest("[data-act]");if(!a)return;
-  if(a.dataset.act==="dl")download(curItem(post,p));
+  if(a.dataset.act==="dl")download(curItem(post,p),p);
   if(a.dataset.act==="share")share(p,curItem(post,p));
   if(a.dataset.act==="edit"){editing.add(id);post.querySelector(".b").innerHTML=editHTML(p);post.querySelector(".ecap").focus()}
   if(a.dataset.act==="del"){if(!confirm(p.items.length>1?`Delete this post and its ${p.items.length} photos for everyone?`:"Delete this post for everyone?"))return;
